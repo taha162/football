@@ -20,7 +20,7 @@ import {
 } from "@/server/teams/actions";
 import { ActionForm, FormField, Hidden, InlineAction, SubmitButton } from "@/components/ui/action-form";
 import { buttonClass } from "@/components/ui/button";
-import { ChoiceChips, Input, Select, Textarea } from "@/components/ui/field";
+import { ChoiceChips, Input, Select, Textarea, controlProps } from "@/components/ui/field";
 import { Alert, Badge, Card, CardBody, Container, EmptyState, PageHeader, Section } from "@/components/ui/primitives";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/opponents">): Promise<Metadata> {
@@ -85,7 +85,7 @@ export default async function OpponentsPage({ params, searchParams }: PageProps<
 
   const teamSelect = (
     <FormField name="challenger_team_id" label={t("yourTeam")} required>
-      <Select defaultValue={preferredTeam} required>
+      <Select {...controlProps("challenger_team_id")} defaultValue={preferredTeam} required>
         {teams.map((tm) => <option key={tm.id} value={tm.id}>{tm.name}</option>)}
       </Select>
     </FormField>
@@ -110,7 +110,7 @@ export default async function OpponentsPage({ params, searchParams }: PageProps<
                 <div className="grid gap-4 sm:grid-cols-2">
                   {teamSelect}
                   <FormField name="format" label={t("format")}>
-                    <Select defaultValue="5v5">
+                    <Select {...controlProps("format")} defaultValue="5v5">
                       {MATCH_FORMATS.map((f) => <option key={f} value={f}>{f}</option>)}
                     </Select>
                   </FormField>
@@ -232,38 +232,38 @@ export default async function OpponentsPage({ params, searchParams }: PageProps<
                   <h3 className="font-semibold">{t("publishRequest")}</h3>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <FormField name="team_id" label={t("yourTeam")} required>
-                      <Select defaultValue={preferredTeam}>
+                      <Select {...controlProps("team_id")} defaultValue={preferredTeam}>
                         {teams.map((tm) => <option key={tm.id} value={tm.id}>{tm.name}</option>)}
                       </Select>
                     </FormField>
                     <FormField name="format" label={t("format")} required>
-                      <Select defaultValue="5v5">
+                      <Select {...controlProps("format")} defaultValue="5v5">
                         {MATCH_FORMATS.map((f) => <option key={f} value={f}>{f}</option>)}
                       </Select>
                     </FormField>
                     <FormField name="earliest" label={t("earliest")} required>
-                      <Input type="datetime-local" min={minStart} defaultValue={defaultStart} required dir="ltr" />
+                      <Input {...controlProps("earliest")} type="datetime-local" min={minStart} defaultValue={defaultStart} required dir="ltr" />
                     </FormField>
                     <FormField name="latest" label={t("latest")} required>
-                      <Input type="datetime-local" min={minStart} defaultValue={defaultStart.slice(0, 11) + "23:00"} required dir="ltr" />
+                      <Input {...controlProps("latest")} type="datetime-local" min={minStart} defaultValue={defaultStart.slice(0, 11) + "23:00"} required dir="ltr" />
                     </FormField>
                     <FormField name="skill_level" label={t("skill")}>
-                      <Select defaultValue="">
+                      <Select {...controlProps("skill_level")} defaultValue="">
                         <option value="">{t("anyLevel")}</option>
                         {SKILL_LEVELS.map((s) => <option key={s} value={s}>{e(`skill.${s}`)}</option>)}
                       </Select>
                     </FormField>
                     <FormField name="cost" label={t("costPerTeamLabel")} hint={t("currencyHint")}>
-                      <Input inputMode="numeric" dir="ltr" />
+                      <Input {...controlProps("cost")} inputMode="numeric" dir="ltr" />
                     </FormField>
                     <FormField name="venue_id" label={t("venue")}>
-                      <Select defaultValue="">
+                      <Select {...controlProps("venue_id")} defaultValue="">
                         <option value="">{t("noVenue")}</option>
                         {venues.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
                       </Select>
                     </FormField>
                     <FormField name="venue_note" label={t("venueNote")}>
-                      <Input maxLength={300} />
+                      <Input {...controlProps("venue_note")} maxLength={300} />
                     </FormField>
                   </div>
                   <ChoiceChips
@@ -272,7 +272,7 @@ export default async function OpponentsPage({ params, searchParams }: PageProps<
                     options={areas.filter((a) => a.city_id === teams[0]?.city_id).map((a) => ({ value: a.id, label: localizedName(a, locale) }))}
                   />
                   <FormField name="rules" label={t("rules")}>
-                    <Textarea maxLength={1000} />
+                    <Textarea {...controlProps("rules")} maxLength={1000} />
                   </FormField>
                   <SubmitButton className="self-start">{t("publish")}</SubmitButton>
                 </ActionForm>
@@ -314,25 +314,25 @@ function ChallengeFields({
     <>
       <div className="grid gap-4 sm:grid-cols-2">
         <FormField name="start" label={t("proposedStart")} required>
-          <Input type="datetime-local" min={minStart} max={maxStart} defaultValue={defaultStart} required dir="ltr" />
+          <Input {...controlProps("start")} type="datetime-local" min={minStart} max={maxStart} defaultValue={defaultStart} required dir="ltr" />
         </FormField>
         <FormField name="duration" label={t("duration")}>
-          <Select defaultValue="60">
+          <Select {...controlProps("duration")} defaultValue="60">
             {[60, 90, 120].map((d) => <option key={d} value={d}>{t("minutes", { count: d })}</option>)}
           </Select>
         </FormField>
         <FormField name="venue_id" label={t("venue")}>
-          <Select defaultValue="">
+          <Select {...controlProps("venue_id")} defaultValue="">
             <option value="">{t("noVenue")}</option>
             {venues.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
           </Select>
         </FormField>
         <FormField name="cost" label={t("costPerTeamLabel")} hint={t("currencyHint")}>
-          <Input inputMode="numeric" dir="ltr" />
+          <Input {...controlProps("cost")} inputMode="numeric" dir="ltr" />
         </FormField>
       </div>
       <FormField name="message" label={t("message")}>
-        <Textarea maxLength={1000} />
+        <Textarea {...controlProps("message")} maxLength={1000} />
       </FormField>
     </>
   );

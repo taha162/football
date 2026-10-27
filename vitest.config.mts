@@ -27,6 +27,7 @@ export default defineConfig({
           hookTimeout: 30_000,
           // Files run in parallel; each creates its own uniquely named data.
           maxWorkers: 4,
+          sequence: { groupOrder: 1 },
         },
       },
     ],

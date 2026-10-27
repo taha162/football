@@ -1,14 +1,11 @@
 "use client";
 
 import {
-  cloneElement,
   createContext,
-  isValidElement,
   useActionState,
   useContext,
   useEffect,
   useRef,
-  type ReactElement,
   type ReactNode,
 } from "react";
 import { useFormStatus } from "react-dom";
@@ -16,7 +13,7 @@ import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
 import { Button, type ButtonProps } from "./button";
 import { Alert } from "./primitives";
-import { Field, describedBy } from "./field";
+import { Field, controlProps, describedBy } from "./field";
 import { cn } from "@/lib/cn";
 import { useActionMessage } from "./use-action-message";
 
@@ -104,9 +101,10 @@ export function useFieldError(name: string): string | undefined {
 type FieldAria = ReturnType<typeof describedBy> & { id: string; name: string };
 
 /**
- * Field wired to the surrounding ActionForm's errors. Client components may pass a render
- * function to receive aria props; server components pass a single control element, which
- * receives the same props (functions cannot cross the server/client boundary).
+ * Field wired to the surrounding ActionForm's errors. Client components pass a render function
+ * to receive id/name/aria props. Server components cannot pass functions to a client component,
+ * so they render the control with `{...controlProps(name)}`; the aria state is then applied to
+ * that control after render.
  */
 export function FormField({
   name,
@@ -121,14 +119,27 @@ export function FormField({
   hint?: ReactNode;
   required?: boolean;
   className?: string;
-  children: ((aria: FieldAria) => ReactNode) | ReactElement<Partial<FieldAria>>;
+  children: ((aria: FieldAria) => ReactNode) | ReactNode;
 }) {
   const error = useFieldError(name);
-  const id = `f-${name}`;
-  const aria: FieldAria = { id, name, ...describedBy(id, error, hint) };
+  const { id } = controlProps(name);
+  const aria = describedBy(id, error, hint);
+  const wrapper = useRef<HTMLDivElement>(null);
+  const isRender = typeof children === "function";
+  const describedby = aria["aria-describedby"];
+  const invalid = aria["aria-invalid"];
+  useEffect(() => {
+    if (isRender) return;
+    const el = wrapper.current?.querySelector<HTMLElement>(`#${CSS.escape(id)}`);
+    if (!el) return;
+    if (describedby) el.setAttribute("aria-describedby", describedby);
+    else el.removeAttribute("aria-describedby");
+    if (invalid) el.setAttribute("aria-invalid", "true");
+    else el.removeAttribute("aria-invalid");
+  }, [isRender, id, describedby, invalid]);
   return (
     <Field label={label} htmlFor={id} hint={hint} error={error} required={required} className={className}>
-      {typeof children === "function" ? children(aria) : isValidElement(children) ? cloneElement(children, aria) : null}
+      {typeof children === "function" ? children({ id, name, ...aria }) : <div ref={wrapper} className="contents">{children}</div>}
     </Field>
   );
 }

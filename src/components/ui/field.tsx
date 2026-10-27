@@ -42,6 +42,11 @@ export function Field({
   );
 }
 
+/** id/name for a control inside a FormField; usable from server components. */
+export function controlProps(name: string) {
+  return { id: `f-${name}`, name };
+}
+
 /** aria props tying a control to its Field hint/error. */
 export function describedBy(id: string, error?: unknown, hint?: unknown) {
   const ids = [error ? `${id}-error` : null, hint && !error ? `${id}-hint` : null].filter(Boolean).join(" ");

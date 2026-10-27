@@ -13,7 +13,7 @@ import { TournamentForm } from "@/components/tournament/tournament-form";
 import { ActionForm, FormField, Hidden, InlineAction, SubmitButton } from "@/components/ui/action-form";
 import { buttonClass } from "@/components/ui/button";
 import { ConfirmAction } from "@/components/ui/confirm-action";
-import { Input, Textarea } from "@/components/ui/field";
+import { Input, Textarea, controlProps } from "@/components/ui/field";
 import { Alert, Badge, Card, CardBody, Container, PageHeader, Section } from "@/components/ui/primitives";
 
 export default async function ManageTournamentPage({ params }: PageProps<"/[locale]/tournaments/[id]/manage">) {
@@ -105,8 +105,8 @@ export default async function ManageTournamentPage({ params }: PageProps<"/[loca
           <CardBody>
             <ActionForm action={postAnnouncementAction} resetOnSuccess>
               <Hidden values={{ tournament_id: id }} />
-              <FormField name="title" label={t("announcementTitle")} required><Input required minLength={3} maxLength={120} /></FormField>
-              <FormField name="body" label={t("announcementBody")} required><Textarea required maxLength={3000} /></FormField>
+              <FormField name="title" label={t("announcementTitle")} required><Input {...controlProps("title")} required minLength={3} maxLength={120} /></FormField>
+              <FormField name="body" label={t("announcementBody")} required><Textarea {...controlProps("body")} required maxLength={3000} /></FormField>
               <SubmitButton className="self-start">{t("post")}</SubmitButton>
             </ActionForm>
           </CardBody>
