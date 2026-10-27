@@ -10,6 +10,7 @@ A community platform for recreational football: find and organize matches, build
 | [DATABASE_DESIGN.md](DATABASE_DESIGN.md) | Schema, constraints, concurrency, RLS, RPCs, jobs |
 | [SECURITY.md](SECURITY.md) | Threat model, controls, secrets, operator procedures |
 | [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) | What is done, verified, and not yet built |
+| [DEPLOYMENT.md](DEPLOYMENT.md) | Step-by-step Vercel + Supabase deployment (Arabic) |
 
 ## Stack
 
@@ -80,16 +81,17 @@ pnpm build && pnpm e2e        # Playwright starts `pnpm start` if nothing is lis
 
 Each E2E test and DB test creates its own uniquely named users and data. They can therefore run in parallel and against a database that already contains data. They never delete data.
 
-## Deployment outline
+## Deployment (Vercel + Supabase)
 
-1. Create a Supabase project. Link it and apply the migrations: `npx supabase link --project-ref <ref>`, then `npx supabase db push`.
+The repository is ready for Vercel. See **[DEPLOYMENT.md](DEPLOYMENT.md)** for the full guide. In short:
+
+1. Create a Supabase project (Frankfurt). Apply migrations with `npx supabase db push` or the manual **Deploy database migrations** workflow.
 2. Configure Supabase Auth:
-   - Site URL and redirect URLs (`https://<domain>/auth/callback`).
+   - Site URL and redirect URLs (`/auth/callback`).
    - E-mail confirmation on.
-   - A custom SMTP provider.
-3. Deploy the Next.js app, for example to Vercel. Set the environment variables listed in `.env.example`. `SUPABASE_SERVICE_ROLE_KEY` and `CRON_SECRET` are server-only.
-4. Schedule `GET /api/cron` every 15 minutes.
-5. Grant the first admin with `pnpm admin:grant` from a trusted machine.
-6. Have the legal pages (`/legal/terms`, `/legal/privacy`, `/legal/safety`) reviewed by a lawyer, and verify the Mosul area list locally. See IMPLEMENTATION_STATUS.md.
+   - Custom SMTP.
+3. Import the repo in Vercel. `vercel.json` sets pnpm, the `fra1` region and a daily cron. Add the variables from `.env.example`. `SUPABASE_SERVICE_ROLE_KEY` and `CRON_SECRET` are server-only, Production only.
+4. For 15-minute scheduled jobs on the Hobby plan, add `APP_URL` and `CRON_SECRET` as GitHub secrets for the **Scheduled jobs** workflow. On Pro, set the cron in `vercel.json` to `*/15 * * * *` instead.
+5. Grant the first admin with `pnpm admin:grant`.
 
 No payment provider, SMS, push or map provider is configured. The app does not pretend otherwise; see IMPLEMENTATION_STATUS.md.

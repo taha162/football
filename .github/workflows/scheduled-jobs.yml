@@ -1,0 +1,34 @@
+# Calls the app's maintenance endpoint every 15 minutes (match reminders,
+# expiring undecided booking requests, closing listings, auto-completing
+# matches). Vercel's Hobby plan only allows a daily cron (see vercel.json), so
+# this workflow provides the 15-minute cadence. The endpoint is idempotent, so
+# running both is safe. On Vercel Pro you can instead set the vercel.json
+# schedule to "*/15 * * * *" and disable this workflow.
+#
+# Repository secrets: APP_URL (e.g. https://example.com) and CRON_SECRET (same
+# value as in Vercel). Without them the job exits without doing anything.
+name: Scheduled jobs
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Call /api/cron
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$APP_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "APP_URL or CRON_SECRET secret not set; skipping."
+            exit 0
+          fi
+          curl --fail-with-body --silent --show-error --max-time 60 \
+            -H "Authorization: Bearer $CRON_SECRET" "${APP_URL%/}/api/cron"
