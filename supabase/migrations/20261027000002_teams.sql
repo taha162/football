@@ -451,7 +451,7 @@ begin
     raise exception 'use_leave_team' using errcode = 'P0001';
   end if;
   -- Captains may remove anyone else; managers may only remove players.
-  if not (v_actor_role = 'captain' or (v_actor_role = 'manager' and v_target_role = 'player')) then
+  if not coalesce(v_actor_role = 'captain' or (v_actor_role = 'manager' and v_target_role = 'player'), false) then
     raise exception 'forbidden' using errcode = '42501';
   end if;
   delete from public.team_members where team_id = p_team_id and user_id = p_user_id;

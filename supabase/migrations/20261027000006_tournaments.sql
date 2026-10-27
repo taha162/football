@@ -517,7 +517,7 @@ begin
     v_count := v_count + 1;
   end loop;
   for f in select * from jsonb_array_elements(p_fixtures) where value ->> 'next_key' is not null loop
-    if not (v_keys ? (f ->> 'next_key')) or (f ->> 'next_slot') not in ('home', 'away') then
+    if not coalesce(v_keys ? (f ->> 'next_key') and (f ->> 'next_slot') in ('home', 'away'), false) then
       raise exception 'invalid_fixtures' using errcode = '22023';
     end if;
     update public.tournament_matches set next_match_id = (v_keys ->> (f ->> 'next_key'))::uuid,

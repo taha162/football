@@ -299,6 +299,8 @@ create or replace function private.rate_limit(p_user uuid, p_bucket text, p_max 
 returns void language plpgsql security definer set search_path = '' as $$
 declare v_count int;
 begin
+  -- Serialize per user+bucket so concurrent requests cannot all pass the check.
+  perform pg_advisory_xact_lock(hashtextextended(p_user::text || ':' || p_bucket, 0));
   select count(*) into v_count from private.rate_events
    where user_id = p_user and bucket = p_bucket and created_at > now() - p_window;
   if v_count >= p_max then

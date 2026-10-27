@@ -215,7 +215,8 @@ begin
   insert into public.opponent_challenges (request_id, challenger_team_id, target_team_id, proposed_starts_at, duration_minutes,
                                           format, venue_id, location_note, cost_per_team, message, created_by)
   values (p_request_id, p_challenger_team_id, v_target, v_starts, p_duration_minutes, v_format, p_venue_id,
-          nullif(btrim(coalesce(p_location_note, '')), ''), p_cost_per_team, nullif(btrim(coalesce(p_message, '')), ''), v_uid)
+          nullif(btrim(coalesce(p_location_note, '')), ''), coalesce(p_cost_per_team, v_req.cost_per_team),
+          nullif(btrim(coalesce(p_message, '')), ''), v_uid)
   on conflict do nothing
   returning id into v_id;
   if v_id is null then
