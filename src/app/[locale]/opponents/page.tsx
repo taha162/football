@@ -85,11 +85,9 @@ export default async function OpponentsPage({ params, searchParams }: PageProps<
 
   const teamSelect = (
     <FormField name="challenger_team_id" label={t("yourTeam")} required>
-      {(a) => (
-        <Select {...a} defaultValue={preferredTeam} required>
-          {teams.map((tm) => <option key={tm.id} value={tm.id}>{tm.name}</option>)}
-        </Select>
-      )}
+      <Select defaultValue={preferredTeam} required>
+        {teams.map((tm) => <option key={tm.id} value={tm.id}>{tm.name}</option>)}
+      </Select>
     </FormField>
   );
 
@@ -112,11 +110,9 @@ export default async function OpponentsPage({ params, searchParams }: PageProps<
                 <div className="grid gap-4 sm:grid-cols-2">
                   {teamSelect}
                   <FormField name="format" label={t("format")}>
-                    {(a) => (
-                      <Select {...a} defaultValue="5v5">
-                        {MATCH_FORMATS.map((f) => <option key={f} value={f}>{f}</option>)}
-                      </Select>
-                    )}
+                    <Select defaultValue="5v5">
+                      {MATCH_FORMATS.map((f) => <option key={f} value={f}>{f}</option>)}
+                    </Select>
                   </FormField>
                 </div>
                 <ChallengeFields t={t} minStart={minStart} defaultStart={defaultStart} venues={venues} />
@@ -236,46 +232,38 @@ export default async function OpponentsPage({ params, searchParams }: PageProps<
                   <h3 className="font-semibold">{t("publishRequest")}</h3>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <FormField name="team_id" label={t("yourTeam")} required>
-                      {(a) => (
-                        <Select {...a} defaultValue={preferredTeam}>
-                          {teams.map((tm) => <option key={tm.id} value={tm.id}>{tm.name}</option>)}
-                        </Select>
-                      )}
+                      <Select defaultValue={preferredTeam}>
+                        {teams.map((tm) => <option key={tm.id} value={tm.id}>{tm.name}</option>)}
+                      </Select>
                     </FormField>
                     <FormField name="format" label={t("format")} required>
-                      {(a) => (
-                        <Select {...a} defaultValue="5v5">
-                          {MATCH_FORMATS.map((f) => <option key={f} value={f}>{f}</option>)}
-                        </Select>
-                      )}
+                      <Select defaultValue="5v5">
+                        {MATCH_FORMATS.map((f) => <option key={f} value={f}>{f}</option>)}
+                      </Select>
                     </FormField>
                     <FormField name="earliest" label={t("earliest")} required>
-                      {(a) => <Input {...a} type="datetime-local" min={minStart} defaultValue={defaultStart} required dir="ltr" />}
+                      <Input type="datetime-local" min={minStart} defaultValue={defaultStart} required dir="ltr" />
                     </FormField>
                     <FormField name="latest" label={t("latest")} required>
-                      {(a) => <Input {...a} type="datetime-local" min={minStart} defaultValue={defaultStart.slice(0, 11) + "23:00"} required dir="ltr" />}
+                      <Input type="datetime-local" min={minStart} defaultValue={defaultStart.slice(0, 11) + "23:00"} required dir="ltr" />
                     </FormField>
                     <FormField name="skill_level" label={t("skill")}>
-                      {(a) => (
-                        <Select {...a} defaultValue="">
-                          <option value="">{t("anyLevel")}</option>
-                          {SKILL_LEVELS.map((s) => <option key={s} value={s}>{e(`skill.${s}`)}</option>)}
-                        </Select>
-                      )}
+                      <Select defaultValue="">
+                        <option value="">{t("anyLevel")}</option>
+                        {SKILL_LEVELS.map((s) => <option key={s} value={s}>{e(`skill.${s}`)}</option>)}
+                      </Select>
                     </FormField>
                     <FormField name="cost" label={t("costPerTeamLabel")} hint={t("currencyHint")}>
-                      {(a) => <Input {...a} inputMode="numeric" dir="ltr" />}
+                      <Input inputMode="numeric" dir="ltr" />
                     </FormField>
                     <FormField name="venue_id" label={t("venue")}>
-                      {(a) => (
-                        <Select {...a} defaultValue="">
-                          <option value="">{t("noVenue")}</option>
-                          {venues.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
-                        </Select>
-                      )}
+                      <Select defaultValue="">
+                        <option value="">{t("noVenue")}</option>
+                        {venues.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
+                      </Select>
                     </FormField>
                     <FormField name="venue_note" label={t("venueNote")}>
-                      {(a) => <Input {...a} maxLength={300} />}
+                      <Input maxLength={300} />
                     </FormField>
                   </div>
                   <ChoiceChips
@@ -284,7 +272,7 @@ export default async function OpponentsPage({ params, searchParams }: PageProps<
                     options={areas.filter((a) => a.city_id === teams[0]?.city_id).map((a) => ({ value: a.id, label: localizedName(a, locale) }))}
                   />
                   <FormField name="rules" label={t("rules")}>
-                    {(a) => <Textarea {...a} maxLength={1000} />}
+                    <Textarea maxLength={1000} />
                   </FormField>
                   <SubmitButton className="self-start">{t("publish")}</SubmitButton>
                 </ActionForm>
@@ -326,29 +314,25 @@ function ChallengeFields({
     <>
       <div className="grid gap-4 sm:grid-cols-2">
         <FormField name="start" label={t("proposedStart")} required>
-          {(a) => <Input {...a} type="datetime-local" min={minStart} max={maxStart} defaultValue={defaultStart} required dir="ltr" />}
+          <Input type="datetime-local" min={minStart} max={maxStart} defaultValue={defaultStart} required dir="ltr" />
         </FormField>
         <FormField name="duration" label={t("duration")}>
-          {(a) => (
-            <Select {...a} defaultValue="60">
-              {[60, 90, 120].map((d) => <option key={d} value={d}>{t("minutes", { count: d })}</option>)}
-            </Select>
-          )}
+          <Select defaultValue="60">
+            {[60, 90, 120].map((d) => <option key={d} value={d}>{t("minutes", { count: d })}</option>)}
+          </Select>
         </FormField>
         <FormField name="venue_id" label={t("venue")}>
-          {(a) => (
-            <Select {...a} defaultValue="">
-              <option value="">{t("noVenue")}</option>
-              {venues.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
-            </Select>
-          )}
+          <Select defaultValue="">
+            <option value="">{t("noVenue")}</option>
+            {venues.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
+          </Select>
         </FormField>
         <FormField name="cost" label={t("costPerTeamLabel")} hint={t("currencyHint")}>
-          {(a) => <Input {...a} inputMode="numeric" dir="ltr" />}
+          <Input inputMode="numeric" dir="ltr" />
         </FormField>
       </div>
       <FormField name="message" label={t("message")}>
-        {(a) => <Textarea {...a} maxLength={1000} />}
+        <Textarea maxLength={1000} />
       </FormField>
     </>
   );

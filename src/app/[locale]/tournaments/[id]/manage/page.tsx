@@ -105,8 +105,8 @@ export default async function ManageTournamentPage({ params }: PageProps<"/[loca
           <CardBody>
             <ActionForm action={postAnnouncementAction} resetOnSuccess>
               <Hidden values={{ tournament_id: id }} />
-              <FormField name="title" label={t("announcementTitle")} required>{(a) => <Input {...a} required minLength={3} maxLength={120} />}</FormField>
-              <FormField name="body" label={t("announcementBody")} required>{(a) => <Textarea {...a} required maxLength={3000} />}</FormField>
+              <FormField name="title" label={t("announcementTitle")} required><Input required minLength={3} maxLength={120} /></FormField>
+              <FormField name="body" label={t("announcementBody")} required><Textarea required maxLength={3000} /></FormField>
               <SubmitButton className="self-start">{t("post")}</SubmitButton>
             </ActionForm>
           </CardBody>

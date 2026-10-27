@@ -24,7 +24,7 @@ export function LocaleSwitcher() {
       aria-label={t("switchLanguage")}
     >
       <Languages aria-hidden="true" className="size-4" />
-      <span>{target === "ar" ? "العربية" : "English"}</span>
+      <span className="hidden sm:inline">{target === "ar" ? "العربية" : "English"}</span>
     </Link>
   );
 }

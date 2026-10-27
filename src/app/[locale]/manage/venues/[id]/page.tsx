@@ -157,7 +157,7 @@ export default async function ManageVenuePage({ params, searchParams }: PageProp
             <ActionForm action={uploadVenueImageAction} resetOnSuccess>
               <Hidden values={{ venue_id: id }} />
               <FormField name="image" label={t("uploadPhoto")} hint={t("photoHint")}>
-                {(a) => <Input {...a} type="file" accept="image/jpeg,image/png,image/webp" required className="py-2" />}
+                <Input type="file" accept="image/jpeg,image/png,image/webp" required className="py-2" />
               </FormField>
               <Checkbox name="as_cover" label={t("useAsCover")} />
               <SubmitButton variant="secondary" className="self-start">{t("upload")}</SubmitButton>
@@ -272,35 +272,29 @@ export default async function ManageVenuePage({ params, searchParams }: PageProp
                 <Hidden values={{ venue_id: venueId }} />
                 <div className="grid gap-4 sm:grid-cols-3">
                   <FormField name="field_id" label={t("field")} required>
-                    {(a) => (
-                      <Select {...a}>
-                        {fs.filter((f) => f.is_active).map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
-                      </Select>
-                    )}
+                    <Select>
+                      {fs.filter((f) => f.is_active).map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+                    </Select>
                   </FormField>
                   <FormField name="start" label={t("start")} required>
-                    {(a) => <Input {...a} type="datetime-local" defaultValue={`${date}T20:00`} required dir="ltr" />}
+                    <Input type="datetime-local" defaultValue={`${date}T20:00`} required dir="ltr" />
                   </FormField>
                   <FormField name="duration" label={t("duration")}>
-                    {(a) => (
-                      <Select {...a} defaultValue="60">
-                        {[30, 60, 90, 120, 180, 240].map((d) => <option key={d} value={d}>{t("minutes", { count: d })}</option>)}
-                      </Select>
-                    )}
+                    <Select defaultValue="60">
+                      {[30, 60, 90, 120, 180, 240].map((d) => <option key={d} value={d}>{t("minutes", { count: d })}</option>)}
+                    </Select>
                   </FormField>
                   <FormField name="kind" label={t("kindLabel")}>
-                    {(a) => (
-                      <Select {...a} defaultValue="manual">
-                        <option value="manual">{t("kindManual")}</option>
-                        <option value="block">{t("kindBlock")}</option>
-                      </Select>
-                    )}
+                    <Select defaultValue="manual">
+                      <option value="manual">{t("kindManual")}</option>
+                      <option value="block">{t("kindBlock")}</option>
+                    </Select>
                   </FormField>
                   <FormField name="customer_name" label={t("customerName")}>
-                    {(a) => <Input {...a} maxLength={100} />}
+                    <Input maxLength={100} />
                   </FormField>
                   <FormField name="price" label={t("priceOverride")} hint={t("priceOverrideHint")}>
-                    {(a) => <Input {...a} inputMode="numeric" dir="ltr" />}
+                    <Input inputMode="numeric" dir="ltr" />
                   </FormField>
                 </div>
                 <SubmitButton className="self-start">{t("record")}</SubmitButton>
@@ -408,17 +402,15 @@ function FieldForm({
       <Hidden values={{ venue_id: venueId, field_id: field?.id }} />
       <div className="grid gap-4 sm:grid-cols-3">
         <FormField name="name" label={t("fieldName")} required>
-          {(a) => <Input {...a} defaultValue={field?.name} required maxLength={60} />}
+          <Input defaultValue={field?.name} required maxLength={60} />
         </FormField>
         <FormField name="surface" label={t("surface")}>
-          {(a) => (
-            <Select {...a} defaultValue={field?.surface ?? "artificial_turf"}>
-              {SURFACES.map((s) => <option key={s} value={s}>{vp(`surface.${s}`)}</option>)}
-            </Select>
-          )}
+          <Select defaultValue={field?.surface ?? "artificial_turf"}>
+            {SURFACES.map((s) => <option key={s} value={s}>{vp(`surface.${s}`)}</option>)}
+          </Select>
         </FormField>
         <FormField name="price_per_hour" label={t("pricePerHour")} hint={t("currencyHint")} required>
-          {(a) => <Input {...a} inputMode="numeric" defaultValue={field?.price_per_hour} required dir="ltr" />}
+          <Input inputMode="numeric" defaultValue={field?.price_per_hour} required dir="ltr" />
         </FormField>
       </div>
       <ChoiceChips name="formats" legend={t("formats")} defaultValue={field?.formats ?? []} options={MATCH_FORMATS.map((f) => ({ value: f, label: f }))} />

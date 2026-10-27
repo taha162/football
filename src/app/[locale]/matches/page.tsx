@@ -24,6 +24,7 @@ export async function generateMetadata({ params }: PageProps<"/[locale]/matches"
 
 const optional = <T extends z.ZodTypeAny>(s: T) => z.preprocess((v) => (v === "" || v == null ? undefined : v), s.optional());
 const querySchema = z.object({
+  q: optional(z.string().trim().max(80)),
   city: optional(z.string().uuid()),
   area: optional(z.string().uuid()),
   from: optional(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)),
@@ -77,6 +78,7 @@ export default async function MatchesPage({ params, searchParams }: PageProps<"/
     radiusKm: q.lat != null ? (q.radius ?? 10) : undefined,
     sort: q.sort ?? (q.lat != null ? "distance" : "relevance"),
     page: q.page,
+    query: q.q,
   };
   const outcome = await searchMatches(search).then(
     (r) => ({ ...r, error: false }),
@@ -113,6 +115,10 @@ export default async function MatchesPage({ params, searchParams }: PageProps<"/
               </span>
             </summary>
             <form method="get" className="flex flex-col gap-4 border-t border-line p-4">
+              <label className="flex flex-col gap-1 text-sm">
+                {t("search")}
+                <Input type="search" name="q" defaultValue={q.q} placeholder={t("searchPlaceholder")} />
+              </label>
               <label className="flex flex-col gap-1 text-sm">
                 {t("city")}
                 <Select name="city" defaultValue={city ?? ""}>

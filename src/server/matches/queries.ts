@@ -56,6 +56,7 @@ export interface MatchSearch {
   radiusKm?: number;
   sort?: MatchSort;
   page?: number;
+  query?: string;
 }
 
 export const PAGE_SIZE = 12;
@@ -86,6 +87,7 @@ export async function searchMatches(s: MatchSearch): Promise<{ items: MatchCardD
       p_sort: s.sort ?? "time",
       p_limit: PAGE_SIZE + 1,
       p_offset: (page - 1) * PAGE_SIZE,
+      p_query: s.query,
     })
     .select(MATCH_CARD_SELECT);
   if (error) throw error;

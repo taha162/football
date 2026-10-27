@@ -1510,7 +1510,7 @@ isOneToOne: false
 { Args: { "p_fixtures": Json,"p_groups"?: Json,"p_tournament_id": string }; Returns: number
                            },
 "search_matches":
-{ Args: { "p_area_id"?: string,"p_booking_confirmed"?: boolean,"p_city_id"?: string,"p_date_from"?: string,"p_date_to"?: string,"p_format"?: Database["public"]['Enums']["match_format"],"p_include_full"?: boolean,"p_join_policy"?: Database["public"]['Enums']["match_join_policy"],"p_lat"?: number,"p_limit"?: number,"p_lng"?: number,"p_max_price"?: number,"p_min_open_slots"?: number,"p_offset"?: number,"p_position"?: Database["public"]['Enums']["player_position"],"p_radius_km"?: number,"p_skill_level"?: Database["public"]['Enums']["skill_level"],"p_sort"?: string,"p_time_from"?: string,"p_time_to"?: string }; Returns: {
+{ Args: { "p_area_id"?: string,"p_booking_confirmed"?: boolean,"p_city_id"?: string,"p_date_from"?: string,"p_date_to"?: string,"p_format"?: Database["public"]['Enums']["match_format"],"p_include_full"?: boolean,"p_join_policy"?: Database["public"]['Enums']["match_join_policy"],"p_lat"?: number,"p_limit"?: number,"p_lng"?: number,"p_max_price"?: number,"p_min_open_slots"?: number,"p_offset"?: number,"p_position"?: Database["public"]['Enums']["player_position"],"p_query"?: string,"p_radius_km"?: number,"p_skill_level"?: Database["public"]['Enums']["skill_level"],"p_sort"?: string,"p_time_from"?: string,"p_time_to"?: string }; Returns: {
               "area_id": string | null,
 "away_team_id": string | null,
 "booking_id": string | null,

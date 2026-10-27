@@ -101,6 +101,8 @@ export async function FixtureList({
   const t = await getTranslations("tournament");
   const locale = await getLocale();
   const knockoutRounds = Math.max(0, ...fixtures.filter((f) => f.stage === "knockout").map((f) => f.round));
+  // A league is stored as a single group; only name groups when there are several.
+  const multipleGroups = new Set(fixtures.filter((f) => f.stage === "group").map((f) => f.group_label)).size > 1;
   const groups = new Map<string, Fixture[]>();
   for (const f of fixtures) {
     const key = f.stage === "group" ? `g:${f.group_label ?? "-"}:${f.round}` : `k:${f.round}`;
@@ -112,7 +114,7 @@ export async function FixtureList({
       const n = roundName(Number(a), knockoutRounds);
       return n === "round_of" ? t("roundOf", { count: 2 ** (knockoutRounds - Number(a) + 1) }) : t(n);
     }
-    return a !== "-" ? t("groupRound", { group: a, round: Number(b) }) : t("round", { round: Number(b) });
+    return a !== "-" && multipleGroups ? t("groupRound", { group: a, round: Number(b) }) : t("round", { round: Number(b) });
   };
 
   return (

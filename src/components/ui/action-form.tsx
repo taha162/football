@@ -1,6 +1,16 @@
 "use client";
 
-import { createContext, useActionState, useContext, useEffect, useRef, type ReactNode } from "react";
+import {
+  cloneElement,
+  createContext,
+  isValidElement,
+  useActionState,
+  useContext,
+  useEffect,
+  useRef,
+  type ReactElement,
+  type ReactNode,
+} from "react";
 import { useFormStatus } from "react-dom";
 import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
@@ -91,7 +101,13 @@ export function useFieldError(name: string): string | undefined {
   return useContext(FieldErrorsContext)[name];
 }
 
-/** Field wired to the surrounding ActionForm's errors. Pass a render function to receive aria props. */
+type FieldAria = ReturnType<typeof describedBy> & { id: string; name: string };
+
+/**
+ * Field wired to the surrounding ActionForm's errors. Client components may pass a render
+ * function to receive aria props; server components pass a single control element, which
+ * receives the same props (functions cannot cross the server/client boundary).
+ */
 export function FormField({
   name,
   label,
@@ -105,13 +121,14 @@ export function FormField({
   hint?: ReactNode;
   required?: boolean;
   className?: string;
-  children: (aria: ReturnType<typeof describedBy> & { id: string; name: string }) => ReactNode;
+  children: ((aria: FieldAria) => ReactNode) | ReactElement<Partial<FieldAria>>;
 }) {
   const error = useFieldError(name);
   const id = `f-${name}`;
+  const aria: FieldAria = { id, name, ...describedBy(id, error, hint) };
   return (
     <Field label={label} htmlFor={id} hint={hint} error={error} required={required} className={className}>
-      {children({ id, name, ...describedBy(id, error, hint) })}
+      {typeof children === "function" ? children(aria) : isValidElement(children) ? cloneElement(children, aria) : null}
     </Field>
   );
 }

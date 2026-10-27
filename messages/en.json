@@ -774,7 +774,9 @@
     "mapAlt": "Map of venues for the listed matches",
     "loadError": "We couldn't load matches right now. Please try again.",
     "emptyTitle": "No matches found",
-    "emptyBody": "Try widening your filters — or create a match and let players find you."
+    "emptyBody": "Try widening your filters — or create a match and let players find you.",
+    "search": "Search",
+    "searchPlaceholder": "Match title or venue"
   },
   "matchForm": {
     "createTitle": "Create a match",

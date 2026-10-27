@@ -123,7 +123,7 @@ grant execute on function public.run_scheduled_jobs() to service_role;
 grant execute on function
   public.search_matches(uuid, uuid, date, date, time, time, public.match_format, public.skill_level, bigint,
                         public.player_position, int, boolean, public.match_join_policy, boolean, numeric, numeric,
-                        numeric, text, int, int),
+                        numeric, text, int, int, text),
   public.quote_booking(uuid, timestamp, int),
   public.field_busy_intervals(uuid, date),
   public.match_transition_allowed(public.match_status, public.match_status),

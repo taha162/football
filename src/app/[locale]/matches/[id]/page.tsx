@@ -152,7 +152,9 @@ export default async function MatchPage({ params, searchParams }: PageProps<"/[l
                     {match.price_per_player > 0 ? formatMoney(match.price_per_player, match.currency, locale) : m("free")}
                     {match.price_per_player > 0 ? <span className="ms-2 text-sm font-normal text-muted">{m("perPlayer")}</span> : null}
                   </p>
-                  <Badge tone={match.cost_is_estimate ? "warning" : "success"}>{match.cost_is_estimate ? t("estimate") : t("confirmedAmount")}</Badge>
+                  {match.price_per_player > 0 ? (
+                    <Badge tone={match.cost_is_estimate ? "warning" : "success"}>{match.cost_is_estimate ? t("estimate") : t("confirmedAmount")}</Badge>
+                  ) : null}
                 </div>
                 <ul className="flex flex-col gap-1 text-sm text-muted">
                   {match.total_cost != null ? (

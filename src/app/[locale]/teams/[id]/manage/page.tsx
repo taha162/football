@@ -162,31 +162,27 @@ export default async function ManageTeamPage({ params, searchParams }: PageProps
             <ActionForm action={createRecruitmentAction} resetOnSuccess>
               <Hidden values={{ team_id: id }} />
               <FormField name="title" label={t("recruitTitle")} required>
-                {(a) => <Input {...a} required minLength={3} maxLength={100} placeholder={t("recruitTitlePlaceholder")} />}
+                <Input required minLength={3} maxLength={100} placeholder={t("recruitTitlePlaceholder")} />
               </FormField>
               <ChoiceChips name="positions" legend={t("recruitPositions")} options={POSITIONS.map((p) => ({ value: p, label: e(`position.${p}`) }))} />
               <div className="grid gap-4 sm:grid-cols-3">
                 <FormField name="players_needed" label={t("playersNeeded")}>
-                  {(a) => <Input {...a} type="number" min={1} max={30} defaultValue={1} />}
+                  <Input type="number" min={1} max={30} defaultValue={1} />
                 </FormField>
                 <FormField name="skill_level" label={t("skill")}>
-                  {(a) => (
-                    <Select {...a} defaultValue="">
-                      <option value="">{t("anyLevel")}</option>
-                      {SKILL_LEVELS.map((s) => <option key={s} value={s}>{e(`skill.${s}`)}</option>)}
-                    </Select>
-                  )}
+                  <Select defaultValue="">
+                    <option value="">{t("anyLevel")}</option>
+                    {SKILL_LEVELS.map((s) => <option key={s} value={s}>{e(`skill.${s}`)}</option>)}
+                  </Select>
                 </FormField>
                 <FormField name="expires_in_days" label={t("expiresIn")}>
-                  {(a) => (
-                    <Select {...a} defaultValue="14">
-                      {[3, 7, 14, 30, 60].map((d) => <option key={d} value={d}>{t("days", { count: d })}</option>)}
-                    </Select>
-                  )}
+                  <Select defaultValue="14">
+                    {[3, 7, 14, 30, 60].map((d) => <option key={d} value={d}>{t("days", { count: d })}</option>)}
+                  </Select>
                 </FormField>
               </div>
               <FormField name="description" label={t("recruitDescription")}>
-                {(a) => <Textarea {...a} maxLength={1000} />}
+                <Textarea maxLength={1000} />
               </FormField>
               <SubmitButton className="self-start">{t("publishRecruitment")}</SubmitButton>
             </ActionForm>
@@ -213,7 +209,7 @@ export default async function ManageTeamPage({ params, searchParams }: PageProps
           <ActionForm action={uploadTeamLogoAction} resetOnSuccess className="flex-1">
             <Hidden values={{ team_id: id }} />
             <FormField name="logo" label={t("logo")} hint={t("logoHint")}>
-              {(a) => <Input {...a} type="file" accept="image/jpeg,image/png,image/webp" required className="py-2" />}
+              <Input type="file" accept="image/jpeg,image/png,image/webp" required className="py-2" />
             </FormField>
             <SubmitButton variant="secondary" size="sm" className="self-start">{t("uploadLogo")}</SubmitButton>
           </ActionForm>

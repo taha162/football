@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import createMiddleware from "next-intl/middleware";
-import type { NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { routing } from "./i18n/routing";
 
 const intl = createMiddleware(routing);
@@ -35,9 +35,27 @@ export async function proxy(request: NextRequest) {
     },
   });
   // Validates and, if needed, refreshes the session.
-  await supabase.auth.getUser();
+  const { data } = await supabase.auth.getUser();
+
+  // Optimistic redirect for signed-out visitors to private areas (proper 307
+  // instead of an in-stream redirect). Pages and the database still enforce
+  // authorization independently.
+  if (!data.user) {
+    const [, locale, ...rest] = request.nextUrl.pathname.split("/");
+    const path = `/${rest.join("/")}`;
+    if (PROTECTED.some((p) => path === p || path.startsWith(`${p}/`)) && routing.locales.includes(locale as "ar")) {
+      const url = request.nextUrl.clone();
+      url.pathname = `/${locale}/sign-in`;
+      url.search = `?next=${encodeURIComponent(path + request.nextUrl.search)}`;
+      const redirect = NextResponse.redirect(url);
+      for (const c of response.cookies.getAll()) redirect.cookies.set(c);
+      return redirect;
+    }
+  }
   return response;
 }
+
+const PROTECTED = ["/dashboard", "/my", "/manage", "/messages", "/notifications", "/settings", "/profile", "/onboarding", "/admin"];
 
 export const config = {
   // Skip API routes, auth callbacks, Next internals and static files.

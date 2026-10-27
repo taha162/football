@@ -18,7 +18,7 @@ export async function SiteHeader({ user }: { user: CurrentUser | null }) {
 
   return (
     <header className="sticky top-0 z-40 border-b border-line/70 bg-bg/85 backdrop-blur supports-[backdrop-filter]:bg-bg/70">
-      <div className="mx-auto flex h-16 w-full max-w-6xl items-center gap-4 px-4 sm:px-6">
+      <div className="mx-auto flex h-16 w-full max-w-6xl items-center gap-2 px-4 sm:gap-4 sm:px-6">
         <Link href="/" className="shrink-0 rounded-lg" aria-label={t("home")}>
           <Logo />
         </Link>
@@ -32,7 +32,7 @@ export async function SiteHeader({ user }: { user: CurrentUser | null }) {
             ]}
           />
         </nav>
-        <div className="ms-auto flex items-center gap-1.5">
+        <div className="ms-auto flex min-w-0 items-center gap-1 sm:gap-1.5">
           <LocaleSwitcher />
           {user ? (
             <>

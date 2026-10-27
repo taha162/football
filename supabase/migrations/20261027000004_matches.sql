@@ -1185,7 +1185,8 @@ create or replace function public.search_matches(
   p_radius_km numeric default null,
   p_sort text default 'time',
   p_limit int default 20,
-  p_offset int default 0
+  p_offset int default 0,
+  p_query text default null
 ) returns setof public.matches
 language sql stable security invoker set search_path = '' as $$
   select m.* from public.matches m
@@ -1210,6 +1211,8 @@ language sql stable security invoker set search_path = '' as $$
     and (p_include_full or m.total_players - m.reserved_spots - m.confirmed_count > 0)
     and (p_booking_confirmed is null or (m.booking_status = 'confirmed') = p_booking_confirmed)
     and (p_join_policy is null or m.join_policy = p_join_policy)
+    and (p_query is null or m.title ilike '%' || replace(replace(replace(left(p_query, 80), '\', '\\'), '%', '\%'), '_', '\_') || '%'
+         or v.name ilike '%' || replace(replace(replace(left(p_query, 80), '\', '\\'), '%', '\%'), '_', '\_') || '%')
     and (p_radius_km is null or p_lat is null or p_lng is null or
          private.distance_km(p_lat, p_lng, coalesce(v.latitude, a.latitude), coalesce(v.longitude, a.longitude)) <= p_radius_km)
   order by
