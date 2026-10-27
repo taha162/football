@@ -1,0 +1,46 @@
+# Applies new migrations from supabase/migrations to the linked Supabase
+# project. Manual only: production schema changes should be a deliberate step.
+# `supabase db push` only applies migrations that have not run yet; it never
+# resets the database. Run it before (or together with) deploying app code that
+# depends on the new schema.
+#
+# Repository secrets: SUPABASE_ACCESS_TOKEN, SUPABASE_PROJECT_REF, SUPABASE_DB_PASSWORD.
+name: Deploy database migrations
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Only list the migrations that would be applied"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: db-migrate
+  cancel-in-progress: false
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.122.0
+      - name: Link project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+      - name: Push migrations
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            supabase db push --dry-run --password "$SUPABASE_DB_PASSWORD"
+          else
+            supabase db push --password "$SUPABASE_DB_PASSWORD"
+          fi
