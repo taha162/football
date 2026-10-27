@@ -78,11 +78,11 @@ export default async function MatchesPage({ params, searchParams }: PageProps<"/
     sort: q.sort ?? (q.lat != null ? "distance" : "relevance"),
     page: q.page,
   };
-  let error = false;
-  const result = await searchMatches(search).catch(() => {
-    error = true;
-    return { items: [], hasMore: false };
-  });
+  const outcome = await searchMatches(search).then(
+    (r) => ({ ...r, error: false }),
+    () => ({ items: [], hasMore: false, error: true }),
+  );
+  const { error, ...result } = outcome;
   const query = Object.fromEntries(Object.entries(raw).filter(([k, v]) => k !== "page" && typeof v === "string" && v !== "")) as Record<string, string>;
   const cityAreas = areas.filter((a) => a.city_id === city);
   const activeFilters = Object.keys(query).filter((k) => !["sort", "city"].includes(k)).length;

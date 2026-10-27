@@ -1,4 +1,5 @@
 import { getTranslations } from "next-intl/server";
+import { getNow } from "@/lib/now";
 import { Link } from "@/i18n/navigation";
 import { publicStorageUrl } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
@@ -53,7 +54,7 @@ export async function OrganizerPanel({
           {(match.status === "open" || match.status === "full") && !started ? (
             <InlineAction action={lifecycleAction} values={{ match_id: match.id, op: "confirm_match" }} label={t("confirm")} />
           ) : null}
-          {["open", "full", "confirmed"].includes(match.status) && new Date(match.starts_at).getTime() - Date.now() < 30 * 60_000 ? (
+          {["open", "full", "confirmed"].includes(match.status) && new Date(match.starts_at).getTime() - getNow() < 30 * 60_000 ? (
             <InlineAction action={lifecycleAction} values={{ match_id: match.id, op: "start_match" }} label={t("start")} />
           ) : null}
           {active && started && match.status !== "draft" ? (

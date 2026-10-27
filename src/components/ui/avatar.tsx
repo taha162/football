@@ -25,6 +25,6 @@ export function Avatar({ src, name, size = 40, className }: { src: string | null
 }
 
 /** next/image for storage URLs; skips the optimizer for local development hosts. */
-export function StorageImage(props: { src: string; alt: string; width?: number; height?: number; fill?: boolean; className?: string; sizes?: string; priority?: boolean }) {
-  return <Image {...props} unoptimized={isLocalStorageHost()} />;
+export function StorageImage({ alt, ...props }: { src: string; alt: string; width?: number; height?: number; fill?: boolean; className?: string; sizes?: string; priority?: boolean }) {
+  return <Image alt={alt} {...props} unoptimized={isLocalStorageHost()} />;
 }

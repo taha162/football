@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getNow } from "@/lib/now";
 import { MessageCircle, Swords } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import type { Locale } from "@/i18n/routing";
@@ -78,8 +79,8 @@ export default async function OpponentsPage({ params, searchParams }: PageProps<
     const { data: convs } = await supabase.from("conversations").select("id, challenge_id").in("challenge_id", allChallengeIds);
     for (const c of convs ?? []) if (c.challenge_id) challengeConvs.set(c.challenge_id, c.id);
   }
-  const minStart = toLocalInputValue(new Date(Date.now() + 3_600_000), TZ);
-  const defaultStart = toLocalInputValue(new Date(Date.now() + 2 * 86_400_000), TZ).slice(0, 10) + "T20:00";
+  const minStart = toLocalInputValue(new Date(getNow() + 3_600_000), TZ);
+  const defaultStart = toLocalInputValue(new Date(getNow() + 2 * 86_400_000), TZ).slice(0, 10) + "T20:00";
   const statusTone = { pending: "warning", accepted: "success", declined: "danger", withdrawn: "neutral", expired: "neutral" } as const;
 
   const teamSelect = (

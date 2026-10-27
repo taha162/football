@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getNow } from "@/lib/now";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import type { Locale } from "@/i18n/routing";
 import { requireOnboardedUser } from "@/lib/auth";
@@ -22,7 +23,7 @@ export default async function NewMatchPage({ params, searchParams }: PageProps<"
   const [cities, areas, venues, teams] = await Promise.all([getCities(), getAreas(), venueOptions(), managedTeams(user.id)]);
   const city = cities.find((c) => c.id === user.profile.city_id) ?? cities[0];
   const tz = city?.timezone ?? "Asia/Baghdad";
-  const tomorrow = toLocalInputValue(new Date(Date.now() + 86_400_000), tz).slice(0, 10) + "T20:00";
+  const tomorrow = toLocalInputValue(new Date(getNow() + 86_400_000), tz).slice(0, 10) + "T20:00";
   const teamId = typeof sp.team === "string" ? sp.team : undefined;
   return (
     <Container className="max-w-3xl py-10">
@@ -33,7 +34,7 @@ export default async function NewMatchPage({ params, searchParams }: PageProps<"
         areas={areas}
         venues={venues}
         teams={teams}
-        minStart={toLocalInputValue(new Date(), tz)}
+        minStart={toLocalInputValue(new Date(getNow()), tz)}
         defaults={{
           city_id: city?.id,
           area_id: user.profile.area_id,

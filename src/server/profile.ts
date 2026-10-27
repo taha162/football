@@ -88,7 +88,7 @@ export async function uploadAvatarAction(_: ActionState, fd: FormData): Promise<
   return ok("avatar_updated");
 }
 
-export async function removeAvatarAction(_: ActionState): Promise<ActionState> {
+export async function removeAvatarAction(): Promise<ActionState> {
   const user = await getCurrentUser();
   if (!user) return fail("not_authenticated");
   const supabase = await createClient();
