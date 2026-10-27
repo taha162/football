@@ -35,7 +35,7 @@ async function registerTeams(tournament: string, n: number) {
 async function fixtures(tournament: string) {
   return admin<{
     id: string; stage: string; round: number; home_team_id: string | null; away_team_id: string | null;
-    status: string; winner_team_id: string | null; is_bye: boolean; home_score: number | null; away_score: number | null;
+    status: "scheduled" | "completed" | "cancelled"; winner_team_id: string | null; is_bye: boolean; home_score: number | null; away_score: number | null;
     result_status: "none" | "submitted" | "confirmed" | "disputed"; group_label: string | null;
   }>("select * from public.tournament_matches where tournament_id = $1 order by stage, round, match_number", [tournament]);
 }

@@ -1,26 +1,112 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* -------------------------------------------------------------------------
+   Design tokens — dark-first athletic palette.
+   Contrast: text (#E9F1EB) on bg (#0A0E0B) ≈ 17:1; muted (#9DAEA3) ≈ 8:1;
+   accent (#B8F23F) on bg ≈ 14:1; accent-ink (#0A0E0B) on accent ≈ 14:1.
+   ------------------------------------------------------------------------- */
+@theme {
+  --color-bg: #0a0e0b;
+  --color-surface: #111712;
+  --color-surface-2: #172019;
+  --color-surface-3: #1e2a21;
+  --color-line: #263329;
+  --color-line-strong: #34453a;
+  --color-ink: #e9f1eb;
+  --color-muted: #9daea3;
+  --color-faint: #6f8276;
+  --color-accent: #b8f23f;
+  --color-accent-strong: #9fdc22;
+  --color-accent-ink: #0a0e0b;
+  --color-pitch: #1f6b3a;
+  --color-danger: #ff6b6b;
+  --color-warning: #ffb547;
+  --color-info: #6cb8ff;
+  --color-success: #4ade80;
+
+  --font-sans: var(--font-body), system-ui, sans-serif;
+  --font-display: var(--font-heading), var(--font-body), system-ui, sans-serif;
+
+  --radius-card: 1rem;
+  --shadow-card: 0 1px 0 0 rgb(255 255 255 / 0.03) inset, 0 10px 30px -18px rgb(0 0 0 / 0.8);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  html {
+    color-scheme: dark;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    background: var(--color-bg);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    text-rendering: optimizeLegibility;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  ::selection {
+    background: var(--color-accent);
+    color: var(--color-accent-ink);
+  }
+  /* Arabic needs a little more line height and no letter spacing. */
+  [dir="rtl"] {
+    letter-spacing: 0;
+  }
+  [dir="rtl"] body {
+    line-height: 1.7;
+  }
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+  /* Native date/time pickers in dark mode */
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="time"]::-webkit-calendar-picker-indicator,
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.85);
+  }
+  dialog::backdrop {
+    background: rgb(0 0 0 / 0.65);
+    backdrop-filter: blur(2px);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer components {
+  .pitch-lines {
+    background-image:
+      radial-gradient(circle at 50% 50%, transparent 0 58px, rgb(184 242 63 / 0.10) 59px 60px, transparent 61px),
+      linear-gradient(90deg, transparent calc(50% - 0.5px), rgb(184 242 63 / 0.10) calc(50% - 0.5px) calc(50% + 0.5px), transparent calc(50% + 0.5px));
+  }
+  .num {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-rise {
+  animation: rise 240ms ease-out both;
 }
