@@ -155,6 +155,16 @@ export function localTime(days: number, hh = 20, mm = 0): string {
   return `${parts.year}-${parts.month}-${parts.day} ${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
 }
 
+/** Baghdad wall-clock time a fixed number of hours from now ("YYYY-MM-DD HH:MM"). */
+export function localTimeInHours(hours: number): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Baghdad", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+  })
+    .formatToParts(new Date(Date.now() + hours * 3_600_000))
+    .reduce<Record<string, string>>((acc, p) => ({ ...acc, [p.type]: p.value }), {});
+  return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}`;
+}
+
 export interface MatchOpts {
   total?: number;
   reserved?: number;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { admin, asUser, createMatch, createUser, errorOf, mosul, moveMatchToPast, notificationsOf, rpc } from "./helpers";
+import { admin, asUser, createMatch, createUser, errorOf, localTimeInHours, mosul, moveMatchToPast, notificationsOf, rpc } from "./helpers";
 
 async function completedMatchWith(players: number) {
   const organizer = await createUser("Org");
@@ -137,7 +137,8 @@ describe("reports and moderation", () => {
 describe("scheduled jobs", () => {
   it("sends reminders once and auto-completes stale matches idempotently", async () => {
     const organizer = await createUser("Org");
-    const soon = await createMatch(organizer, { days: 0.5 });
+    // Starts in 3 hours, i.e. inside the 24-hour reminder window at any time of day.
+    const soon = await createMatch(organizer, { extra: { p_start_local: localTimeInHours(3) } });
     const p = await createUser();
     await rpc(p, "join_match", { p_match_id: soon });
     const stale = await createMatch(organizer);
