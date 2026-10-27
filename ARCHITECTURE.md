@@ -1,0 +1,71 @@
+# Architecture
+
+## Overview
+
+```
+Browser ──► Next.js (proxy.ts → App Router server components / server actions)
+               │  user-scoped Supabase client (cookies, anon key + user JWT)
+               ▼
+           Supabase PostgREST ──► Postgres
+               - RLS: SELECT policies only
+               - Writes: SECURITY DEFINER RPCs (business rules, locks, audit, notifications)
+           Supabase Auth / Storage / Realtime (messages, notifications)
+Scheduler ──► /api/cron (Bearer CRON_SECRET) ──► service role ──► run_scheduled_jobs()
+```
+
+**The database is the source of truth for every business rule.** Next.js does input parsing (Zod), UX, rendering and translation. It is never the only guard. Any client that talks to PostgREST directly with a user JWT hits the same rules, because API roles have no table write privileges at all.
+
+## Layers
+
+| Layer | Location | Responsibility |
+| --- | --- | --- |
+| Routing / i18n | `src/proxy.ts`, `src/i18n/*` | Locale prefix (`/ar`, `/en`, always present), session refresh, optimistic redirect of signed-out users away from private paths |
+| Pages | `src/app/[locale]/**` | Server components; read via the user-scoped client (RLS applies) |
+| Server actions | `src/server/**` (`"use server"`) | Parse `FormData` with Zod, call one RPC, map DB error codes, `revalidatePath` |
+| Queries | `src/server/*/queries.ts` | Typed selects with explicit FK embeds |
+| Domain | `src/lib/domain/*` | Pure TS: money, match status machine, tournament generators/standings, venue constants (unit-tested) |
+| UI | `src/components/**` | Design system (`ui/`), feature components; client components only where interactivity requires |
+| Database | `supabase/migrations/*` | Schema, constraints, triggers, RLS, RPCs, grants, seed reference data |
+
+### Write path (example: joining a match)
+
+1. `<ActionForm action={joinMatchAction}>` (client) posts `FormData`.
+2. `joinMatchAction` validates the UUID and calls `supabase.rpc("join_match")` as the user.
+3. `public.join_match` (definer):
+   - `private.require_user(true)`: the caller must be signed in, active and onboarded.
+   - Applies a rate limit.
+   - Locks the match row with `FOR UPDATE`, recounts participants and applies the policy (open / approval / invite, blocks, status).
+   - Inserts the participant or a waitlist entry.
+   - Calls `private.notify`.
+4. Errors are raised as machine codes (`raise exception 'match_full'`). `dbErrorCode` extracts the code, and the form shows `errors.<code>` in the current language.
+
+### Error and message codes
+
+Server actions return `{ ok, message | error, fieldErrors }` codes, never translated text. `messages/{ar,en}.json` hold the strings. `pnpm i18n:check` keeps the two catalogs in sync and verifies static keys used in code.
+
+## Key decisions
+
+- **RPC-only writes and SELECT-only RLS.** This keeps every invariant in one transactional place, with locks, recounts, audit and notifications together. It also makes "trust nothing from the client" structural rather than a convention.
+- **Business status machines enforced by triggers.** `match_transition_allowed` and `tournament_transition_allowed` are mirrored in TS (`MATCH_TRANSITIONS`), and a test asserts that the two are equal.
+- **Concurrency.** Capacity is protected by row locks plus a partial unique index. Waitlist order comes from an identity sequence assigned under the lock. Double booking is prevented by a GiST exclusion constraint, with a per-field advisory lock to avoid deadlocks. See DATABASE_DESIGN.md.
+- **Money is integer minor units** (`bigint`; IQD exponent 0). The per-player share is a ceiling division, and the UI labels it as an estimate. Payments are tracked manually by organizers ("paid (marked)"). No payment is processed.
+- **Tournament structure is generated in TS** (round robin, seeded single elimination with byes, groups → knockout). The `save_tournament_fixtures` RPC validates and persists it. Knockout advancement and byes are handled in SQL so results always propagate atomically.
+- **Messaging access is derived, not stored.** `private.can_access_conversation` checks match, team, booking, challenge or tournament membership live. Leaving a team therefore removes chat access immediately. Realtime is published for `messages` and `notifications`, and RLS applies to those streams.
+- **Cache Components / PPR are not enabled.** Almost every page is personalized (session, RLS-filtered data, locale). Correctness was prioritized over static shells, and `cacheComponents` was left off. Request-scoped memoization uses React `cache` (`getCurrentUser`, `getNow`).
+- **Signed-out protection is two-layered.** `proxy.ts` redirects signed-out users from private prefixes with a real 307. Pages also call `requireUser()` and similar helpers, which also handle suspension, onboarding and roles.
+- **Maps.** `src/lib/maps.ts` defines a provider abstraction. `none` (the default) shows the address plus an "open in maps" link built from stored coordinates. `mapbox` adds static map images when a token is set. The app never shows a placeholder or fake map.
+- **Images.** Uploads are checked server-side by magic bytes and size, and also by bucket MIME and size limits. Paths are `<owner-entity-id>/<uuid>.<ext>`, and storage policies check ownership by path.
+
+## Known trade-offs
+
+- **404 status with a root `loading.tsx`.** Not-found pages stream after the loading shell, so `notFound()` renders the localized 404 UI with `noindex`, but the HTTP status is 200. Private pages are not affected, because the proxy redirects before rendering.
+- **Server-rendered form controls.** Server components cannot pass render functions to the client `FormField`. They render controls with `{...controlProps(name)}`, and `FormField` applies the error aria attributes after hydration. Client forms receive the attributes directly.
+- **Distance search** uses a haversine function over venue or match coordinates, without PostGIS. This is adequate for city scale, and PostGIS is the upgrade path.
+- **Notifications are in-app only.** E-mail, SMS and push are not implemented. Preferences are stored so that channels can be added later.
+
+## Observability
+
+- `src/lib/log.ts` is a JSON logger that redacts keys resembling secrets, tokens, passwords, cookies, e-mails or phone numbers.
+- `GET /api/health` reports app and database reachability.
+- Render errors show a digest reference only. Server error details never reach the client.
+- `audit_logs` records every administrative and sensitive action, and is readable by admins at `/admin/audit`.

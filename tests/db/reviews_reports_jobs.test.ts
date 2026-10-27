@@ -106,6 +106,15 @@ describe("reports and moderation", () => {
     expect(row.snapshot.body).toBe("abusive text");
     // Moderators still cannot read the conversation itself.
     expect(await asUser(moderator, "select * from public.messages where conversation_id = $1", [conv])).toEqual([]);
+    // Only moderators can remove the message; the body is erased, audited, and the sender told.
+    expect(await errorOf(rpc(b, "admin_remove_message", { p_message_id: messageId, p_reason: "abusive" }))).toBe("forbidden");
+    expect(await errorOf(rpc(moderator, "admin_remove_message", { p_message_id: messageId, p_reason: "" }))).toBe("reason_required");
+    await rpc(moderator, "admin_remove_message", { p_message_id: messageId, p_reason: "Harassment" });
+    const [removed] = await asUser<{ body: string; deleted_at: string | null }>(b, "select body, deleted_at from public.messages where id = $1", [messageId]);
+    expect(removed.body).toBe("[removed]");
+    expect(removed.deleted_at).not.toBeNull();
+    expect(await admin("select 1 from public.audit_logs where action = 'moderation.message_removed' and entity_id = $1", [String(messageId)])).toHaveLength(1);
+    expect(await notificationsOf(a, "moderation_notice")).toHaveLength(1);
     await rpc(moderator, "admin_set_user_status", { p_user_id: a, p_status: "suspended", p_reason: "harassment" });
     await rpc(moderator, "admin_update_report", { p_report_id: report, p_status: "resolved", p_note: "User suspended" });
     expect(await errorOf(rpc(b, "admin_update_report", { p_report_id: report, p_status: "dismissed" }))).toBe("forbidden");

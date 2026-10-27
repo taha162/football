@@ -1304,6 +1304,9 @@ isOneToOne: false
               "city_id": string,"created_at": string,"display_name": string,"email": string,"id": string,"last_sign_in_at": string,"roles": (Database["public"]['Enums']["app_role"])[],"status": Database["public"]['Enums']["account_status"]
             }[]
                            },
+"admin_remove_message":
+{ Args: { "p_message_id": number,"p_reason": string }; Returns: undefined
+                           },
 "admin_set_hidden":
 { Args: { "p_entity_id": string,"p_entity_type": string,"p_hidden": boolean,"p_reason"?: string }; Returns: undefined
                            },

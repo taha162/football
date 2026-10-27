@@ -553,7 +553,8 @@
     "report_updated": "تم تحديث البلاغ.",
     "setting_updated": "تم تحديث الإعداد.",
     "area_saved": "تم حفظ المنطقة.",
-    "city_saved": "تم حفظ المدينة."
+    "city_saved": "تم حفظ المدينة.",
+    "message_removed": "تم حذف الرسالة."
   },
   "notifications": {
     "generic": "لديك تحديث جديد.",
@@ -1368,7 +1369,9 @@
     "currency": "العملة",
     "active": "فعالة",
     "inactive": "غير فعالة",
-    "add": "إضافة"
+    "add": "إضافة",
+    "removeMessage": "حذف الرسالة",
+    "removeMessageDescription": "يُمحى نص الرسالة لدى جميع المشاركين في المحادثة، ويحتفظ البلاغ بنسخة للمشرفين. لا يمكن التراجع عن ذلك."
   },
   "teams": {
     "title": "الفرق",

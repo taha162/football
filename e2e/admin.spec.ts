@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { createAuthUser, createMatchFor, expect, signIn, test } from "./fixtures";
+import { createAuthUser, createMatchFor, expect, rpc, signIn, test } from "./fixtures";
 
 test.describe("Journey I — reporting and moderation", () => {
   test("a user reports a match, an administrator hides it and resolves the report", async ({ browser }) => {
@@ -50,6 +50,43 @@ test.describe("Journey I — reporting and moderation", () => {
     await expect(adm.getByText("Spam listing confirmed").first()).toBeVisible();
 
     await Promise.all([repCtx.close(), adminCtx.close()]);
+  });
+
+  test("a reported chat message is removed by a moderator", async ({ browser }) => {
+    const sender = await createAuthUser("Sender");
+    const recipient = await createAuthUser("Recipient");
+    const moderator = await createAuthUser("Admin", { admin: true });
+    const conversation = await rpc<string>(sender.id, "start_direct_conversation", { p_user_id: recipient.id });
+    const text = `abusive ${randomUUID().slice(0, 6)}`;
+    await rpc(sender.id, "send_message", { p_conversation_id: conversation, p_body: text });
+
+    const recCtx = await browser.newContext();
+    const rec = await recCtx.newPage();
+    await signIn(rec, recipient);
+    await rec.goto(`/en/messages/${conversation}`);
+    await rec.getByRole("listitem").filter({ hasText: text }).getByRole("button", { name: "Report" }).click();
+    const dialog = rec.getByRole("dialog", { name: "Report a problem" });
+    await dialog.getByRole("combobox", { name: "What's wrong?" }).selectOption("harassment");
+    await dialog.getByRole("button", { name: "Send report" }).click();
+    await expect(dialog.getByText("Thanks. Our moderators will review your report.")).toBeVisible();
+
+    const admCtx = await browser.newContext();
+    const adm = await admCtx.newPage();
+    await signIn(adm, moderator);
+    await adm.goto("/en/admin/reports");
+    const card = adm.getByRole("listitem").filter({ hasText: text });
+    await card.getByRole("button", { name: "Remove message" }).click();
+    const confirm = adm.getByRole("dialog", { name: "Remove message" });
+    await confirm.getByRole("textbox").fill("Harassment");
+    await confirm.getByRole("button", { name: "Remove message" }).click();
+    await expect(confirm).toBeHidden();
+
+    await expect(async () => {
+      await rec.reload();
+      await expect(rec.getByText("Message deleted").first()).toBeVisible({ timeout: 1_000 });
+    }).toPass({ timeout: 15_000 });
+    await expect(rec.getByText(text)).toHaveCount(0);
+    await Promise.all([recCtx.close(), admCtx.close()]);
   });
 
   test("a regular user cannot reach the admin area", async ({ page }) => {

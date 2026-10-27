@@ -2,7 +2,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { formatDateTime } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
-import { setHiddenAction, setUserStatusAction, updateReportAction } from "@/server/admin";
+import { removeMessageAction, setHiddenAction, setUserStatusAction, updateReportAction } from "@/server/admin";
 import { ActionForm, Hidden, SubmitButton } from "@/components/ui/action-form";
 import { buttonClass } from "@/components/ui/button";
 import { ConfirmAction } from "@/components/ui/confirm-action";
@@ -75,6 +75,19 @@ export default async function AdminReportsPage({ searchParams }: PageProps<"/[lo
                         label={t("hideContent")}
                         title={t("hideContent")}
                         confirmLabel={t("hideContent")}
+                        reasonName="reason"
+                        reasonLabel={t("reason")}
+                        reasonRequired
+                      />
+                    ) : null}
+                    {rep.target_type === "message" && /^\d+$/.test(rep.target_id) ? (
+                      <ConfirmAction
+                        action={removeMessageAction}
+                        values={{ message_id: rep.target_id }}
+                        label={t("removeMessage")}
+                        title={t("removeMessage")}
+                        description={t("removeMessageDescription")}
+                        confirmLabel={t("removeMessage")}
                         reasonName="reason"
                         reasonLabel={t("reason")}
                         reasonRequired

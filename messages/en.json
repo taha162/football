@@ -553,7 +553,8 @@
     "report_updated": "Report updated.",
     "setting_updated": "Setting updated.",
     "area_saved": "Area saved.",
-    "city_saved": "City saved."
+    "city_saved": "City saved.",
+    "message_removed": "Message removed."
   },
   "notifications": {
     "generic": "You have a new update.",
@@ -1368,7 +1369,9 @@
     "currency": "Currency",
     "active": "Active",
     "inactive": "Inactive",
-    "add": "Add"
+    "add": "Add",
+    "removeMessage": "Remove message",
+    "removeMessageDescription": "The message text is erased for everyone in the conversation. The report keeps a copy for moderators. This can't be undone."
   },
   "teams": {
     "title": "Teams",

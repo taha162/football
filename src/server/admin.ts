@@ -50,6 +50,12 @@ export async function setHiddenAction(_: ActionState, fd: FormData): Promise<Act
   return run("admin_set_hidden", { p_entity_type: entity.data, p_entity_id: id.data, p_hidden: hidden, p_reason: str(fd, "reason") }, hidden ? "content_hidden" : "content_restored");
 }
 
+export async function removeMessageAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  const id = z.coerce.number().int().positive().safeParse(fd.get("message_id"));
+  if (!id.success) return fail("invalid");
+  return run("admin_remove_message", { p_message_id: id.data, p_reason: str(fd, "reason") }, "message_removed");
+}
+
 export async function setVerificationAction(_: ActionState, fd: FormData): Promise<ActionState> {
   const venue = uuid.safeParse(fd.get("venue_id"));
   const status = z.enum(["unverified", "pending", "verified", "rejected"]).safeParse(fd.get("status"));
