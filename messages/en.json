@@ -1991,5 +1991,45 @@
     "reason": "Reason (optional)",
     "message": "Message",
     "review": "Rate venue"
+  },
+  "home": {
+    "hero": {
+      "kicker": "Mosul · Football the way we play it",
+      "coords": "36.34° N · 43.13° E",
+      "line1": "Lights on.",
+      "line2": "One spot left.",
+      "line3": "It's yours.",
+      "subtitle": "Open matches, teams looking for players and pitches to book — all in one place.",
+      "primary": "Find a match",
+      "secondary": "Book a pitch",
+      "openNow": "{count, plural, one {# match is looking for players now} other {# matches are looking for players now}}",
+      "scroll": "Scroll",
+      "playVideo": "Play video",
+      "pauseVideo": "Pause video",
+      "footage": "Footage:"
+    },
+    "fixtures": {
+      "eyebrow": "Matchday",
+      "title": "Coming up on the pitch",
+      "spotsLeft": "{count, plural, one {# spot left} other {# spots left}}",
+      "waitlist": "Full · waitlist",
+      "vs": "vs"
+    },
+    "how": {
+      "eyebrow": "Whistle to whistle",
+      "title": "Three steps from the group chat to kick-off."
+    },
+    "index": {
+      "eyebrow": "Everything a match needs",
+      "title": "More than tonight's game.",
+      "opponentsTitle": "Opponents"
+    },
+    "trust": {
+      "title": "Fair play, off the pitch too."
+    },
+    "final": {
+      "title": "Kick-off is close.",
+      "body": "Create your free account and join your first match nearby."
+    }
   }
 }

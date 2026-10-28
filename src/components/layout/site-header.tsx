@@ -6,6 +6,7 @@ import { publicStorageUrl } from "@/lib/storage";
 import { getUnreadCounts } from "@/server/reference";
 import { Avatar } from "@/components/ui/avatar";
 import { buttonClass } from "@/components/ui/button";
+import { HeaderFrame } from "./header-frame";
 import { Logo } from "./logo";
 import { LocaleSwitcher } from "./locale-switcher";
 import { NavLinks } from "./nav-links";
@@ -17,7 +18,7 @@ export async function SiteHeader({ user }: { user: CurrentUser | null }) {
   const counts = user ? await getUnreadCounts() : { notifications: 0, messages: 0 };
 
   return (
-    <header className="sticky top-0 z-40 border-b border-line/70 bg-bg/85 backdrop-blur supports-[backdrop-filter]:bg-bg/70">
+    <HeaderFrame>
       <div className="mx-auto flex h-16 w-full max-w-6xl items-center gap-2 px-4 sm:gap-4 sm:px-6">
         <Link href="/" className="shrink-0 rounded-lg" aria-label={t("home")}>
           <Logo />
@@ -70,7 +71,7 @@ export async function SiteHeader({ user }: { user: CurrentUser | null }) {
           )}
         </div>
       </div>
-    </header>
+    </HeaderFrame>
   );
 }
 
