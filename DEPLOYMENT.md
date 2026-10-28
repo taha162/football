@@ -55,6 +55,18 @@
 2. **Authentication → Providers → Email:** فعّل *Confirm email*. الحد الأدنى لكلمة المرور 8 أحرف (مطابق للإعداد المحلي).
 3. **Authentication → SMTP Settings:** أضف مزوّد بريد حقيقياً (Resend، Postmark، SES…). الخادم المدمج في Supabase محدود جداً، ولا يصلح للإنتاج.
 
+### قوالب البريد بهوية الموقع
+
+القوالب الجاهزة في `supabase/templates/`. كل قالب ثنائي اللغة (العربية أولًا ثم الإنجليزية)، وكلها مجرّبة على محرك البريد في Supabase محليًا. في **Authentication ← Emails ← Templates** الصق لكل قالب العنوان (Subject) والمحتوى (Body / Source):
+
+| القالب في Supabase | الملف | Subject |
+| --- | --- | --- |
+| Confirm signup | `confirmation.html` | `أكّد بريدك في ملعب \| Confirm your Malaab e-mail` |
+| Reset Password | `recovery.html` | `إعادة تعيين كلمة المرور \| Reset your Malaab password` |
+| Change Email Address | `email_change.html` | `تأكيد البريد الجديد \| Confirm your new Malaab e-mail` |
+
+نفس القوالب مفعّلة محليًا عبر `supabase/config.toml`. عند تعديل قالب، عدّل الملف ثم الصقه من جديد في المشروع المستضاف.
+
 ## 2) إنشاء مشروع Vercel
 
 1. **Add New → Project** ثم استورد المستودع `taha162/football`.
