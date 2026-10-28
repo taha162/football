@@ -3,6 +3,7 @@ import type { Locale } from "@/i18n/routing";
 import { Link } from "@/i18n/navigation";
 import { requireUser } from "@/lib/auth";
 import { OPTIONAL_NOTIFICATION_TYPES } from "@/lib/notifications";
+import { isPhoneAccountEmail } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/server";
 import { blockUserAction, savePreferencesAction } from "@/server/profile";
 import { signOutAction } from "@/server/auth";
@@ -18,10 +19,13 @@ export default async function SettingsPage({ params }: PageProps<"/[locale]/sett
   const t = await getTranslations("settings");
   const nt = await getTranslations("notificationTypes");
   const supabase = await createClient();
-  const [{ data: prefs }, { data: blocks }] = await Promise.all([
+  const [{ data: prefs }, { data: blocks }, { data: phone }] = await Promise.all([
     supabase.from("user_preferences").select("*").eq("user_id", user.id).maybeSingle(),
     supabase.from("user_blocks").select("blocked_id, profile:profiles!user_blocks_blocked_id_fkey(display_name)").eq("blocker_id", user.id),
+    supabase.rpc("my_phone"),
   ]);
+  // WhatsApp accounts have only an internal auth address; show their verified number instead.
+  const phoneAccount = isPhoneAccountEmail(user.email);
   const muted = new Set(Object.entries((prefs?.notification_prefs ?? {}) as Record<string, boolean>).filter(([, v]) => v === false).map(([k]) => k));
 
   return (
@@ -32,8 +36,13 @@ export default async function SettingsPage({ params }: PageProps<"/[locale]/sett
           <CardBody className="flex flex-col gap-4">
             <DefinitionList
               items={[
-                { label: t("email"), value: <span dir="ltr">{user.email}</span> },
-                { label: t("emailStatus"), value: user.emailConfirmed ? t("confirmed") : t("unconfirmed") },
+                ...(phoneAccount
+                  ? []
+                  : [
+                      { label: t("email"), value: <span dir="ltr">{user.email}</span> },
+                      { label: t("emailStatus"), value: user.emailConfirmed ? t("confirmed") : t("unconfirmed") },
+                    ]),
+                ...(phone ? [{ label: t("phone"), value: <span dir="ltr">+{phone} · {t("phoneVerified")}</span> }] : []),
               ]}
             />
             <div className="flex flex-wrap gap-2">

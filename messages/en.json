@@ -165,7 +165,43 @@
     "resetExpiredAction": "Request a new link",
     "termsHeading": "Terms",
     "acceptTerms": "I accept the <terms>terms of use</terms> and <privacy>privacy policy</privacy>.",
-    "linkInvalid": "That link is invalid or has expired. Please try again."
+    "linkInvalid": "That link is invalid or has expired. Please try again.",
+    "emailOrPhone": "E-mail or WhatsApp number",
+    "emailOrPhoneHint": "If you signed up with WhatsApp, enter your number, e.g. 07701234567.",
+    "verifyMethod": "Verification method",
+    "methodEmail": "With e-mail",
+    "methodWhatsapp": "With WhatsApp",
+    "whatsappSignupNote": "We won't ask for your number or message you. Next, you send a short code from WhatsApp to Malaab's number; your account is activated automatically and linked to your number.",
+    "continueWhatsapp": "Continue with WhatsApp",
+    "verifyEmailTitle": "Enter your code",
+    "verifyEmailSubtitle": "We sent a verification code to <email></email>. Enter it here to activate your account.",
+    "code": "Verification code",
+    "codeHint": "Can't find it? Check your spam folder.",
+    "verify": "Verify",
+    "resendCode": "Resend code",
+    "changeEmail": "Use a different e-mail",
+    "waTitle": "Send the code on WhatsApp",
+    "waSubtitleSignup": "One last step to activate your account and link your number.",
+    "waSubtitleReset": "Send the code from the number linked to your account to choose a new password.",
+    "waStep1": "Tap the button to open WhatsApp — the message is pre-filled.",
+    "waStep2": "Send it as is from your number.",
+    "waStep3": "Come back here; verification happens automatically within seconds.",
+    "waYourCode": "Your code",
+    "waCopy": "Copy code",
+    "waCopied": "Copied",
+    "waOpen": "Open WhatsApp and send the code",
+    "waSendTo": "Or send the code manually to",
+    "waWaiting": "Waiting for your message…",
+    "waExpires": "expires in {minutes} min",
+    "waExpired": "This code has expired.",
+    "waRestart": "Start again",
+    "waPhoneTaken": "This number already has a Malaab account.",
+    "waNoAccount": "No account is linked to this number.",
+    "waVerified": "Verified! Taking you there…",
+    "waMessage": "Malaab verification code: {code}",
+    "forgotWhatsapp": "Recover with WhatsApp",
+    "forgotWhatsappNote": "Signed up with WhatsApp? Send a code from the same number and choose a new password.",
+    "or": "or"
   },
   "onboarding": {
     "eyebrow": "Step 1 of 1",
@@ -441,7 +477,12 @@
     "invalid_formation": "Use a format like 2-2-1.",
     "invalid_rule": "Each pricing rule needs days, a time range and a price.",
     "invalid_json": "Enter a valid JSON value.",
-    "invalid_slug": "Use lowercase letters, digits and dashes."
+    "invalid_slug": "Use lowercase letters, digits and dashes.",
+    "invalid_code": "The code is wrong or has expired.",
+    "verification_missing": "This session has ended. Please start again.",
+    "whatsapp_unavailable": "WhatsApp verification isn't available right now.",
+    "invalid_user": "Couldn't start verification. Please try again.",
+    "resend_too_soon": "Please wait a minute before requesting a new code — the previous one may already be in your inbox."
   },
   "validation": {
     "invalid": "Invalid value.",
@@ -460,12 +501,13 @@
     "range_invalid": "The end must be after the start.",
     "reserved_too_many": "Reserved spots must be fewer than total players.",
     "rating_required": "Please choose a rating.",
-    "invalid_phone": "Enter a valid phone number.",
+    "invalid_phone": "That phone number isn't valid.",
     "coordinates_pair": "Enter both latitude and longitude, or neither.",
     "invalid_date": "Enter a valid date.",
     "invalid_rule": "Complete the rule: days, times and price.",
     "invalid_json": "Enter a valid JSON value.",
-    "invalid_slug": "Use lowercase letters, digits and dashes."
+    "invalid_slug": "Use lowercase letters, digits and dashes.",
+    "invalid_code": "Enter the numeric code you received."
   },
   "success": {
     "saved": "Saved.",
@@ -554,7 +596,8 @@
     "setting_updated": "Setting updated.",
     "area_saved": "Area saved.",
     "city_saved": "City saved.",
-    "message_removed": "Message removed."
+    "message_removed": "Message removed.",
+    "code_sent": "We sent you a new code."
   },
   "notifications": {
     "generic": "You have a new update.",
@@ -1371,7 +1414,8 @@
     "inactive": "Inactive",
     "add": "Add",
     "removeMessage": "Remove message",
-    "removeMessageDescription": "The message text is erased for everyone in the conversation. The report keeps a copy for moderators. This can't be undone."
+    "removeMessageDescription": "The message text is erased for everyone in the conversation. The report keeps a copy for moderators. This can't be undone.",
+    "whatsappAccount": "WhatsApp account"
   },
   "teams": {
     "title": "Teams",
@@ -1634,7 +1678,9 @@
     "save": "Save preferences",
     "blocked": "Blocked people",
     "noBlocked": "You haven't blocked anyone.",
-    "unblock": "Unblock"
+    "unblock": "Unblock",
+    "phone": "WhatsApp number",
+    "phoneVerified": "Verified via WhatsApp"
   },
   "messages": {
     "title": "Messages",

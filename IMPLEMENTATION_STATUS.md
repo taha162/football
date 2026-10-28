@@ -8,22 +8,24 @@ Last updated: 2026-10-27. "Verified" means covered by an automated test that pas
 | --- | --- |
 | `pnpm lint` | Clean |
 | `pnpm typecheck` | Clean (TS strict) |
-| `pnpm i18n:check` | 1652 keys, ar/en in sync, all static keys resolved |
+| `pnpm i18n:check` | 1698 keys, ar/en in sync, all static keys resolved |
 | `pnpm test:unit` | 28 passed |
-| `pnpm test:db` | 64 passed (concurrency, RLS, RPC rules, jobs) |
+| `pnpm test:db` | 71 passed (concurrency, RLS, RPC rules, jobs, WhatsApp verification) |
 | `pnpm build` | Succeeds (Next.js 16.4, Turbopack) |
-| `pnpm e2e` (production build) | 17 passed: 15 desktop, 2 mobile (Pixel 7, Arabic RTL) |
+| `pnpm e2e` (production build) | 21 passed: 19 desktop, 2 mobile (Pixel 7, Arabic RTL) |
 
 ## Features
 
 Legend: ✅ implemented and verified by automated tests · 🟡 implemented, exercised manually or partly covered · ⛔ not implemented
 
 ### Accounts and profiles
-- ✅ E-mail/password sign-up, sign-in, sign-out, onboarding (city, positions, skill) — E2E A.
+- ✅ E-mail/password sign-up confirmed with an **e-mailed code** entered on `/verify-email` (resend, clear message when resending too soon); sign-in before confirming leads back to the code page — E2E A and verification spec.
+- ✅ **WhatsApp verification without paid messages:** the user sends a one-time code from their own WhatsApp to the platform number; the signed Cloud API webhook activates the account and links the sender's number. Sign-in with phone + password, password recovery by sending a code from the same number, one account per number — DB (7 tests) and E2E with signed webhook payloads. **Not yet tested against Meta's real service** (needs the owner's Meta app and number); hidden until its env vars are set.
+- ✅ Sign-out, onboarding (city, positions, skill) — E2E A.
 - 🟡 Forgot and reset password. Wired to Supabase Auth; requires SMTP in production. Locally, mail goes to the mail catcher.
 - 🟡 Profile editing, avatar upload (magic-byte checked), preferences, notification preferences, visibility of history and stats (stats visibility is DB-tested).
 - ✅ Block/unblock users (DB: blocked users cannot join the blocker's matches or message them).
-- ⛔ Phone/OTP sign-in and OAuth providers. Not configured; no UI is shown for them.
+- ⛔ SMS OTP and OAuth providers. Not configured; no UI is shown for them.
 - ⛔ Self-service account deletion and data export. The settings page says to contact support, but **no support contact is configured yet** (launch blocker).
 
 ### Matches

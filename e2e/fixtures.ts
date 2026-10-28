@@ -4,7 +4,7 @@
  * the journey under test are created through the same RPCs the app uses,
  * executed as the relevant user.
  */
-import { randomUUID } from "node:crypto";
+import { createHmac, randomUUID } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
 import { admin, localTime, mosul, rpc } from "../tests/shared/db";
 
@@ -49,7 +49,8 @@ export async function createAuthUser(name: string, opts: { onboard?: boolean; ad
 
 export async function signIn(page: Page, user: TestUser, locale: "en" | "ar" = "en") {
   await page.goto(`/${locale}/sign-in`);
-  await page.getByRole("textbox", { name: locale === "en" ? "Email" : "البريد الإلكتروني" }).fill(user.email);
+  // The label also mentions WhatsApp numbers when that sign-in method is enabled.
+  await page.getByRole("textbox", { name: locale === "en" ? /^E-?mail/ : /^البريد الإلكتروني/ }).fill(user.email);
   await page.getByRole("textbox", { name: locale === "en" ? "Password" : "كلمة المرور" }).fill(PASSWORD);
   await page.getByRole("button", { name: locale === "en" ? "Sign in" : "تسجيل الدخول" }).click();
   await page.waitForURL(/\/dashboard/);
@@ -66,6 +67,35 @@ export async function createMatchFor(organizer: TestUser, extra: Record<string, 
     p_organizer_plays: false,
     ...extra,
   });
+}
+
+const MAILPIT = process.env.E2E_MAILPIT_URL ?? "http://127.0.0.1:54324";
+
+/** Latest numeric code e-mailed to `email` (local Mailpit inbox of the Supabase CLI stack). */
+export async function emailedCode(email: string, timeoutMs = 15_000): Promise<string> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const res = await fetch(`${MAILPIT}/api/v1/search?query=${encodeURIComponent(`to:"${email}"`)}`);
+    const list = (await res.json()) as { messages?: { ID: string }[] };
+    const id = list.messages?.[0]?.ID;
+    if (id) {
+      const msg = (await (await fetch(`${MAILPIT}/api/v1/message/${id}`)).json()) as { Text?: string; HTML?: string };
+      const match = /\b(\d{6,10})\b/.exec(msg.Text ?? "") ?? />(\d{6,10})</.exec(msg.HTML ?? "");
+      if (match) return match[1];
+    }
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  throw new Error(`no code e-mailed to ${email}`);
+}
+
+/** Posts an inbound WhatsApp text to the app's webhook, signed like Meta does. */
+export async function whatsappInbound(baseURL: string, from: string, body: string, secret = process.env.WHATSAPP_APP_SECRET ?? "") {
+  const payload = JSON.stringify({
+    object: "whatsapp_business_account",
+    entry: [{ id: "e2e", changes: [{ field: "messages", value: { messaging_product: "whatsapp", messages: [{ id: `wamid.${randomUUID()}`, from, type: "text", timestamp: String(Math.floor(Date.now() / 1000)), text: { body } }] } }] }],
+  });
+  const signature = `sha256=${createHmac("sha256", secret).update(payload).digest("hex")}`;
+  return fetch(`${baseURL}/api/whatsapp/webhook`, { method: "POST", headers: { "Content-Type": "application/json", "X-Hub-Signature-256": signature }, body: payload });
 }
 
 export { admin, localTime, mosul, rpc };

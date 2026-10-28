@@ -8,6 +8,9 @@ import { fail, ok, zodFieldErrors, type ActionState } from "@/lib/actions";
 import { safeNext } from "@/lib/auth";
 import { publicEnv } from "@/lib/env";
 import { logger } from "@/lib/log";
+import { clearPendingEmail, getPendingEmail, setPendingEmail } from "@/lib/pending-email";
+import { looksLikePhone, normalizePhone } from "@/lib/phone";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 const email = z.string().trim().toLowerCase().email("invalid_email").max(254);
@@ -29,14 +32,35 @@ function authErrorCode(message: string | undefined, status?: number): string {
 }
 
 export async function signInAction(_: ActionState, fd: FormData): Promise<ActionState> {
-  const parsed = z.object({ email, password: z.string().min(1, "required") }).safeParse({
-    email: fd.get("email"),
-    password: fd.get("password"),
-  });
-  if (!parsed.success) return fail("validation", zodFieldErrors(parsed.error));
+  const login = String(fd.get("email") ?? "").trim();
+  const pass = z.string().min(1, "required").safeParse(fd.get("password"));
+  if (!pass.success) return fail("validation", { password: "required" });
+
+  let address: string;
+  if (looksLikePhone(login)) {
+    // Phone sign-in (WhatsApp-verified accounts): map the number to its auth address.
+    const phone = normalizePhone(login);
+    const admin = createAdminClient();
+    if (!phone) return fail("validation", { email: "invalid_phone" });
+    const { data } = admin ? await admin.rpc("wa_auth_email_for_phone", { p_phone: phone }) : { data: null };
+    if (!data) return fail("invalid_credentials");
+    address = data as string;
+  } else {
+    const parsed = email.safeParse(login);
+    if (!parsed.success) return fail("validation", { email: "invalid_email" });
+    address = parsed.data;
+  }
+
   const supabase = await createClient();
-  const { data, error } = await supabase.auth.signInWithPassword(parsed.data);
-  if (error) return fail(authErrorCode(error.message, error.status));
+  const { data, error } = await supabase.auth.signInWithPassword({ email: address, password: pass.data });
+  if (error) {
+    const code = authErrorCode(error.message, error.status);
+    if (code === "email_not_confirmed") {
+      await setPendingEmail(address);
+      redirect({ href: "/verify-email", locale: await currentLocale() });
+    }
+    return fail(code);
+  }
   const { data: prefs } = await supabase.from("user_preferences").select("locale").eq("user_id", data.user.id).maybeSingle();
   const locale = isLocale(prefs?.locale) ? prefs.locale : await currentLocale();
   redirect({ href: safeNext(fd.get("next")), locale });
@@ -69,10 +93,42 @@ export async function signUpAction(_: ActionState, fd: FormData): Promise<Action
     },
   });
   if (error) return fail(authErrorCode(error.message, error.status));
-  // With e-mail confirmation enabled there is no session until the link is used.
-  if (!data.session) return ok("check_email");
+  // With e-mail confirmation enabled there is no session until the code is entered.
+  if (!data.session) {
+    await setPendingEmail(parsed.data.email);
+    redirect({ href: "/verify-email", locale });
+  }
   redirect({ href: "/onboarding", locale });
   return ok();
+}
+
+export async function verifyEmailCodeAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  const address = await getPendingEmail();
+  if (!address) return fail("verification_missing");
+  const token = String(fd.get("code") ?? "").replace(/\s/g, "");
+  if (!/^[0-9]{6,10}$/.test(token)) return fail("validation", { code: "invalid_code" });
+  const supabase = await createClient();
+  const { error } = await supabase.auth.verifyOtp({ email: address, token, type: "email" });
+  if (error) return fail(error.status === 429 ? "rate_limited" : "invalid_code");
+  await clearPendingEmail();
+  redirect({ href: "/onboarding", locale: await currentLocale() });
+  return ok();
+}
+
+export async function resendEmailCodeAction(): Promise<ActionState> {
+  const address = await getPendingEmail();
+  if (!address) return fail("verification_missing");
+  const locale = await currentLocale();
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resend({
+    type: "signup",
+    email: address,
+    options: { emailRedirectTo: `${publicEnv.siteUrl}/auth/callback?next=/${locale}/onboarding` },
+  });
+  if (error?.code === "over_email_send_rate_limit") return fail("resend_too_soon");
+  if (error && error.status === 429) return fail("rate_limited");
+  if (error) logger.warn("resend_code_failed", { status: error.status });
+  return ok("code_sent");
 }
 
 export async function forgotPasswordAction(_: ActionState, fd: FormData): Promise<ActionState> {
