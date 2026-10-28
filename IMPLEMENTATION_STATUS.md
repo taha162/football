@@ -70,6 +70,13 @@ Legend: ✅ implemented and verified by automated tests · 🟡 implemented, exe
 - ✅ Player and venue reviews (participants only, once, within the window; no-shows excluded), reputation aggregates — DB.
 
 ### Platform
+- 🟡 **Cinematic landing page.** The pieces:
+  - Full-bleed hero with layered grading and an Arabic-first editorial composition.
+  - Restrained entrance motion and scroll drift, both switched off for reduced motion.
+  - Header that floats over the hero.
+  - Matchday board of real upcoming matches, editorial "how it works", directory, trust section and final call.
+
+  QA'd at desktop, tablet and phone in both languages. The video path (autoplay, pause/play, reduced motion, broken-file fallback) was QA'd with a **synthetic test clip only**. **No real stadium footage is bundled yet:** the licensed-footage sites were not reachable from the build environment. Add footage with `scripts/prepare-hero-video.sh` + `NEXT_PUBLIC_HERO_*` (DEPLOYMENT.md §7). Until then the hero shows a vector night-pitch illustration drawn from real pitch dimensions.
 - ✅ Arabic (RTL, default) and English (LTR), with the locale persisted per user and cookie — E2E J and mobile.
 - ✅ Mobile layout with bottom navigation and no horizontal overflow on phone widths — E2E mobile.
 - ✅ Scheduled jobs (`/api/cron` → `run_scheduled_jobs`) are idempotent — DB.

@@ -110,3 +110,282 @@
 .animate-rise {
   animation: rise 240ms ease-out both;
 }
+
+/* =========================================================================
+   Landing — cinematic hero and editorial sections
+   ========================================================================= */
+:root {
+  /* Direction-aware nudge for "forward" arrows. */
+  --nudge: 4px;
+}
+[dir="rtl"] {
+  --nudge: -4px;
+}
+
+/* Layered grade over the footage: legibility on the text side, a soft
+   vignette, depth at the bottom, and a restrained floodlight tint. The
+   footage itself stays visible and is never flattened by a single overlay. */
+.hero-grade {
+  background:
+    /* floodlight accent, far side, very low */
+    radial-gradient(60% 45% at 85% 8%, rgb(184 242 63 / 0.10), transparent 70%),
+    /* blend into the page below */
+    linear-gradient(to top, var(--color-bg) 0%, rgb(10 14 11 / 0.72) 18%, rgb(10 14 11 / 0) 52%),
+    /* text side, start edge */
+    linear-gradient(to right, rgb(6 9 7 / 0.82) 0%, rgb(6 9 7 / 0.55) 34%, rgb(6 9 7 / 0) 66%),
+    /* under the header */
+    linear-gradient(to bottom, rgb(6 9 7 / 0.55) 0%, rgb(6 9 7 / 0) 22%),
+    /* vignette */
+    radial-gradient(120% 90% at 50% 45%, transparent 55%, rgb(0 0 0 / 0.55) 100%);
+}
+[dir="rtl"] .hero-grade {
+  background:
+    radial-gradient(60% 45% at 15% 8%, rgb(184 242 63 / 0.10), transparent 70%),
+    linear-gradient(to top, var(--color-bg) 0%, rgb(10 14 11 / 0.72) 18%, rgb(10 14 11 / 0) 52%),
+    linear-gradient(to left, rgb(6 9 7 / 0.82) 0%, rgb(6 9 7 / 0.55) 34%, rgb(6 9 7 / 0) 66%),
+    linear-gradient(to bottom, rgb(6 9 7 / 0.55) 0%, rgb(6 9 7 / 0) 22%),
+    radial-gradient(120% 90% at 50% 45%, transparent 55%, rgb(0 0 0 / 0.55) 100%);
+}
+.hero-media img,
+.hero-media video {
+  filter: contrast(1.06) saturate(0.92);
+}
+
+.hero-title {
+  font-size: clamp(3.1rem, 8.4vw, 7.6rem);
+  font-weight: 800;
+  line-height: 0.94;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+:lang(en) .hero-title {
+  text-transform: uppercase;
+}
+[dir="rtl"] .hero-title {
+  font-size: clamp(2.7rem, 6.6vw, 5.75rem);
+  font-weight: 900;
+  line-height: 1.12;
+  letter-spacing: 0;
+}
+
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-accent);
+}
+.eyebrow::before {
+  content: "";
+  width: 2rem;
+  height: 1px;
+  background: currentColor;
+}
+:lang(en) .eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.75rem;
+}
+.section-title {
+  font-family: var(--font-display);
+  font-size: clamp(2.1rem, 4.6vw, 3.6rem);
+  font-weight: 800;
+  line-height: 1.02;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+[dir="rtl"] .section-title {
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+.step-numeral {
+  font-family: var(--font-display);
+  font-size: clamp(2.6rem, 5vw, 3.75rem);
+  font-weight: 800;
+  line-height: 0.9;
+  color: transparent;
+  -webkit-text-stroke: 1px var(--color-line-strong);
+}
+
+/* Calls to action: a squared, confident primary and an underlined secondary. */
+.cta-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 3.25rem;
+  padding: 0 1.6rem;
+  border-radius: 0.35rem;
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+  font-weight: 700;
+  font-size: 1rem;
+  box-shadow: 0 0 0 0 rgb(184 242 63 / 0);
+  transition:
+    background-color 200ms ease,
+    box-shadow 300ms ease,
+    transform 120ms ease;
+}
+.cta-primary:hover {
+  background: #c7f75f;
+  box-shadow: 0 10px 40px -12px rgb(184 242 63 / 0.55);
+}
+.cta-primary:active {
+  transform: translateY(1px) scale(0.99);
+}
+.cta-primary:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 3px;
+}
+.cta-secondary {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 3.25rem;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+.cta-secondary::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0.85rem;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.45;
+  transform-origin: var(--origin, left);
+  transition:
+    opacity 200ms ease,
+    background-color 200ms ease;
+}
+.cta-secondary:hover {
+  color: var(--color-accent);
+}
+.cta-secondary:hover::after {
+  opacity: 1;
+}
+.link-arrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: var(--color-ink);
+  border-bottom: 1px solid rgb(233 241 235 / 0.3);
+  padding-bottom: 0.25rem;
+  transition:
+    color 200ms ease,
+    border-color 200ms ease;
+}
+.link-arrow:hover {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+/* Matchday rows and directory links: a thin accent rule grows on hover. */
+.fixture-row,
+.index-link {
+  position: relative;
+  outline-offset: -2px;
+}
+.fixture-row::before,
+.index-link::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: 0;
+  bottom: -1px;
+  height: 1px;
+  width: 100%;
+  background: var(--color-accent);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 450ms cubic-bezier(0.2, 0.7, 0.1, 1);
+}
+[dir="rtl"] .fixture-row::before,
+[dir="rtl"] .index-link::before {
+  transform-origin: right;
+}
+.fixture-row:hover::before,
+.index-link:hover::before,
+.fixture-row:focus-visible::before,
+.index-link:focus-visible::before {
+  transform: scaleX(1);
+}
+
+/* Final call: centre circle and halfway line, barely there. */
+.final-pitch {
+  background:
+    radial-gradient(circle at 78% 50%, transparent 0 13rem, rgb(184 242 63 / 0.14) 13rem calc(13rem + 1px), transparent calc(13rem + 1px)),
+    linear-gradient(90deg, transparent calc(78% - 0.5px), rgb(184 242 63 / 0.14) calc(78% - 0.5px) calc(78% + 0.5px), transparent calc(78% + 0.5px)),
+    radial-gradient(70% 90% at 78% 50%, rgb(31 107 58 / 0.22), transparent 70%);
+}
+[dir="rtl"] .final-pitch {
+  transform: scaleX(-1);
+}
+
+/* ---- Motion: one restrained entrance, then the footage does the work. ---- */
+@keyframes hero-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes hero-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+@keyframes hero-line {
+  from {
+    transform: translateY(105%);
+  }
+}
+@keyframes hero-scroll {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translateY(4px);
+    opacity: 1;
+  }
+}
+.header-intro {
+  animation: hero-fade 700ms ease-out both;
+}
+.hero-media {
+  animation: hero-fade 900ms ease-out both;
+}
+.hero-in {
+  animation: hero-up 800ms cubic-bezier(0.2, 0.7, 0.1, 1) both;
+  animation-delay: var(--d, 0ms);
+}
+.hero-line-inner {
+  animation: hero-line 1000ms cubic-bezier(0.19, 1, 0.22, 1) both;
+  animation-delay: var(--d, 0ms);
+}
+.hero-scroll {
+  animation: hero-scroll 2.4s ease-in-out infinite;
+}
+/* Very slight drift of the footage as the hero scrolls away. */
+@supports (animation-timeline: scroll()) {
+  @keyframes hero-drift {
+    to {
+      transform: translateY(12%) scale(1.04);
+    }
+  }
+  .hero-media > img,
+  .hero-media > picture img,
+  .hero-media > video {
+    animation: hero-drift linear both;
+    animation-timeline: scroll(root);
+    animation-range: 0 100vh;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-media > img,
+  .hero-media > picture img,
+  .hero-media > video {
+    animation: none;
+  }
+}
