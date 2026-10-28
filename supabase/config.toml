@@ -244,6 +244,20 @@ otp_expiry = 3600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
+# Branded, bilingual (ar/en) auth e-mails. Paste the same files into the hosted
+# project under Authentication > Emails > Templates (see DEPLOYMENT.md).
+[auth.email.template.confirmation]
+subject = "أكّد بريدك في ملعب | Confirm your Malaab e-mail"
+content_path = "./supabase/templates/confirmation.html"
+
+[auth.email.template.recovery]
+subject = "إعادة تعيين كلمة المرور | Reset your Malaab password"
+content_path = "./supabase/templates/recovery.html"
+
+[auth.email.template.email_change]
+subject = "تأكيد البريد الجديد | Confirm your new Malaab e-mail"
+content_path = "./supabase/templates/email_change.html"
+
 # Uncomment to customize email template
 # [auth.email.template.invite]
 # subject = "You have been invited"
