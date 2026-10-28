@@ -15,6 +15,7 @@ All schema objects are created by the committed migrations in `supabase/migratio
 | `…0009_admin_jobs` | Admin RPCs, `run_scheduled_jobs()` |
 | `…0010_storage_reference_grants` | Storage buckets and policies, seed reference data (IQD/USD, Mosul + areas), privileges |
 | `…0011_message_moderation` | `admin_remove_message`: moderators erase a reported message (audited, sender notified) |
+| `…0012_whatsapp_verification` | `whatsapp_verifications` (codes, ticket hashes, status), `private.user_phones` (verified numbers, unique), service-role-only functions `wa_create_verification`, `wa_receive`, `wa_get_verification`, `wa_consume_verification`, `wa_auth_email_for_phone`, `wa_cleanup`; `my_phone()` for the signed-in user |
 
 ## Schemas
 

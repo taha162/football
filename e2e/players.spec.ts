@@ -1,4 +1,4 @@
-import { createAuthUser, createMatchFor, expect, signIn, test } from "./fixtures";
+import { createAuthUser, createMatchFor, emailedCode, expect, signIn, test } from "./fixtures";
 
 test.describe("Journey A — register, onboard, discover and join", () => {
   test("a new user registers, completes onboarding, finds a match and joins it", async ({ page }) => {
@@ -14,7 +14,14 @@ test.describe("Journey A — register, onboard, discover and join", () => {
     await page.getByRole("checkbox").check();
     await page.getByRole("button", { name: "Create account" }).click();
 
-    // Local stack has e-mail confirmation disabled, so the user lands on onboarding.
+    // E-mail confirmation is on: enter the code that was e-mailed.
+    await page.waitForURL(/\/en\/verify-email/);
+    await expect(page.getByText(email)).toBeVisible();
+    await page.getByRole("textbox", { name: "Verification code" }).fill("000000");
+    await page.getByRole("button", { name: "Verify" }).click();
+    await expect(page.getByText("The code is wrong or has expired.")).toBeVisible();
+    await page.getByRole("textbox", { name: "Verification code" }).fill(await emailedCode(email));
+    await page.getByRole("button", { name: "Verify" }).click();
     await page.waitForURL(/\/en\/onboarding/);
     await expect(page.getByRole("heading", { name: "Set up your player profile" })).toBeVisible();
     await page.getByText("Goalkeeper", { exact: true }).click();

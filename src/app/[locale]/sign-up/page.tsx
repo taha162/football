@@ -3,15 +3,19 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link, redirect } from "@/i18n/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { AuthShell } from "@/components/auth/auth-shell";
-import { SignUpForm } from "@/components/auth/auth-forms";
+import { SignUpForm, WhatsappSignUpForm } from "@/components/auth/auth-forms";
+import { buttonClass } from "@/components/ui/button";
+import { whatsappConfig } from "@/lib/whatsapp";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/sign-up">): Promise<Metadata> {
   const t = await getTranslations({ locale: (await params).locale, namespace: "auth" });
   return { title: t("createAccount") };
 }
 
-export default async function SignUpPage({ params }: PageProps<"/[locale]/sign-up">) {
+export default async function SignUpPage({ params, searchParams }: PageProps<"/[locale]/sign-up">) {
   const { locale } = await params;
+  const waEnabled = whatsappConfig().enabled;
+  const method = waEnabled && (await searchParams).method === "whatsapp" ? "whatsapp" : "email";
   setRequestLocale(locale);
   if (await getCurrentUser()) redirect({ href: "/dashboard", locale });
   const t = await getTranslations("auth");
@@ -28,7 +32,21 @@ export default async function SignUpPage({ params }: PageProps<"/[locale]/sign-u
         </>
       }
     >
-      <SignUpForm />
+      {waEnabled ? (
+        <nav aria-label={t("verifyMethod")} className="grid grid-cols-2 gap-1 rounded-xl border border-line bg-surface-2 p-1">
+          {(["email", "whatsapp"] as const).map((m) => (
+            <Link
+              key={m}
+              href={{ pathname: "/sign-up", query: m === "email" ? {} : { method: m } }}
+              aria-current={method === m ? "page" : undefined}
+              className={buttonClass(method === m ? "secondary" : "ghost", "sm", "w-full")}
+            >
+              {m === "email" ? t("methodEmail") : t("methodWhatsapp")}
+            </Link>
+          ))}
+        </nav>
+      ) : null}
+      {method === "whatsapp" ? <WhatsappSignUpForm /> : <SignUpForm />}
     </AuthShell>
   );
 }

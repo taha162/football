@@ -52,6 +52,20 @@
 
 Server Action body size is capped at 6 MB.
 
+## Account verification
+
+- **E-mail code:** Supabase Auth issues and checks the code (`verifyOtp`, type `email`). It expires (1 h by default) and resends are throttled. The pending address is kept in an httpOnly cookie, not in the URL.
+- **WhatsApp (user sends the code):**
+  - The webhook accepts only requests whose `X-Hub-Signature-256` HMAC matches `WHATSAPP_APP_SECRET`, compared in constant time.
+  - The verified number is the sender id Meta delivers. The user never types it, so nobody can claim someone else's number.
+  - Codes are 8 characters from a 31-symbol alphabet (~40 bits), valid for 15 minutes and usable once.
+  - The browser holds only a random ticket in an httpOnly cookie, and the database stores its SHA-256.
+  - Starts are rate-limited per client (setting `whatsapp.max_starts_per_hour`).
+  - A number can belong to one account only.
+  - All `wa_*` functions are executable by `service_role` only, and `private.user_phones` is never exposed.
+  - Phone accounts use an internal address on the reserved `.invalid` TLD, so no e-mail is ever sent to them.
+  - Never-verified sign-ups are deleted by the scheduled job after a day.
+
 ## Cron endpoint
 
 `/api/cron` requires `Authorization: Bearer $CRON_SECRET`, which must be at least 16 characters and is compared in constant time. It returns 401 otherwise, and 503 if the service role is not configured.

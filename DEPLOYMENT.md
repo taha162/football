@@ -61,11 +61,13 @@
 
 | القالب في Supabase | الملف | Subject |
 | --- | --- | --- |
-| Confirm signup | `confirmation.html` | `أكّد بريدك في ملعب \| Confirm your Malaab e-mail` |
+| Confirm signup | `confirmation.html` | `رمز تفعيل حسابك في ملعب \| Your Malaab activation code` |
 | Reset Password | `recovery.html` | `إعادة تعيين كلمة المرور \| Reset your Malaab password` |
 | Change Email Address | `email_change.html` | `تأكيد البريد الجديد \| Confirm your new Malaab e-mail` |
 
 نفس القوالب مفعّلة محليًا عبر `supabase/config.toml`. عند تعديل قالب، عدّل الملف ثم الصقه من جديد في المشروع المستضاف.
+
+قالب **Confirm signup** يعرض **رمزًا** (`{{ .Token }}`) يُدخله المستخدم في صفحة `/verify-email` بعد إنشاء الحساب، ومعه زر احتياطي. الصفحة تقبل رموزًا من 6 إلى 10 أرقام، فيعمل أي طول تضبطه في **Authentication ← Sign In / Providers ← Email ← Email OTP Length**.
 
 ## 2) إنشاء مشروع Vercel
 
@@ -128,6 +130,49 @@
 2. حدّث `NEXT_PUBLIC_SITE_URL` في Vercel، ثم **Site URL** و **Redirect URLs** في Supabase.
 3. أعد النشر (Redeploy)، لأن متغيرات `NEXT_PUBLIC_*` تُضمَّن وقت البناء.
 
+## 6) التحقق عبر واتساب (اختياري)
+
+المستخدم **هو من يرسل** رمزًا من واتساب إلى رقمك، فلا تدفع شيئًا مقابل كل تحقق. تصل الرسالة إلى موقعك عبر **WhatsApp Cloud API** الرسمية من Meta (Webhook موقّع). الموقع يأخذ رقم المرسل من واتساب نفسه، ويفعّل الحساب ويربطه بالرقم، ثم يسجّل المستخدم دخوله. لاحقًا يدخل المستخدم برقمه وكلمة المرور، ويستعيد كلمة المرور بنفس الطريقة.
+
+ما دامت المتغيرات أدناه غير مضافة، يبقى خيار واتساب **مخفيًا** تمامًا.
+
+**ستحتاج إلى:** رقم هاتف مخصص للمنصة، والأفضل شريحة جديدة. الرقم المسجّل في Cloud API لا يمكن استخدامه في تطبيق واتساب العادي في الوقت نفسه. إذا كان مسجلًا في واتساب فاحذف حساب واتساب منه أولًا.
+
+### الإعداد في Meta
+1. من developers.facebook.com: **My Apps ← Create App**، واختر حالة الاستخدام الخاصة بـ WhatsApp أو نوع **Business**. اربطه بحساب Meta Business، أو أنشئ واحدًا.
+2. **WhatsApp ← API Setup ← Add phone number**: أضف رقم المنصة، واكتب اسم العرض (مثل *Malaab*)، ثم أكّد الرقم بالرمز الذي يصلك.
+3. **WhatsApp ← Configuration ← Webhook ← Edit:**
+   - **Callback URL:** `https://<your-domain>/api/whatsapp/webhook`
+   - **Verify token:** نص عشوائي تختاره، وهو نفس قيمة `WHATSAPP_VERIFY_TOKEN` في Vercel.
+   - اضغط **Verify and save**. يجب أن يكون الموقع منشورًا والمتغيرات مضافة قبل هذه الخطوة.
+   - ثم في **Webhook fields** فعّل **messages** (Subscribe).
+4. **App settings ← Basic ← App secret ← Show:** هذه القيمة هي `WHATSAPP_APP_SECRET`. يستخدمها الموقع ليتأكد أن الرسائل قادمة من Meta فعلًا.
+5. حوّل التطبيق إلى **Live**، فهذا مطلوب لاستقبال رسائل المستخدمين الحقيقيين. تطلب Meta رابط سياسة الخصوصية، فاستخدم `https://<your-domain>/ar/legal/privacy`.
+
+### المتغيرات في Vercel (Production)
+
+| المتغير | القيمة |
+| --- | --- |
+| `WHATSAPP_NUMBER` | رقم المنصة بالصيغة الدولية بدون + ولا مسافات، مثل `9647701234567` |
+| `WHATSAPP_VERIFY_TOKEN` | نفس الـ Verify token في Meta |
+| `WHATSAPP_APP_SECRET` | App secret من Meta (**سري**) |
+| `WHATSAPP_ACCESS_TOKEN` | اختياري: لإرسال رد "تم التحقق ✅" داخل نافذة المحادثة المجانية. يُفضّل System User token دائمًا (**سري**) |
+| `WHATSAPP_PHONE_NUMBER_ID` | اختياري، مع الـ token: Phone number ID من صفحة API Setup |
+
+بعد الإضافة اضغط **Redeploy**. ستظهر في صفحة إنشاء الحساب خانتان: **عبر البريد الإلكتروني** و**عبر واتساب**.
+
+> قاعدة البيانات تحتاج migration رقم `0012` (جداول واتساب). شغّل **Deploy database migrations** مرة أخرى بعد دمج التحديث.
+
+### كيف تتأكد أنه يعمل
+1. أنشئ حسابًا من خيار **عبر واتساب** بهاتف آخر غير رقم المنصة.
+2. اضغط **افتح واتساب وأرسل الرمز** ثم أرسل الرسالة كما هي.
+3. خلال ثوانٍ تنتقل الصفحة وحدها إلى إكمال الملف الشخصي.
+
+إذا لم يحدث شيء:
+- راجع **Vercel ← Logs** وابحث عن `/api/whatsapp/webhook`.
+  - ظهور `401` يعني أن `WHATSAPP_APP_SECRET` لا يطابق.
+  - عدم ظهور أي طلب يعني أن الـ Webhook غير مفعّل، أو أن حقل **messages** غير مشترك فيه، أو أن التطبيق ليس **Live**.
+
 ## قائمة التحقق قبل الإطلاق
 
 - [ ] الـ migrations مطبّقة، و `/api/health` يُرجع `ok`
@@ -148,5 +193,7 @@
 | `/api/health` يعطي `database: error` | الرابط أو المفتاح خطأ، أو أن الـ migrations لم تُطبّق |
 | رابط تأكيد البريد يفتح localhost | `NEXT_PUBLIC_SITE_URL` خطأ، أو أن Site URL في Supabase غير محدث |
 | `/api/cron` يعطي 401 | `CRON_SECRET` غير مطابق أو أقصر من 16 حرفاً |
+| رسالة واتساب لا تفعّل الحساب | راجع قسم "التحقق عبر واتساب": الـ Webhook، وحقل messages، ووضع Live، و`WHATSAPP_APP_SECRET` |
+| "انتظر دقيقة قبل طلب رمز جديد" | Supabase يسمح برسالة رمز واحدة كل 60 ثانية افتراضيًا، فانتظر قليلًا |
 | `/api/cron` يعطي 503 | `SUPABASE_SERVICE_ROLE_KEY` غير مضاف لبيئة Production |
 | الصور لا تظهر | أعد النشر بعد تعديل `NEXT_PUBLIC_SUPABASE_URL`، لأن نطاق الصور يُقرأ وقت البناء |
