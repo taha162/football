@@ -70,73 +70,6 @@
     "safety": "Trust & safety",
     "copyright": "© {year} Malaab"
   },
-  "landing": {
-    "hero": {
-      "eyebrow": "Now in Mosul",
-      "titleA": "Find your team.",
-      "titleB": "Join the game.",
-      "subtitle": "Short of players or missing an opponent? Discover open matches near you, fill your roster, book a pitch and play.",
-      "findMatch": "Find a match",
-      "createMatch": "Create a match",
-      "join": "Create a free account"
-    },
-    "upcoming": {
-      "title": "Matches looking for players",
-      "subtitle": "Live listings from organizers in your city.",
-      "all": "All matches",
-      "emptyTitle": "No open matches right now",
-      "emptyBody": "Be the first: create a match and players will find you.",
-      "emptyAction": "Create a match"
-    },
-    "how": {
-      "title": "How it works",
-      "find": {
-        "title": "Find",
-        "body": "Filter matches by area, time, format, level and price — or post what you need."
-      },
-      "join": {
-        "title": "Join",
-        "body": "Reserve a spot instantly. If it's full, join the waiting list and get promoted automatically."
-      },
-      "play": {
-        "title": "Play",
-        "body": "Chat with your team, share costs transparently, and rate the experience afterwards."
-      }
-    },
-    "tiles": {
-      "teams": {
-        "title": "Teams",
-        "body": "Build a squad, recruit missing positions and challenge other teams.",
-        "cta": "Browse teams"
-      },
-      "venues": {
-        "title": "Venues",
-        "body": "Find pitches, compare prices and request bookings where venues support it.",
-        "cta": "Browse venues"
-      },
-      "tournaments": {
-        "title": "Tournaments",
-        "body": "Register your team, follow fixtures, results and standings.",
-        "cta": "See tournaments"
-      }
-    },
-    "community": {
-      "title": "Built for real games",
-      "missing": "Missing two players an hour before kickoff? Post the slots and fill them.",
-      "opponents": "Teams publish opponent requests and accept challenges in one place.",
-      "organize": "Organizers manage rosters, waiting lists and attendance without endless group chats.",
-      "cost": "Pitch costs are split transparently — everyone sees the share before joining."
-    },
-    "trust": {
-      "title": "Trust & safety",
-      "privacy": "Your exact location and contact details are never shown publicly.",
-      "verified": "Venues are verified by our team before they can take bookings.",
-      "reviews": "Reviews only come from people who actually played together.",
-      "report": "Report and block tools are available on every profile, listing and message.",
-      "payments": "No online payments yet — costs are settled in person and nothing is charged through the app.",
-      "more": "Read our safety approach"
-    }
-  },
   "auth": {
     "email": "Email",
     "password": "Password",
@@ -1993,43 +1926,85 @@
     "review": "Rate venue"
   },
   "home": {
+    "stage": {
+      "controls": "Scene controls",
+      "skip": "Skip intro",
+      "soundOn": "Turn sound on",
+      "soundOff": "Turn sound off",
+      "motionPause": "Pause animation",
+      "motionPlay": "Play animation",
+      "resetBall": "Bring the ball back to the centre spot",
+      "kick": "Kick the ball",
+      "kickHint": "Flick the ball"
+    },
     "hero": {
-      "kicker": "Mosul · Football the way we play it",
-      "coords": "36.34° N · 43.13° E",
-      "line1": "Lights on.",
-      "line2": "One spot left.",
-      "line3": "It's yours.",
-      "subtitle": "Open matches, teams looking for players and pitches to book — all in one place.",
+      "kicker": "Mosul. Under the lights.",
+      "line1": "Your next game",
+      "line2": "starts here.",
+      "subtitle": "Find your team. Join the game.",
       "primary": "Find a match",
       "secondary": "Book a pitch",
       "openNow": "{count, plural, one {# match is looking for players now} other {# matches are looking for players now}}",
       "scroll": "Scroll",
-      "playVideo": "Play video",
-      "pauseVideo": "Pause video",
-      "footage": "Footage:"
+      "coords": "36.34° N · 43.13° E"
     },
-    "fixtures": {
-      "eyebrow": "Matchday",
-      "title": "Coming up on the pitch",
+    "matches": {
+      "chapter": "Find your game",
+      "title": "Matches looking for players.",
+      "body": "Straight from their organisers: when and where, the format, the price — and how many spots are still open.",
       "spotsLeft": "{count, plural, one {# spot left} other {# spots left}}",
       "waitlist": "Full · waitlist",
-      "vs": "vs"
+      "vs": "vs",
+      "join": "Join",
+      "all": "All matches",
+      "emptyTitle": "No open matches right now",
+      "emptyBody": "Be the first: create a match and players will find you.",
+      "emptyAction": "Create a match"
     },
-    "how": {
-      "eyebrow": "Whistle to whistle",
-      "title": "Three steps from the group chat to kick-off."
+    "squad": {
+      "chapter": "Build your squad",
+      "title": "Build your squad, position by position.",
+      "body": "Teams post the positions they are missing. Find the one that fits you, or recruit the players your team needs.",
+      "teamsLooking": "{count, plural, one {# team looking} other {# teams looking}}",
+      "noRequests": "No open requests right now",
+      "markerNone": "No open requests",
+      "teams": "Browse teams",
+      "createTeam": "Create a team",
+      "opponents": "Find opponents"
     },
-    "index": {
-      "eyebrow": "Everything a match needs",
-      "title": "More than tonight's game.",
-      "opponentsTitle": "Opponents"
+    "venues": {
+      "chapter": "Your next venue",
+      "title": "Find your pitch.",
+      "body": "Compare prices and formats. Verified venues take booking requests in the app; the others list how to reach them.",
+      "book": "Book",
+      "view": "Details",
+      "all": "All venues",
+      "list": "List your venue",
+      "emptyTitle": "No venues listed yet",
+      "emptyBody": "Venue owners can list their pitches for free."
     },
-    "trust": {
-      "title": "Fair play, off the pitch too."
+    "tournaments": {
+      "chapter": "Tournament night",
+      "title": "When the lights stay on longer.",
+      "body": "Register your team, then follow the fixtures, results and standings.",
+      "all": "All tournaments",
+      "create": "Create a tournament",
+      "emptyTitle": "No tournaments are running right now",
+      "emptyBody": "Organise one: set the format, open registration and publish the fixtures."
     },
     "final": {
-      "title": "Kick-off is close.",
-      "body": "Create your free account and join your first match nearby."
+      "chapter": "The final whistle",
+      "title": "The pitch is waiting.",
+      "primary": "Find your next match",
+      "create": "Create a match",
+      "join": "Create a free account",
+      "trust": {
+        "verified": "Venues are verified by our team before they can take bookings.",
+        "reviews": "Reviews only come from people who actually played together.",
+        "privacy": "Your exact location and contact details are never shown publicly.",
+        "payments": "No online payments yet — costs are settled in person and nothing is charged through the app.",
+        "more": "Read our safety approach"
+      }
     }
   }
 }
