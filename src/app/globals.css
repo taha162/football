@@ -112,100 +112,384 @@
 }
 
 /* =========================================================================
-   Landing — cinematic hero and editorial sections
+   Landing — the floodlit stage
+   Six scenes scroll over a live WebGL stadium (or its still fallback).
+   Motion tokens: one family of curves for the whole experience. The camera
+   uses the same "heavy" curve in the engine (src/lib/stage/camera.ts).
    ========================================================================= */
 :root {
-  /* Direction-aware nudge for "forward" arrows. */
   --nudge: 4px;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1); /* interface feedback */
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1); /* state changes */
+  --ease-reveal: cubic-bezier(0.19, 1, 0.22, 1); /* type reveals */
+  --ease-camera: cubic-bezier(0.6, 0.02, 0.12, 1); /* the camera: slow start, long settle */
+  --dur-fast: 200ms;
+  --dur-base: 450ms;
+  --dur-slow: 900ms;
 }
 [dir="rtl"] {
   --nudge: -4px;
 }
 
-/* Layered grade over the footage: legibility on the text side, a soft
-   vignette, depth at the bottom, and a restrained floodlight tint. The
-   footage itself stays visible and is never flattened by a single overlay. */
-.hero-grade {
-  background:
-    /* floodlight accent, far side, very low */
-    radial-gradient(60% 45% at 85% 8%, rgb(184 242 63 / 0.10), transparent 70%),
-    /* blend into the page below */
-    linear-gradient(to top, var(--color-bg) 0%, rgb(10 14 11 / 0.72) 18%, rgb(10 14 11 / 0) 52%),
-    /* text side, start edge */
-    linear-gradient(to right, rgb(6 9 7 / 0.82) 0%, rgb(6 9 7 / 0.55) 34%, rgb(6 9 7 / 0) 66%),
-    /* under the header */
-    linear-gradient(to bottom, rgb(6 9 7 / 0.55) 0%, rgb(6 9 7 / 0) 22%),
-    /* vignette */
-    radial-gradient(120% 90% at 50% 45%, transparent 55%, rgb(0 0 0 / 0.55) 100%);
+.stage-root {
+  position: relative;
+  isolation: isolate;
+  margin-top: -4rem; /* runs under the floating header */
+  clip-path: inset(0); /* the fixed stage shows only behind the landing */
 }
-[dir="rtl"] .hero-grade {
-  background:
-    radial-gradient(60% 45% at 15% 8%, rgb(184 242 63 / 0.10), transparent 70%),
-    linear-gradient(to top, var(--color-bg) 0%, rgb(10 14 11 / 0.72) 18%, rgb(10 14 11 / 0) 52%),
-    linear-gradient(to left, rgb(6 9 7 / 0.82) 0%, rgb(6 9 7 / 0.55) 34%, rgb(6 9 7 / 0) 66%),
-    linear-gradient(to bottom, rgb(6 9 7 / 0.55) 0%, rgb(6 9 7 / 0) 22%),
-    radial-gradient(120% 90% at 50% 45%, transparent 55%, rgb(0 0 0 / 0.55) 100%);
+.stage-layer {
+  position: fixed;
+  inset-inline: 0;
+  top: 0;
+  z-index: 0;
+  height: 100lvh; /* constant through mobile toolbar changes: no resize while scrolling */
+  overflow: hidden;
+  background: #000;
 }
-.hero-media img,
-.hero-media video {
-  filter: contrast(1.06) saturate(0.92);
+.stage-canvas,
+.stage-fallback,
+.stage-grade {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.stage-canvas {
+  display: block;
+  opacity: 0;
+  transition: opacity var(--dur-slow) var(--ease-in-out);
+}
+html[data-stage="live"] .stage-canvas {
+  opacity: 1;
+}
+/* Still image wherever WebGL is missing or lost (vector, drawn from real pitch dimensions). */
+.stage-fallback {
+  background: #050806 url("/media/landing/pitch-night.svg") 62% 55% / cover no-repeat;
+  transition: opacity var(--dur-slow) var(--ease-in-out);
+}
+[dir="rtl"] .stage-fallback {
+  transform: scaleX(-1);
+}
+html[data-stage="live"] .stage-fallback,
+html[data-intro="wait"] .stage-fallback,
+html[data-intro="play"] .stage-fallback,
+html[data-intro="headline"] .stage-fallback {
+  opacity: 0;
+}
+/* Grade: the text side, a floor for copy, the header band and a soft vignette. */
+.stage-grade {
+  pointer-events: none;
+  background:
+    linear-gradient(to bottom, rgb(5 7 6 / 0.6) 0, rgb(5 7 6 / 0) 7rem),
+    linear-gradient(to top, rgb(10 14 11 / 0.72) 0, rgb(10 14 11 / 0) 34%),
+    linear-gradient(to right, rgb(5 7 6 / 0.82) 0%, rgb(5 7 6 / 0.5) 30%, rgb(5 7 6 / 0) 58%),
+    radial-gradient(125% 95% at 62% 45%, transparent 55%, rgb(0 0 0 / 0.55) 100%);
+}
+[dir="rtl"] .stage-grade {
+  background:
+    linear-gradient(to bottom, rgb(5 7 6 / 0.6) 0, rgb(5 7 6 / 0) 7rem),
+    linear-gradient(to top, rgb(10 14 11 / 0.72) 0, rgb(10 14 11 / 0) 34%),
+    linear-gradient(to left, rgb(5 7 6 / 0.82) 0%, rgb(5 7 6 / 0.5) 30%, rgb(5 7 6 / 0) 58%),
+    radial-gradient(125% 95% at 38% 45%, transparent 55%, rgb(0 0 0 / 0.55) 100%);
+}
+/* Portrait screens: the copy sits low, the subject high (the camera frames it that way). */
+@media (orientation: portrait) {
+  .stage-grade,
+  [dir="rtl"] .stage-grade {
+    background:
+      linear-gradient(to bottom, rgb(5 7 6 / 0.65) 0, rgb(5 7 6 / 0) 6rem),
+      linear-gradient(to top, rgb(8 11 9 / 0.92) 0, rgb(8 11 9 / 0.55) 38%, rgb(8 11 9 / 0) 62%),
+      radial-gradient(140% 90% at 50% 35%, transparent 55%, rgb(0 0 0 / 0.5) 100%);
+  }
+}
+/* Fine film grain. */
+.stage-grade::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.06;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-.hero-title {
-  font-size: clamp(3.1rem, 8.4vw, 7.6rem);
-  font-weight: 800;
-  line-height: 0.94;
-  letter-spacing: -0.02em;
-  text-wrap: balance;
+/* ---- Scenes ----------------------------------------------------------- */
+.stage-scenes {
+  position: relative;
+  z-index: 1;
+  pointer-events: none; /* empty space belongs to the stage (ball, markers) */
 }
-:lang(en) .hero-title {
-  text-transform: uppercase;
+.stage-panel,
+.scene-panel > * {
+  pointer-events: auto;
 }
-[dir="rtl"] .hero-title {
-  font-size: clamp(2.7rem, 6.6vw, 5.75rem);
-  font-weight: 900;
-  line-height: 1.12;
-  letter-spacing: 0;
+/* Where the ball can be under the copy, interactive blocks are only as wide as their content. */
+.scene-hero .stage-panel,
+.scene-final .scene-panel > * {
+  width: fit-content;
+  max-width: 100%;
 }
-
-.eyebrow {
+.stage-scene {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  min-height: 118svh;
+  padding-block: 16svh;
+}
+.scene-hero {
+  min-height: max(36rem, 100svh);
+  align-items: flex-end;
+  padding-block: 7rem 8.5rem;
+}
+.scene-final {
+  min-height: 125svh;
+}
+@media (min-width: 768px) {
+  .scene-hero {
+    padding-bottom: 7.5rem;
+  }
+}
+@media (orientation: portrait) {
+  .stage-scene:not(.scene-hero) {
+    align-items: flex-end;
+    padding-block: 46svh 10svh;
+  }
+}
+.scene-panel {
+  position: relative;
+  display: flex;
+  max-width: 40rem;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+/* A soft pool of shadow behind the copy instead of a box. */
+.scene-panel::before {
+  content: "";
+  position: absolute;
+  inset: -5rem -7rem;
+  z-index: -1;
+  background: radial-gradient(closest-side, rgb(5 7 6 / 0.78), rgb(5 7 6 / 0.55) 55%, rgb(5 7 6 / 0));
+  pointer-events: none;
+}
+@media (orientation: portrait) {
+  .scene-panel::before {
+    inset: -3rem -1rem;
+    background: radial-gradient(closest-side, rgb(5 7 6 / 0.9), rgb(5 7 6 / 0.75) 60%, rgb(5 7 6 / 0));
+  }
+}
+
+.scene-kicker,
+.scene-chapter {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
   font-size: 0.8125rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--color-accent);
 }
-.eyebrow::before {
+.scene-kicker::before {
   content: "";
-  width: 2rem;
+  width: 2.5rem;
   height: 1px;
   background: currentColor;
 }
-:lang(en) .eyebrow {
+.scene-chapter .num {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  color: rgb(233 241 235 / 0.6);
+}
+.scene-chapter .num::after {
+  content: "";
+  display: inline-block;
+  width: 1.5rem;
+  height: 1px;
+  margin-inline: 0.85rem 0;
+  vertical-align: middle;
+  background: rgb(233 241 235 / 0.35);
+}
+:lang(en) .scene-kicker,
+:lang(en) .scene-chapter {
   text-transform: uppercase;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.2em;
   font-size: 0.75rem;
 }
-.section-title {
-  font-family: var(--font-display);
-  font-size: clamp(2.1rem, 4.6vw, 3.6rem);
+
+.hero-title {
+  font-size: clamp(3rem, 8.2vw, 7.4rem);
   font-weight: 800;
-  line-height: 1.02;
+  line-height: 0.92;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+:lang(en) .hero-title,
+:lang(en) .scene-title,
+:lang(en) .final-title {
+  text-transform: uppercase;
+}
+[dir="rtl"] .hero-title {
+  font-size: clamp(2.6rem, 6.6vw, 5.6rem);
+  font-weight: 900;
+  line-height: 1.18;
+  letter-spacing: 0;
+}
+.hero-sub {
+  max-width: 34ch;
+  font-size: clamp(1.05rem, 1.5vw, 1.3rem);
+  color: rgb(233 241 235 / 0.84);
+}
+.scene-title {
+  font-family: var(--font-display);
+  font-size: clamp(2.1rem, 4.6vw, 3.75rem);
+  font-weight: 800;
+  line-height: 1;
   letter-spacing: -0.01em;
   text-wrap: balance;
 }
-[dir="rtl"] .section-title {
-  line-height: 1.2;
+[dir="rtl"] .scene-title {
+  line-height: 1.25;
   letter-spacing: 0;
 }
-.step-numeral {
-  font-family: var(--font-display);
-  font-size: clamp(2.6rem, 5vw, 3.75rem);
+.final-title {
+  font-size: clamp(3.2rem, 9vw, 7.4rem);
   font-weight: 800;
-  line-height: 0.9;
-  color: transparent;
-  -webkit-text-stroke: 1px var(--color-line-strong);
+  line-height: 0.95;
+  text-wrap: balance;
+}
+[dir="rtl"] .final-title {
+  font-size: clamp(2.8rem, 7.4vw, 6rem);
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+/* Boards: rows like a matchday listing, hairlines and an accent rule on hover. */
+.scene-board {
+  border-top: 1px solid rgb(233 241 235 / 0.16);
+}
+.board-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.35rem 1.25rem;
+  padding-block: 1.1rem;
+  border-bottom: 1px solid rgb(233 241 235 / 0.1);
+  outline-offset: -2px;
+}
+.board-row::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: 0;
+  bottom: -1px;
+  width: 100%;
+  height: 1px;
+  background: var(--color-accent);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--dur-base) var(--ease-out);
+}
+[dir="rtl"] .board-row::before {
+  transform-origin: right;
+}
+.board-row:hover::before,
+.board-row:focus-visible::before,
+.board-row:focus-within::before {
+  transform: scaleX(1);
+}
+.match-row {
+  grid-template-columns: 4.5rem minmax(0, 1fr) auto;
+}
+.board-stretch::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+.board-stretch:focus-visible {
+  outline: none;
+}
+.match-row:focus-within {
+  outline: 2px solid var(--color-accent);
+}
+.match-join {
+  display: none;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--color-accent);
+}
+@media (min-width: 640px) {
+  .match-row {
+    grid-template-columns: 5.25rem minmax(0, 1fr) auto auto;
+  }
+  .match-join {
+    display: inline-flex;
+  }
+}
+@media (max-width: 639px) {
+  .match-row .match-meta {
+    grid-column: 2 / -1;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 0.75rem;
+    text-align: start;
+  }
+  .match-row .match-meta > span {
+    align-items: flex-start;
+  }
+}
+.scene-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.75rem;
+}
+.trust-list {
+  display: grid;
+  gap: 0.75rem;
+  max-width: 40rem;
+  font-size: 0.95rem;
+  color: rgb(233 241 235 / 0.82);
+}
+.trust-list li {
+  display: flex;
+  gap: 0.9rem;
+}
+@media (min-width: 768px) {
+  .trust-list {
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem 2rem;
+  }
+}
+
+/* Hero caption strip. */
+.hero-strip {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 5rem;
+}
+@media (min-width: 768px) {
+  .hero-strip {
+    bottom: 1.75rem;
+  }
+}
+.scroll-cue {
+  display: block;
+  width: 1px;
+  height: 2.25rem;
+  background: linear-gradient(to bottom, var(--color-accent), transparent);
+  transform-origin: top;
+  animation: scroll-cue 2.4s var(--ease-in-out) infinite;
+}
+@keyframes scroll-cue {
+  0% {
+    transform: scaleY(0);
+    opacity: 1;
+  }
+  60% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scaleY(1);
+    opacity: 0;
+  }
 }
 
 /* Calls to action: a squared, confident primary and an underlined secondary. */
@@ -222,9 +506,14 @@
   font-size: 1rem;
   box-shadow: 0 0 0 0 rgb(184 242 63 / 0);
   transition:
-    background-color 200ms ease,
+    background-color var(--dur-fast) ease,
     box-shadow 300ms ease,
     transform 120ms ease;
+}
+:lang(en) .cta-primary {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.9375rem;
 }
 .cta-primary:hover {
   background: #c7f75f;
@@ -245,6 +534,11 @@
   font-weight: 600;
   color: var(--color-ink);
 }
+:lang(en) .cta-secondary {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.9375rem;
+}
 .cta-secondary::after {
   content: "";
   position: absolute;
@@ -253,10 +547,9 @@
   height: 1px;
   background: currentColor;
   opacity: 0.45;
-  transform-origin: var(--origin, left);
   transition:
-    opacity 200ms ease,
-    background-color 200ms ease;
+    opacity var(--dur-fast) ease,
+    background-color var(--dur-fast) ease;
 }
 .cta-secondary:hover {
   color: var(--color-accent);
@@ -273,119 +566,171 @@
   border-bottom: 1px solid rgb(233 241 235 / 0.3);
   padding-bottom: 0.25rem;
   transition:
-    color 200ms ease,
-    border-color 200ms ease;
+    color var(--dur-fast) ease,
+    border-color var(--dur-fast) ease;
 }
 .link-arrow:hover {
   color: var(--color-accent);
   border-color: var(--color-accent);
 }
 
-/* Matchday rows and directory links: a thin accent rule grows on hover. */
-.fixture-row,
-.index-link {
-  position: relative;
-  outline-offset: -2px;
+/* ---- Scene controls and the ball -------------------------------------- */
+/* Phones: under the header (the bottom belongs to the navigation bar). Larger
+   screens: bottom corner, where media controls usually live. */
+.stage-controls {
+  position: fixed;
+  z-index: 30;
+  top: 4.75rem;
+  inset-inline-end: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
-.fixture-row::before,
-.index-link::before {
+@media (min-width: 768px) {
+  .stage-controls {
+    top: auto;
+    bottom: 1.5rem;
+    inset-inline-end: 1.5rem;
+  }
+  .hero-strip .stage-panel {
+    margin-inline-end: 7.5rem;
+  }
+}
+.stage-control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 999px;
+  border: 1px solid rgb(233 241 235 / 0.2);
+  background: rgb(5 7 6 / 0.6);
+  color: rgb(233 241 235 / 0.92);
+  transition:
+    border-color var(--dur-fast) ease,
+    color var(--dur-fast) ease;
+}
+.stage-control:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+.stage-control[aria-pressed="true"] {
+  border-color: rgb(184 242 63 / 0.6);
+}
+.stage-control-text {
+  padding-inline: 1rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+.stage-ball {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: max(3.5rem, calc(var(--ball-r, 1rem) * 3));
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  cursor: grab;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.stage-ball:active {
+  cursor: grabbing;
+}
+.stage-ball[data-on="false"] {
+  visibility: hidden;
+}
+.stage-ball::before {
   content: "";
   position: absolute;
-  inset-inline-start: 0;
-  bottom: -1px;
-  height: 1px;
-  width: 100%;
-  background: var(--color-accent);
-  transform: scaleX(0);
-  transform-origin: left;
-  transition: transform 450ms cubic-bezier(0.2, 0.7, 0.1, 1);
+  left: 50%;
+  top: 50%;
+  width: calc(var(--ball-r, 1rem) * 2 + 16px);
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: 999px;
+  border: 1.5px solid rgb(184 242 63 / 0.7);
+  opacity: 0;
+  transition: opacity var(--dur-base) var(--ease-out);
 }
-[dir="rtl"] .fixture-row::before,
-[dir="rtl"] .index-link::before {
-  transform-origin: right;
+.stage-ball:hover::before,
+.stage-ball:focus-visible::before {
+  opacity: 1;
 }
-.fixture-row:hover::before,
-.index-link:hover::before,
-.fixture-row:focus-visible::before,
-.index-link:focus-visible::before {
-  transform: scaleX(1);
+.stage-ball:focus-visible {
+  outline: none;
 }
-
-/* Final call: centre circle and halfway line, barely there. */
-.final-pitch {
-  background:
-    radial-gradient(circle at 78% 50%, transparent 0 13rem, rgb(184 242 63 / 0.14) 13rem calc(13rem + 1px), transparent calc(13rem + 1px)),
-    linear-gradient(90deg, transparent calc(78% - 0.5px), rgb(184 242 63 / 0.14) calc(78% - 0.5px) calc(78% + 0.5px), transparent calc(78% + 0.5px)),
-    radial-gradient(70% 90% at 78% 50%, rgb(31 107 58 / 0.22), transparent 70%);
+.stage-ball-hint {
+  position: absolute;
+  left: 50%;
+  top: calc(50% + var(--ball-r, 1rem) + 1rem);
+  translate: -50% 0;
+  white-space: nowrap;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  background: rgb(5 7 6 / 0.6);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgb(233 241 235 / 0.88);
+  pointer-events: none;
+  animation: stage-breathe 2.8s var(--ease-in-out) infinite;
 }
-[dir="rtl"] .final-pitch {
-  transform: scaleX(-1);
-}
-
-/* ---- Motion: one restrained entrance, then the footage does the work. ---- */
-@keyframes hero-fade {
-  from {
-    opacity: 0;
-  }
-}
-@keyframes hero-up {
-  from {
-    opacity: 0;
-    transform: translateY(14px);
-  }
-}
-@keyframes hero-line {
-  from {
-    transform: translateY(105%);
-  }
-}
-@keyframes hero-scroll {
+@keyframes stage-breathe {
   0%,
   100% {
-    transform: translateY(0);
-    opacity: 0.6;
+    opacity: 0.55;
   }
   50% {
-    transform: translateY(4px);
     opacity: 1;
   }
 }
+
+/* ---- The opening: copy waits for the lights ----------------------------- */
+@keyframes stage-fade {
+  from {
+    opacity: 0;
+  }
+}
 .header-intro {
-  animation: hero-fade 700ms ease-out both;
+  animation: stage-fade 700ms ease-out both;
 }
-.hero-media {
-  animation: hero-fade 900ms ease-out both;
+html[data-intro="wait"] .header-intro,
+html[data-intro="play"] .header-intro {
+  animation: none;
+  opacity: 0;
 }
-.hero-in {
-  animation: hero-up 800ms cubic-bezier(0.2, 0.7, 0.1, 1) both;
-  animation-delay: var(--d, 0ms);
+html[data-intro="headline"] .header-intro {
+  animation: stage-fade 900ms ease-out both;
 }
-.hero-line-inner {
-  animation: hero-line 1000ms cubic-bezier(0.19, 1, 0.22, 1) both;
-  animation-delay: var(--d, 0ms);
+.intro-reveal {
+  transition:
+    opacity 700ms var(--ease-out),
+    transform 900ms var(--ease-out);
 }
-.hero-scroll {
-  animation: hero-scroll 2.4s ease-in-out infinite;
+.reveal-line {
+  display: block;
+  overflow: hidden;
+  /* Room for Arabic marks above and below the line box while clipping the reveal. */
+  padding-block: 0.08em 0.12em;
+  margin-block: -0.08em -0.12em;
 }
-/* Very slight drift of the footage as the hero scrolls away. */
-@supports (animation-timeline: scroll()) {
-  @keyframes hero-drift {
-    to {
-      transform: translateY(12%) scale(1.04);
-    }
-  }
-  .hero-media > img,
-  .hero-media > picture img,
-  .hero-media > video {
-    animation: hero-drift linear both;
-    animation-timeline: scroll(root);
-    animation-range: 0 100vh;
-  }
+.reveal-line > span {
+  display: block;
+  transition: transform 1100ms var(--ease-reveal);
 }
-@media (prefers-reduced-motion: reduce) {
-  .hero-media > img,
-  .hero-media > picture img,
-  .hero-media > video {
-    animation: none;
-  }
+html[data-intro="wait"] .intro-reveal,
+html[data-intro="play"] .intro-reveal {
+  opacity: 0;
+  transform: translate3d(0, 1.1rem, 0);
+}
+html[data-intro="wait"] .reveal-line > span,
+html[data-intro="play"] .reveal-line > span {
+  transform: translate3d(0, 110%, 0);
+}
+html[data-intro="headline"] .intro-reveal,
+html[data-intro="headline"] .reveal-line > span {
+  transition-delay: var(--d, 0ms);
 }

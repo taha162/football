@@ -1,6 +1,6 @@
 # Implementation status
 
-Last updated: 2026-10-27. "Verified" means covered by an automated test that passed on this date: unit, DB integration against real Postgres, or Playwright against a production build. Everything was verified locally against the Supabase CLI stack. No hosted environment has been deployed or tested.
+Last updated: 2026-10-28. "Verified" means covered by an automated test that passed on this date: unit, DB integration against real Postgres, or Playwright against a production build. Everything was verified locally against the Supabase CLI stack. No hosted environment has been deployed or tested.
 
 ## Verification summary
 
@@ -8,11 +8,11 @@ Last updated: 2026-10-27. "Verified" means covered by an automated test that pas
 | --- | --- |
 | `pnpm lint` | Clean |
 | `pnpm typecheck` | Clean (TS strict) |
-| `pnpm i18n:check` | 1698 keys, ar/en in sync, all static keys resolved |
-| `pnpm test:unit` | 28 passed |
+| `pnpm i18n:check` | 1721 keys, ar/en in sync, all static keys resolved |
+| `pnpm test:unit` | 44 passed (domain rules, ball physics, camera and quality logic) |
 | `pnpm test:db` | 71 passed (concurrency, RLS, RPC rules, jobs, WhatsApp verification) |
 | `pnpm build` | Succeeds (Next.js 16.4, Turbopack) |
-| `pnpm e2e` (production build) | 21 passed: 19 desktop, 2 mobile (Pixel 7, Arabic RTL) |
+| `pnpm e2e` (production build) | 27 passed: 25 desktop, 2 mobile (Pixel 7, Arabic RTL) |
 
 ## Features
 
@@ -70,13 +70,17 @@ Legend: ✅ implemented and verified by automated tests · 🟡 implemented, exe
 - ✅ Player and venue reviews (participants only, once, within the window; no-shows excluded), reputation aggregates — DB.
 
 ### Platform
-- 🟡 **Cinematic landing page.** The pieces:
-  - Full-bleed hero with layered grading and an Arabic-first editorial composition.
-  - Restrained entrance motion and scroll drift, both switched off for reduced motion.
-  - Header that floats over the hero.
-  - Matchday board of real upcoming matches, editorial "how it works", directory, trust section and final call.
+- ✅ **Landing stage: six scenes over a live floodlit stadium (WebGL).** The scenes are pitch, matches, squad, venues, tournaments and the final whistle. Covered by E2E (`landing.spec.ts`):
+  - every action and position link points at the real route;
+  - the recruitment figures change with the database;
+  - without WebGL, the still image shows and the page stays usable;
+  - with reduced motion there is no opening and motion starts paused;
+  - the opening releases the page within its failsafe and can be skipped;
+  - the ball can be kicked from the keyboard and brought back.
 
-  QA'd at desktop, tablet and phone in both languages. The video path (autoplay, pause/play, reduced motion, broken-file fallback) was QA'd with a **synthetic test clip only**. **No real stadium footage is bundled yet:** the licensed-footage sites were not reachable from the build environment. Add footage with `scripts/prepare-hero-video.sh` + `NEXT_PUBLIC_HERO_*` (DEPLOYMENT.md §7). Until then the hero shows a vector night-pitch illustration drawn from real pitch dimensions.
+  The ball physics and the camera/quality logic are unit-tested. Visual QA was done in both languages at desktop, portrait tablet and phone sizes, including the opening, all six shots, a flick, context loss and restore, and marker hover and click.
+
+  🟡 **Not verified on real hardware:** all rendering QA ran in headless Chromium with software WebGL (SwiftShader), at the lowest quality tier plus spot checks of the highest. Frame rates on real phones and GPUs, and the governor's thresholds, have not been measured. The synthesised sound was exercised (it turns on and off without errors) but has not been listened to.
 - ✅ Arabic (RTL, default) and English (LTR), with the locale persisted per user and cookie — E2E J and mobile.
 - ✅ Mobile layout with bottom navigation and no horizontal overflow on phone widths — E2E mobile.
 - ✅ Scheduled jobs (`/api/cron` → `run_scheduled_jobs`) are idempotent — DB.

@@ -9,6 +9,7 @@ import { SiteFooter } from "@/components/layout/site-footer";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { getCurrentUser } from "@/lib/auth";
 import { publicEnv } from "@/lib/env";
+import { INTRO_SCRIPT } from "@/components/stage/intro-script";
 import "../globals.css";
 
 const cairo = Cairo({ subsets: ["arabic", "latin"], variable: "--font-cairo", display: "swap" });
@@ -58,8 +59,12 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
       dir={directionOf(locale)}
       className={`${cairo.variable} ${barlow.variable} ${barlowCondensed.variable} h-full antialiased`}
       style={fontVars as React.CSSProperties}
+      // The pre-paint script below sets data-intro on <html> before hydration (landing page).
+      suppressHydrationWarning
     >
       <body className="flex min-h-full flex-col">
+        {/* Landing page only: decides before first paint whether the opening plays. */}
+        <script dangerouslySetInnerHTML={{ __html: INTRO_SCRIPT }} />
         <NextIntlClientProvider>
           <a
             href="#main"
