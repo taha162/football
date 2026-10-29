@@ -10,6 +10,8 @@ import { MobileNav } from "@/components/layout/mobile-nav";
 import { getCurrentUser } from "@/lib/auth";
 import { publicEnv } from "@/lib/env";
 import { INTRO_SCRIPT } from "@/components/stage/intro-script";
+import { MotionRoot } from "@/components/motion/motion-root";
+import { PageTransition } from "@/components/motion/page-transition";
 import "../globals.css";
 
 const cairo = Cairo({ subsets: ["arabic", "latin"], variable: "--font-cairo", display: "swap" });
@@ -57,12 +59,12 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
     <html
       lang={locale}
       dir={directionOf(locale)}
-      className={`${cairo.variable} ${barlow.variable} ${barlowCondensed.variable} h-full antialiased`}
+      className={`${cairo.variable} ${barlow.variable} ${barlowCondensed.variable} antialiased`}
       style={fontVars as React.CSSProperties}
       // The pre-paint script below sets data-intro on <html> before hydration (landing page).
       suppressHydrationWarning
     >
-      <body className="flex min-h-full flex-col">
+      <body className="flex min-h-svh flex-col">
         {/* Landing page only: decides before first paint whether the opening plays. */}
         <script dangerouslySetInnerHTML={{ __html: INTRO_SCRIPT }} />
         <NextIntlClientProvider>
@@ -74,10 +76,12 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
           </a>
           <SiteHeader user={user} />
           <main id="main" className="flex-1 pb-24 md:pb-12">
-            {children}
+            <PageTransition>{children}</PageTransition>
           </main>
           <SiteFooter />
           <MobileNav signedIn={Boolean(user)} />
+          {/* After the page content, so its effects run once the router has placed the new page. */}
+          <MotionRoot />
         </NextIntlClientProvider>
       </body>
     </html>

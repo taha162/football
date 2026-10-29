@@ -69,11 +69,30 @@ The home page is six scenes (pitch, matches, squad, venues, tournaments, final w
 - **Adaptive quality.** The starting tier comes from GPU and device hints. A frame governor (median frame time) steps it down at run time. Rendering stops when nothing moves (ambient motion runs at about 30 fps), when the stage is off screen and when the tab is hidden. On WebGL context loss the still image shows, and the scene comes back on restore.
 - **Accessibility and motion.** Controls are provided to skip the opening, pause ambient motion (WCAG 2.2.2) and turn sound on. Sound is synthesised with WebAudio, off by default, and created only inside the click. Reduced motion means no opening, no camera travel (scenes cut) and paused ambient motion. Without WebGL, the page shows the illustration `public/media/landing/pitch-night.svg`.
 
+## Motion and interaction
+
+The whole site shares one set of motion tokens (`src/app/globals.css`): durations, an ease-out for feedback, a press curve, and a damped spring written as CSS `linear()` (damping ratio 0.62, 8% overshoot). All of it honours `prefers-reduced-motion`: CSS through the global block, scripted motion by checking the media query.
+
+- **Smooth scrolling.** Lenis eases wheel scrolling of the window (`src/components/motion/motion-root.tsx`). Touch and keyboard scrolling stay native, nested scroll areas (the chat, wide tables) scroll themselves, and reduced motion turns the easing off. A navigation ends any glide still running, so it cannot pull the new page away from where the router placed it. The landing camera now follows the eased scroll more closely (its own damping went from 4.5 to 6).
+- **Page transitions.** `PageTransition` wraps each page in a React `<ViewTransition>` keyed by the path. Every navigation, detail pages included, is therefore an exit and an enter: the old page fades out in 150 ms and the new one rises in 400 ms. Changing only the query (filters) or refreshing data keeps the page in place. The header, the phone navigation bar and the progress line are named, so they hold still above the moving pages. When the rest of the page is unaffected, React keeps it live by shrinking the transition layer to 0×0. On right-to-left pages that layer must be pinned to the left (`::view-transition { right: auto }`): otherwise it anchors to the right edge and every animated group renders off-screen, so the screen is blank for the whole transition. The loading skeleton fades out as streamed content arrives, and full page loads cross-fade (`@view-transition`). A swipe back that the browser has already animated is not animated a second time (`hasUAVisualTransition`).
+- **Navigation progress.** A 2 px line runs along the top while the next page loads. It starts on internal link clicks and GET form submissions, appears only after 120 ms, and completes when the address changes, with a 10 s safety stop.
+- **Search forms** use `next/form` with `action=""` and `scroll={false}`. Filters update the results in place instead of reloading the document, and the URLs are unchanged.
+- **Reveals.** Marked content rises into view once, the first time it is scrolled to. That covers `.reveal` (cards, empty states) and the children of `.reveal-children` (landing scene panels). Content added later while on screen, such as new results, rises immediately. Content on screen when a page arrives is left to the page transition. Reveals use IntersectionObserver and Web Animations, never classes or attributes, because the first scan can run before React has hydrated the server-rendered markup. Printing shows everything.
+- **Micro-interactions.**
+  - Buttons lift on hover, press to 97% and spring back, and the focus ring closes in on them.
+  - List cards lift and are lit from the pointer position. The position goes to CSS through a held Web Animation, not the style attribute.
+  - Fields glow on focus. On a validation error, the page glides to the first invalid field, which shakes; error alerts pop in and shake.
+  - In the desktop navigation, a highlight glides between items and the current section is underlined. The phone bar lights a segment of its top line.
+  - Dialogs rise with a spring while the page behind dims. The account menu grows from the avatar.
+  - Pending buttons show a rolling football, and unread counts pop when they change.
+- **Celebration.** Joining a match or accepting an invitation can end in the server-rendered "You're in" state. When it does, the tab that sent the action throws a short burst of lime and white flecks (Web Animations with exact drag and gravity). It is keyed by match and armed only for 20 s after that tab's submission, so reloading or arriving any other way shows nothing.
+
 ## Known trade-offs
 
 - **404 status with a root `loading.tsx`.** Not-found pages stream after the loading shell, so `notFound()` renders the localized 404 UI with `noindex`, but the HTTP status is 200. Private pages are not affected, because the proxy redirects before rendering.
 - **Server-rendered form controls.** Server components cannot pass render functions to the client `FormField`. They render controls with `{...controlProps(name)}`, and `FormField` applies the error aria attributes after hydration. Client forms receive the attributes directly.
 - **Distance search** uses a haversine function over venue or match coordinates, without PostGIS. This is adequate for city scale, and PostGIS is the upgrade path.
+- **Page transitions briefly hold named elements.** While a page transition plays (about 0.45 s), the browser does not deliver clicks to the named participants: the arriving page, the header and the phone bar. A tap in that window can miss. Transitions are kept short for this reason.
 - **Notifications are in-app only.** E-mail, SMS and push are not implemented. Preferences are stored so that channels can be added later.
 
 ## Observability

@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import Form from "next/form";
 import type { Locale } from "@/i18n/routing";
 import { Link } from "@/i18n/navigation";
 import { dbErrorCode } from "@/lib/actions";
@@ -62,7 +63,7 @@ export default async function BookVenuePage({ params, searchParams }: PageProps<
         <div className="flex flex-col gap-6">
           <Card>
             <CardBody>
-              <form method="get" className="grid gap-4 sm:grid-cols-2">
+              <Form action="" scroll={false} className="grid gap-4 sm:grid-cols-2">
                 {matchId ? <input type="hidden" name="match" value={matchId} /> : null}
                 <label className="flex flex-col gap-1 text-sm">
                   {t("field")}
@@ -85,7 +86,7 @@ export default async function BookVenuePage({ params, searchParams }: PageProps<
                   </Select>
                 </label>
                 <button type="submit" className={buttonClass("secondary", "md", "sm:col-span-2")}>{t("check")}</button>
-              </form>
+              </Form>
             </CardBody>
           </Card>
 

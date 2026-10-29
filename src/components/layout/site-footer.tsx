@@ -15,16 +15,16 @@ export async function SiteFooter() {
         </div>
         <nav aria-label={t("explore")} className="flex flex-col gap-2 text-sm">
           <p className="font-semibold">{t("explore")}</p>
-          <Link className="text-muted hover:text-ink" href="/matches">{nav("matches")}</Link>
-          <Link className="text-muted hover:text-ink" href="/teams">{nav("teams")}</Link>
-          <Link className="text-muted hover:text-ink" href="/venues">{nav("venues")}</Link>
-          <Link className="text-muted hover:text-ink" href="/tournaments">{nav("tournaments")}</Link>
+          <Link className="link-quiet w-fit text-muted hover:text-ink" href="/matches">{nav("matches")}</Link>
+          <Link className="link-quiet w-fit text-muted hover:text-ink" href="/teams">{nav("teams")}</Link>
+          <Link className="link-quiet w-fit text-muted hover:text-ink" href="/venues">{nav("venues")}</Link>
+          <Link className="link-quiet w-fit text-muted hover:text-ink" href="/tournaments">{nav("tournaments")}</Link>
         </nav>
         <nav aria-label={t("legal")} className="flex flex-col gap-2 text-sm">
           <p className="font-semibold">{t("legal")}</p>
-          <Link className="text-muted hover:text-ink" href="/legal/terms">{t("terms")}</Link>
-          <Link className="text-muted hover:text-ink" href="/legal/privacy">{t("privacy")}</Link>
-          <Link className="text-muted hover:text-ink" href="/legal/safety">{t("safety")}</Link>
+          <Link className="link-quiet w-fit text-muted hover:text-ink" href="/legal/terms">{t("terms")}</Link>
+          <Link className="link-quiet w-fit text-muted hover:text-ink" href="/legal/privacy">{t("privacy")}</Link>
+          <Link className="link-quiet w-fit text-muted hover:text-ink" href="/legal/safety">{t("safety")}</Link>
         </nav>
       </div>
       <p className="border-t border-line px-4 py-4 text-center text-xs text-faint">{t("copyright", { year })}</p>

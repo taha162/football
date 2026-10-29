@@ -1,6 +1,6 @@
 # Implementation status
 
-Last updated: 2026-10-28. "Verified" means covered by an automated test that passed on this date: unit, DB integration against real Postgres, or Playwright against a production build. Everything was verified locally against the Supabase CLI stack. No hosted environment has been deployed or tested.
+Last updated: 2026-10-29. "Verified" means covered by an automated test that passed on this date: unit, DB integration against real Postgres, or Playwright against a production build. Everything was verified locally against the Supabase CLI stack. No hosted environment has been deployed or tested.
 
 ## Verification summary
 
@@ -12,7 +12,7 @@ Last updated: 2026-10-28. "Verified" means covered by an automated test that pas
 | `pnpm test:unit` | 44 passed (domain rules, ball physics, camera and quality logic) |
 | `pnpm test:db` | 71 passed (concurrency, RLS, RPC rules, jobs, WhatsApp verification) |
 | `pnpm build` | Succeeds (Next.js 16.4, Turbopack) |
-| `pnpm e2e` (production build) | 27 passed: 25 desktop, 2 mobile (Pixel 7, Arabic RTL) |
+| `pnpm e2e` (production build) | 30 passed: 28 desktop, 2 mobile (Pixel 7, Arabic RTL) |
 
 ## Features
 
@@ -81,6 +81,14 @@ Legend: ✅ implemented and verified by automated tests · 🟡 implemented, exe
   The ball physics and the camera/quality logic are unit-tested. Visual QA was done in both languages at desktop, portrait tablet and phone sizes, including the opening, all six shots, a flick, context loss and restore, and marker hover and click.
 
   🟡 **Not verified on real hardware:** all rendering QA ran in headless Chromium with software WebGL (SwiftShader), at the lowest quality tier plus spot checks of the highest. Frame rates on real phones and GPUs, and the governor's thresholds, have not been measured. The synthesised sound was exercised (it turns on and off without errors) but has not been listened to.
+- ✅ **Site-wide motion and interaction.** This covers smooth wheel scrolling, page transitions, a navigation progress line and scroll reveals. It also covers feedback on buttons, cards, fields, menus and dialogs, a rolling-football pending state and a celebration on joining a match. All of it honours reduced motion. Search filters now update in place instead of reloading the page. Covered by E2E (`motion.spec.ts`):
+  - filters update the list without reloading the document;
+  - content below the fold rises in and is never left hidden;
+  - nothing is held back with reduced motion.
+
+  The rest of the suite also passes with transitions on. Visual QA was done in headless Chromium in both languages at desktop and phone sizes, with transitions slowed down to inspect individual frames. That QA found and fixed a blank screen during page transitions on right-to-left phones.
+
+  🟡 **Not verified on real devices, or in Safari or Firefox.** Where view transitions, `linear()` springs or `@starting-style` are missing, content appears without the animation. The guard against animating a browser swipe-back twice relies on `hasUAVisualTransition`, which not every browser reports.
 - ✅ Arabic (RTL, default) and English (LTR), with the locale persisted per user and cookie — E2E J and mobile.
 - ✅ Mobile layout with bottom navigation and no horizontal overflow on phone widths — E2E mobile.
 - ✅ Scheduled jobs (`/api/cron` → `run_scheduled_jobs`) are idempotent — DB.

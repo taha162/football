@@ -86,6 +86,537 @@
   }
 }
 
+/* =========================================================================
+   Motion — one family of curves for the whole site
+   A press lands at once, a release lets go with a small spring, content
+   arrives by rising into place, and pages hand over in under half a second.
+   The landing camera uses the same "heavy" curve in the engine
+   (src/lib/stage/camera.ts). prefers-reduced-motion switches all of it off
+   (the block after this section; scripted motion checks it too).
+   ========================================================================= */
+:root {
+  --nudge: 4px; /* "forward" in the reading direction */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1); /* interface feedback */
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1); /* state changes */
+  --ease-reveal: cubic-bezier(0.19, 1, 0.22, 1); /* type reveals */
+  --ease-camera: cubic-bezier(0.6, 0.02, 0.12, 1); /* the camera: slow start, long settle */
+  --ease-press: cubic-bezier(0.2, 0, 0, 1); /* a press lands immediately */
+  /* A damped spring (damping ratio 0.62, 8% overshoot): releases, pops, glides. */
+  --ease-spring: linear(0, 0.071, 0.234, 0.432, 0.625, 0.79, 0.916, 1.003, 1.055, 1.079, 1.083, 1.075, 1.06, 1.043, 1.028, 1.015, 1.005, 0.998, 0.995, 0.993, 0.993, 0.994, 0.995, 0.997, 1);
+  --dur-press: 90ms;
+  --dur-fast: 200ms;
+  --dur-base: 450ms;
+  --dur-spring: 560ms;
+  --dur-slow: 900ms;
+}
+[dir="rtl"] {
+  --nudge: -4px;
+}
+
+@layer base {
+  /* Every hover and state colour change eases instead of snapping. */
+  a,
+  button,
+  summary {
+    transition-property: color, background-color, border-color, text-decoration-color, opacity, box-shadow;
+    transition-duration: var(--dur-fast);
+    transition-timing-function: ease;
+  }
+}
+
+/* ---- Smooth scrolling ----------------------------------------------------
+   Lenis eases wheel scrolling of the window (src/components/motion/motion-root.tsx);
+   touch and keyboard scrolling stay native. Its stylesheet is not imported:
+   these are the parts of it this layout needs. */
+.lenis.lenis-smooth iframe {
+  pointer-events: none;
+}
+.lenis.lenis-stopped {
+  overflow: clip;
+}
+[data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+/* ---- Page transitions ----------------------------------------------------
+   Every page sits in a React <ViewTransition> keyed by its path
+   (src/components/motion/page-transition.tsx). The old page steps back and
+   fades fast; the new one rises into place a beat later. The header, the
+   phone navigation bar and the progress line are named, so they hold still
+   above the moving pages. Full page loads cross-fade. */
+@view-transition {
+  navigation: auto;
+}
+::view-transition {
+  pointer-events: none; /* clicks reach the live page while a transition plays */
+  /* React shrinks this layer to 0×0 when the rest of the page stays live. With
+     both insets at 0, a right-to-left page then anchors it to the right edge,
+     taking every animated group off-screen: pin it to the left instead. */
+  right: auto;
+}
+::view-transition-old(.page-out) {
+  animation: page-out 150ms var(--ease-in-out) both;
+}
+::view-transition-new(.page-in) {
+  animation: page-in 400ms var(--ease-out) 50ms both;
+}
+/* Everything else (footer, background) changes on the same beat as the pages. */
+::view-transition-old(root) {
+  animation-duration: 150ms;
+}
+::view-transition-new(root) {
+  animation-duration: 350ms;
+  animation-delay: 50ms;
+}
+/* The loading skeleton hands over to the real content (src/app/[locale]/loading.tsx). */
+::view-transition-old(.skeleton-out) {
+  animation: fade-out 180ms ease-out both;
+}
+::view-transition-group(site-header),
+::view-transition-group(mobile-nav) {
+  z-index: 100;
+}
+::view-transition-group(nav-progress) {
+  z-index: 101;
+}
+/* The browser already animated this swipe back: do not animate it twice. */
+html[data-ua-transition]::view-transition-group(*),
+html[data-ua-transition]::view-transition-old(*),
+html[data-ua-transition]::view-transition-new(*) {
+  animation-duration: 0s !important;
+  animation-delay: 0s !important;
+}
+@keyframes page-out {
+  to {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.99);
+  }
+}
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+}
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+/* ---- Navigation progress -------------------------------------------------
+   A chalk line drawn across the top while the next page loads, shown only
+   when loading takes longer than a blink (src/components/motion/nav-progress.tsx). */
+.nav-progress {
+  position: fixed;
+  inset-inline: 0;
+  top: 0;
+  z-index: 60;
+  height: 2px;
+  pointer-events: none;
+  view-transition-name: nav-progress;
+}
+.nav-progress::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to right, rgb(184 242 63 / 0.25), var(--color-accent) 70%, #efffc4);
+  box-shadow: 0 0 12px rgb(184 242 63 / 0.6);
+  transform-origin: left center;
+  transform: scaleX(0);
+  opacity: 0;
+}
+[dir="rtl"] .nav-progress::before {
+  background: linear-gradient(to left, rgb(184 242 63 / 0.25), var(--color-accent) 70%, #efffc4);
+  transform-origin: right center;
+}
+.nav-progress[data-state="loading"]::before {
+  opacity: 1;
+  animation: nav-trickle 10s cubic-bezier(0.08, 0.7, 0.2, 1) forwards;
+}
+.nav-progress[data-state="done"]::before {
+  transform: scaleX(1);
+  opacity: 0;
+  transition:
+    transform 240ms var(--ease-out),
+    opacity 320ms ease 180ms;
+}
+@keyframes nav-trickle {
+  from {
+    transform: scaleX(0);
+  }
+  6% {
+    transform: scaleX(0.25);
+  }
+  to {
+    transform: scaleX(0.94);
+  }
+}
+
+@layer components {
+  /* ---- Buttons: a hover lifts, a press lands, the release springs back ---- */
+  .btn {
+    --btn-move: var(--dur-spring) var(--ease-spring);
+    outline: 2px solid transparent;
+    outline-offset: 5px;
+    -webkit-tap-highlight-color: transparent;
+    transition:
+      color var(--dur-fast) ease,
+      background-color var(--dur-fast) ease,
+      border-color var(--dur-fast) ease,
+      box-shadow 320ms var(--ease-out),
+      outline-color var(--dur-fast) ease,
+      outline-offset 280ms var(--ease-out),
+      translate var(--btn-move),
+      scale var(--btn-move);
+  }
+  /* The focus ring closes in on the control. */
+  .btn:focus-visible {
+    outline-color: var(--color-accent);
+    outline-offset: 2px;
+  }
+  .btn:active:not(:disabled, [aria-disabled="true"]) {
+    --btn-move: var(--dur-press) var(--ease-press);
+    scale: 0.97;
+  }
+  @media (hover: hover) {
+    .btn-lift:hover:not(:disabled, [aria-disabled="true"]) {
+      translate: 0 -1px;
+    }
+    .btn-glow:hover:not(:disabled, [aria-disabled="true"]) {
+      box-shadow: 0 10px 28px -12px rgb(184 242 63 / 0.6);
+    }
+  }
+
+  /* ---- Cards: lift towards the pointer, lit like turf under floodlights ---- */
+  .card-hover {
+    transition:
+      translate var(--dur-spring) var(--ease-spring),
+      border-color var(--dur-fast) ease,
+      box-shadow 420ms var(--ease-out);
+  }
+  @media (hover: hover) {
+    .card-hover:hover {
+      translate: 0 -3px;
+      box-shadow:
+        0 1px 0 0 rgb(255 255 255 / 0.04) inset,
+        0 24px 48px -30px rgb(0 0 0 / 0.95);
+    }
+  }
+  .card-hover:active {
+    translate: 0 -1px;
+    transition-duration: var(--dur-press), var(--dur-fast), 420ms;
+  }
+  /* Keyboard focus on the card's link outlines the whole card. */
+  .card-hover:has(:focus-visible) {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+  .spotlight {
+    isolation: isolate;
+  }
+  .spotlight::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    pointer-events: none;
+    background: radial-gradient(26rem circle at var(--mx, 50%) var(--my, 0%), rgb(184 242 63 / 0.08), transparent 45%);
+    opacity: 0;
+    transition: opacity 500ms var(--ease-out);
+  }
+  @media (hover: hover) {
+    .spotlight:hover::before {
+      opacity: 1;
+    }
+  }
+
+  /* ---- Fields ---- */
+  .field-control {
+    transition:
+      border-color var(--dur-fast) ease,
+      background-color var(--dur-fast) ease,
+      box-shadow 320ms var(--ease-out);
+  }
+  .field-control:focus {
+    box-shadow: 0 0 0 4px rgb(184 242 63 / 0.12);
+  }
+  .field-control[aria-invalid="true"]:focus {
+    box-shadow: 0 0 0 4px rgb(255 107 107 / 0.14);
+  }
+  .chip {
+    transition:
+      color var(--dur-fast) ease,
+      background-color var(--dur-fast) ease,
+      border-color var(--dur-fast) ease,
+      scale var(--dur-spring) var(--ease-spring);
+  }
+  label:active > .chip {
+    scale: 0.94;
+    transition-duration: var(--dur-fast), var(--dur-fast), var(--dur-fast), var(--dur-press);
+  }
+
+  /* ---- Feedback after a form is sent ---- */
+  .alert-pop {
+    animation: alert-pop var(--dur-spring) var(--ease-spring) both;
+  }
+  .alert-pop[data-tone="danger"] {
+    animation:
+      alert-pop var(--dur-spring) var(--ease-spring) both,
+      shake 420ms var(--ease-out) 140ms;
+  }
+
+  /* ---- Header ---- */
+  .site-header[data-scrolled] {
+    box-shadow: 0 14px 30px -24px rgb(0 0 0 / 0.95);
+  }
+  /* An unread count pops in when it changes. */
+  .badge-pop {
+    animation: badge-pop var(--dur-spring) var(--ease-spring) both;
+  }
+  /* Desktop navigation: a highlight glides to the hovered item; the current
+     page is underlined with a line that grows from the centre. */
+  .nav-glide {
+    position: relative;
+    isolation: isolate;
+  }
+  .nav-glide-pill {
+    position: absolute;
+    z-index: -1;
+    top: 0;
+    left: 0;
+    width: var(--pill-w, 0px);
+    height: 100%;
+    translate: var(--pill-x, 0px) 0;
+    border-radius: 0.5rem;
+    background: var(--color-surface-2);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 220ms ease;
+  }
+  .nav-glide[data-hover] .nav-glide-pill {
+    opacity: 1;
+    transition:
+      opacity 220ms ease,
+      translate 420ms var(--ease-spring),
+      width 420ms var(--ease-spring);
+  }
+  .nav-link {
+    position: relative;
+  }
+  .nav-glide:not([data-ready]) .nav-link:hover {
+    background-color: var(--color-surface-2);
+  }
+  .nav-link::after {
+    content: "";
+    position: absolute;
+    inset-inline: 0.75rem;
+    bottom: 0.25rem;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--color-accent);
+    scale: 0 1;
+    transition: scale var(--dur-spring) var(--ease-spring);
+  }
+  .nav-link[aria-current="page"]::after {
+    scale: 1 1;
+  }
+  /* Account menu: grows from the avatar's corner. */
+  .menu-trigger {
+    transition: box-shadow 260ms var(--ease-out);
+  }
+  .menu-trigger:hover {
+    box-shadow: 0 0 0 2px var(--color-line-strong);
+  }
+  details[open] > .menu-trigger {
+    box-shadow: 0 0 0 2px var(--color-accent);
+  }
+  .menu-panel {
+    transform-origin: top right;
+  }
+  [dir="rtl"] .menu-panel {
+    transform-origin: top left;
+  }
+  details[open] > .menu-panel {
+    animation: menu-in 280ms var(--ease-out) both;
+  }
+
+  /* ---- Phone navigation bar: the current tab lights a segment of the top line ---- */
+  .mnav-link {
+    position: relative;
+    -webkit-tap-highlight-color: transparent;
+    transition: color var(--dur-fast) ease;
+  }
+  .mnav-link > svg,
+  .mnav-plus,
+  .mnav-plus > svg {
+    transition:
+      translate var(--dur-spring) var(--ease-spring),
+      scale var(--dur-spring) var(--ease-spring),
+      rotate var(--dur-spring) var(--ease-spring);
+  }
+  .mnav-link:not(:has(.mnav-plus))::before {
+    content: "";
+    position: absolute;
+    top: -1px;
+    left: 50%;
+    width: 1.75rem;
+    height: 3px;
+    margin-left: -0.875rem;
+    border-radius: 0 0 4px 4px;
+    background: var(--color-accent);
+    box-shadow: 0 0 14px rgb(184 242 63 / 0.55);
+    scale: 0 1;
+    transition: scale var(--dur-spring) var(--ease-spring);
+  }
+  .mnav-link[aria-current="page"]::before {
+    scale: 1 1;
+  }
+  .mnav-link[aria-current="page"] > svg {
+    translate: 0 -1px;
+  }
+  .mnav-link:active > svg,
+  .mnav-link:active > .mnav-plus {
+    scale: 0.86;
+    transition-duration: var(--dur-press);
+    transition-timing-function: var(--ease-press);
+  }
+  .mnav-link:active > .mnav-plus > svg {
+    rotate: 90deg;
+  }
+
+  /* ---- Quiet links (footer): step forward on hover ---- */
+  .link-quiet {
+    transition:
+      color var(--dur-fast) ease,
+      translate var(--dur-spring) var(--ease-spring);
+  }
+  @media (hover: hover) {
+    .link-quiet:hover {
+      translate: calc(var(--nudge) * 0.75) 0;
+    }
+  }
+
+  /* ---- Loading ---- */
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    background: var(--color-surface-2);
+  }
+  .skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgb(233 241 235 / 0.06), transparent);
+    translate: -100% 0;
+    animation: sheen 1.5s var(--ease-in-out) var(--sheen-delay, 0s) infinite;
+  }
+  [dir="rtl"] .skeleton::after {
+    animation-direction: reverse;
+  }
+  /* The pending spinner is a football, rolling in the reading direction. */
+  .ball-spin {
+    animation: roll 0.85s linear infinite;
+  }
+  [dir="rtl"] .ball-spin {
+    animation-direction: reverse;
+  }
+}
+
+/* ---- Dialogs: rise and settle; the page behind dims ---- */
+dialog {
+  opacity: 0;
+  scale: 0.96;
+  translate: 0 10px;
+  transition:
+    opacity 180ms ease,
+    scale 200ms var(--ease-out),
+    translate 200ms var(--ease-out),
+    overlay 200ms allow-discrete,
+    display 200ms allow-discrete;
+}
+dialog[open] {
+  opacity: 1;
+  scale: 1;
+  translate: 0 0;
+  transition:
+    opacity 220ms ease,
+    scale var(--dur-spring) var(--ease-spring),
+    translate var(--dur-spring) var(--ease-spring),
+    overlay 220ms allow-discrete,
+    display 220ms allow-discrete;
+}
+@starting-style {
+  dialog[open] {
+    opacity: 0;
+    scale: 0.96;
+    translate: 0 10px;
+  }
+}
+dialog::backdrop {
+  opacity: 0;
+  transition:
+    opacity 200ms ease,
+    overlay 200ms allow-discrete,
+    display 200ms allow-discrete;
+}
+dialog[open]::backdrop {
+  opacity: 1;
+}
+@starting-style {
+  dialog[open]::backdrop {
+    opacity: 0;
+  }
+}
+
+@keyframes alert-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+}
+@keyframes shake {
+  0%,
+  100% {
+    translate: 0;
+  }
+  20% {
+    translate: -6px 0;
+  }
+  40% {
+    translate: 5px 0;
+  }
+  60% {
+    translate: -3px 0;
+  }
+  80% {
+    translate: 2px 0;
+  }
+}
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.96);
+  }
+}
+@keyframes badge-pop {
+  from {
+    opacity: 0;
+    scale: 0.4;
+  }
+}
+@keyframes sheen {
+  to {
+    translate: 100% 0;
+  }
+}
+@keyframes roll {
+  to {
+    rotate: 360deg;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -94,6 +625,15 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
+  @view-transition {
+    navigation: none;
   }
 }
 
@@ -114,22 +654,8 @@
 /* =========================================================================
    Landing — the floodlit stage
    Six scenes scroll over a live WebGL stadium (or its still fallback).
-   Motion tokens: one family of curves for the whole experience. The camera
-   uses the same "heavy" curve in the engine (src/lib/stage/camera.ts).
+   It shares the motion tokens above.
    ========================================================================= */
-:root {
-  --nudge: 4px;
-  --ease-out: cubic-bezier(0.16, 1, 0.3, 1); /* interface feedback */
-  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1); /* state changes */
-  --ease-reveal: cubic-bezier(0.19, 1, 0.22, 1); /* type reveals */
-  --ease-camera: cubic-bezier(0.6, 0.02, 0.12, 1); /* the camera: slow start, long settle */
-  --dur-fast: 200ms;
-  --dur-base: 450ms;
-  --dur-slow: 900ms;
-}
-[dir="rtl"] {
-  --nudge: -4px;
-}
 
 .stage-root {
   position: relative;

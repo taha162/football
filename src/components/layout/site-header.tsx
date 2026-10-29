@@ -94,7 +94,7 @@ async function CountLink({
     <Link href={href} className={buttonClass("ghost", "sm", `relative px-2.5 ${className ?? ""}`)} aria-label={accessible}>
       {children}
       {count > 0 ? (
-        <span aria-hidden="true" className="num absolute -end-0.5 -top-0.5 min-w-5 rounded-full bg-accent px-1 text-center text-[11px] font-bold leading-5 text-accent-ink">
+        <span key={count} aria-hidden="true" className="badge-pop num absolute -end-0.5 -top-0.5 min-w-5 rounded-full bg-accent px-1 text-center text-[11px] font-bold leading-5 text-accent-ink">
           {count > 99 ? "99+" : count}
         </span>
       ) : null}

@@ -27,7 +27,7 @@ export async function MatchCard({ match, role }: { match: MatchCardData; role?: 
   const place = match.venue?.name ?? localizedName(match.area, locale) ?? localizedName(match.city, locale);
 
   return (
-    <article className="group relative flex flex-col gap-4 rounded-[var(--radius-card)] border border-line bg-surface p-4 transition-colors hover:border-line-strong">
+    <article className="reveal card-hover spotlight group relative flex flex-col gap-4 rounded-[var(--radius-card)] border border-line bg-surface p-4 hover:border-line-strong">
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 flex-col gap-1">
           <div className="flex flex-wrap items-center gap-1.5">

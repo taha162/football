@@ -130,7 +130,7 @@ export default async function LandingPage({ params }: PageProps<"/[locale]">) {
             ------------------------------------------------------------------ */}
         <section data-scene="matches" className="stage-scene" aria-labelledby="matches-title">
           <Container>
-            <div className="scene-panel">
+            <div className="scene-panel reveal-children">
               <SceneHeading number={chapter(2)} chapterLabel={t("matches.chapter")} id="matches-title" title={t("matches.title")} body={t("matches.body")} />
               {matches.length > 0 ? (
                 <ol className="scene-board">
@@ -160,7 +160,7 @@ export default async function LandingPage({ params }: PageProps<"/[locale]">) {
             ------------------------------------------------------------------ */}
         <section data-scene="squad" className="stage-scene" aria-labelledby="squad-title">
           <Container>
-            <div className="scene-panel">
+            <div className="scene-panel reveal-children">
               <SceneHeading number={chapter(3)} chapterLabel={t("squad.chapter")} id="squad-title" title={t("squad.title")} body={t("squad.body")} />
               <ul className="scene-board">
                 {POSITIONS.map((p) => (
@@ -193,7 +193,7 @@ export default async function LandingPage({ params }: PageProps<"/[locale]">) {
             ------------------------------------------------------------------ */}
         <section data-scene="venues" className="stage-scene" aria-labelledby="venues-title">
           <Container>
-            <div className="scene-panel">
+            <div className="scene-panel reveal-children">
               <SceneHeading number={chapter(4)} chapterLabel={t("venues.chapter")} id="venues-title" title={t("venues.title")} body={t("venues.body")} />
               {venues.length > 0 ? (
                 <ul className="scene-board">
@@ -228,7 +228,7 @@ export default async function LandingPage({ params }: PageProps<"/[locale]">) {
             ------------------------------------------------------------------ */}
         <section data-scene="tournaments" className="stage-scene" aria-labelledby="tournaments-title">
           <Container>
-            <div className="scene-panel">
+            <div className="scene-panel reveal-children">
               <SceneHeading
                 number={chapter(5)}
                 chapterLabel={t("tournaments.chapter")}
@@ -286,7 +286,7 @@ export default async function LandingPage({ params }: PageProps<"/[locale]">) {
             ------------------------------------------------------------------ */}
         <section data-scene="final" className="stage-scene scene-final" aria-labelledby="final-title">
           <Container>
-            <div className="scene-panel">
+            <div className="scene-panel reveal-children">
               <p className="scene-chapter">
                 <span className="num">{chapter(6)}</span>
                 {t("final.chapter")}

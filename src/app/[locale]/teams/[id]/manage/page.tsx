@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import Form from "next/form";
 import type { Locale } from "@/i18n/routing";
 import { Link, redirect } from "@/i18n/navigation";
 import { requireOnboardedUser } from "@/lib/auth";
@@ -129,11 +130,11 @@ export default async function ManageTeamPage({ params, searchParams }: PageProps
       </Section>
 
       <Section title={t("invite")} id="invite">
-        <form method="get" className="flex gap-2">
+        <Form action="" scroll={false} className="flex gap-2">
           <label htmlFor="team-invite" className="sr-only">{t("searchPlayers")}</label>
           <Input id="team-invite" name="invite" defaultValue={q} placeholder={t("searchPlayers")} minLength={2} />
           <button type="submit" className={buttonClass("secondary", "md")}>{t("search")}</button>
-        </form>
+        </Form>
         {q && candidates.length === 0 ? <p className="text-sm text-muted">{t("noPlayersFound")}</p> : null}
         <ul className="flex flex-col gap-2">
           {candidates.map((p) => (

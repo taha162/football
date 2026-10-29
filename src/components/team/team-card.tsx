@@ -23,12 +23,12 @@ export async function TeamCard({ team, role }: { team: TeamCardData; role?: stri
   const locale = await getLocale();
   const count = team.members?.[0]?.count ?? 0;
   return (
-    <article className="relative flex flex-col gap-3 rounded-[var(--radius-card)] border border-line bg-surface p-4 transition-colors hover:border-line-strong">
+    <article className="reveal card-hover spotlight relative flex flex-col gap-3 rounded-[var(--radius-card)] border border-line bg-surface p-4 hover:border-line-strong">
       <div className="flex items-center gap-3">
         <TeamLogo path={team.logo_path} name={team.name} />
         <div className="min-w-0">
           <h3 className="truncate font-display text-lg font-semibold">
-            <Link href={`/teams/${team.id}`} className="after:absolute after:inset-0">{team.name}</Link>
+            <Link href={`/teams/${team.id}`} className="after:absolute after:inset-0 focus-visible:outline-none">{team.name}</Link>
           </h3>
           <p className="text-xs text-muted">{[localizedName(team.area, locale), localizedName(team.city, locale)].filter(Boolean).join("، ")}</p>
         </div>

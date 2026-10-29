@@ -404,7 +404,7 @@ export class Stage {
       this.s = Math.floor(this.sTarget);
     } else {
       const prev = this.s;
-      this.s = damp(this.s, this.sTarget, 4.5, dt);
+      this.s = damp(this.s, this.sTarget, 6, dt); // the wheel is already eased (Lenis): follow it closely
       if (Math.abs(this.s - this.sTarget) < 1e-4) this.s = this.sTarget;
       busy ||= Math.abs(this.s - prev) > 1e-6;
     }

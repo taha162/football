@@ -5,6 +5,7 @@ import { isJoinableStatus, isLateWithdrawal, openSlots, POSITIONS } from "@/lib/
 import { formatDateTime } from "@/lib/format";
 import type { MatchDetail } from "@/server/matches/queries";
 import { joinMatchAction, leaveMatchAction, respondMatchInvitationAction } from "@/server/matches/actions";
+import { Celebration } from "@/components/motion/celebrate";
 import { ActionForm, Hidden, SubmitButton } from "@/components/ui/action-form";
 import { buttonClass } from "@/components/ui/button";
 import { ConfirmAction } from "@/components/ui/confirm-action";
@@ -25,6 +26,8 @@ export async function ParticipationPanel({ match, user, mine, isOrganizer }: { m
   const joinable = isJoinableStatus(match.status) && new Date(match.starts_at) > new Date();
   const tz = match.city?.timezone ?? "Asia/Baghdad";
   const deadline = new Date(new Date(match.starts_at).getTime() - match.leave_deadline_hours * 3_600_000);
+  // Joining (or accepting an invitation) that ends confirmed is celebrated once, by whoever just did it.
+  const joined = `joined:${match.id}`;
 
   const positionSelect = (
     <label className="flex flex-col gap-1 text-sm">
@@ -52,9 +55,11 @@ export async function ParticipationPanel({ match, user, mine, isOrganizer }: { m
     const late = isLateWithdrawal(match.starts_at, match.leave_deadline_hours);
     body = (
       <div className="flex flex-col gap-3">
-        <Alert tone="success" title={t("youreIn")}>
-          {mine.participant.position ? e(`position.${mine.participant.position}`) : t("anyPosition")}
-        </Alert>
+        <Celebration on={joined}>
+          <Alert tone="success" title={t("youreIn")}>
+            {mine.participant.position ? e(`position.${mine.participant.position}`) : t("anyPosition")}
+          </Alert>
+        </Celebration>
         {joinable ? (
           <>
             <p className="text-xs text-muted">{t("leaveDeadlineInfo", { time: formatDateTime(deadline, locale, tz) })}</p>
@@ -88,7 +93,7 @@ export async function ParticipationPanel({ match, user, mine, isOrganizer }: { m
     body = (
       <div className="flex flex-col gap-3">
         <Alert tone="info" title={t("invitedTitle")}>{t("invitedBody")}</Alert>
-        <ActionForm action={respondMatchInvitationAction}>
+        <ActionForm action={respondMatchInvitationAction} celebrate={joined}>
           <Hidden values={{ invitation_id: mine.invitationId, match_id: match.id, accept: "1" }} />
           {positionSelect}
           <SubmitButton size="lg">{t("acceptInvitation")}</SubmitButton>
@@ -111,7 +116,7 @@ export async function ParticipationPanel({ match, user, mine, isOrganizer }: { m
     body = <p className="text-sm text-muted">{t("inviteOnly")}</p>;
   } else {
     body = (
-      <ActionForm action={joinMatchAction}>
+      <ActionForm action={joinMatchAction} celebrate={joined}>
         <Hidden values={{ match_id: match.id, waitlist: slots > 0 ? undefined : "1" }} />
         {positionSelect}
         {match.price_per_player > 0 ? <p className="text-xs text-muted">{t("costReminder")}</p> : null}

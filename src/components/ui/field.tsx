@@ -1,8 +1,9 @@
 import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
 import { cn } from "@/lib/cn";
 
+// `field-control` (globals.css): eased colours and the soft focus glow.
 const control =
-  "w-full rounded-xl border border-line bg-surface-2 px-3.5 text-ink placeholder:text-faint transition-colors focus:border-accent focus:outline-none focus-visible:outline-none aria-[invalid=true]:border-danger disabled:opacity-60";
+  "field-control w-full rounded-xl border border-line bg-surface-2 px-3.5 text-ink placeholder:text-faint hover:border-line-strong focus:border-accent focus:outline-none focus-visible:outline-none aria-[invalid=true]:border-danger disabled:opacity-60";
 
 export function Field({
   label,
@@ -104,7 +105,7 @@ export function ChoiceChips({
         {options.map((o) => (
           <label key={o.value} className="cursor-pointer">
             <input type={type} name={name} value={o.value} defaultChecked={selected.has(o.value)} className="peer sr-only" />
-            <span className="inline-flex min-h-10 items-center rounded-full border border-line bg-surface-2 px-4 text-sm text-muted transition-colors peer-checked:border-accent peer-checked:bg-accent/10 peer-checked:text-accent peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-accent">
+            <span className="chip inline-flex min-h-10 items-center rounded-full border border-line bg-surface-2 px-4 text-sm text-muted hover:border-line-strong peer-checked:border-accent peer-checked:bg-accent/10 peer-checked:text-accent peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-accent">
               {o.label}
             </span>
           </label>
