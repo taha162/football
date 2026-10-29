@@ -8,11 +8,11 @@ Last updated: 2026-10-29. "Verified" means covered by an automated test that pas
 | --- | --- |
 | `pnpm lint` | Clean |
 | `pnpm typecheck` | Clean (TS strict) |
-| `pnpm i18n:check` | 1722 keys, ar/en in sync, all static keys resolved |
-| `pnpm test:unit` | 45 passed (domain rules, ball physics, camera and quality logic) |
+| `pnpm i18n:check` | 1725 keys, ar/en in sync, all static keys resolved |
+| `pnpm test:unit` | 50 passed (domain rules, ball physics, camera and quality logic, auth error mapping) |
 | `pnpm test:db` | 71 passed (concurrency, RLS, RPC rules, jobs, WhatsApp verification) |
 | `pnpm build` | Succeeds (Next.js 16.4, Turbopack) |
-| `pnpm e2e` (production build) | 35 passed: 33 desktop, 2 mobile (Pixel 7, Arabic RTL) |
+| `pnpm e2e` (production build) | 36 passed: 34 desktop, 2 mobile (Pixel 7, Arabic RTL) |
 
 ## Features
 
@@ -20,6 +20,9 @@ Legend: ✅ implemented and verified by automated tests · 🟡 implemented, exe
 
 ### Accounts and profiles
 - ✅ E-mail/password sign-up confirmed with an **e-mailed code** entered on `/verify-email` (resend, clear message when resending too soon); sign-in before confirming leads back to the code page — E2E A and verification spec.
+  - The code e-mail contains no links, which keeps it from looking like phishing to spam filters — E2E.
+  - Signing up with an address that already has an account says so, instead of waiting for a code — E2E.
+  - If an e-mail cannot be sent, the site says why and logs it; it never claims a code or reset link was sent. The causes are a failing mail server, Supabase's built-in mail service refusing addresses outside the project team, and the hourly e-mail allowance running out. Covered by unit tests on Supabase's recorded responses, and checked by hand in the browser with the local mail server stopped. The hosted built-in service's refusal could not be reproduced locally.
 - ✅ **WhatsApp verification without paid messages:** the user sends a one-time code from their own WhatsApp to the platform number; the signed Cloud API webhook activates the account and links the sender's number. Sign-in with phone + password, password recovery by sending a code from the same number, one account per number — DB (7 tests) and E2E with signed webhook payloads. **Not yet tested against Meta's real service** (needs the owner's Meta app and number); hidden until its env vars are set.
 - ✅ Sign-out, onboarding (city, positions, skill) — E2E A.
 - 🟡 Forgot and reset password. Wired to Supabase Auth; requires SMTP in production. Locally, mail goes to the mail catcher.
@@ -111,7 +114,7 @@ Legend: ✅ implemented and verified by automated tests · 🟡 implemented, exe
 1. **Legal text** (`/legal/terms`, `/legal/privacy`, `/legal/safety`) is a plain-language draft. It must be reviewed by a lawyer for Iraqi law before launch.
 2. **Support contact** for account deletion and appeals is not configured.
 3. **Area list** for Mosul (18 areas, ar/en) needs verification by someone local. Area coordinates are empty.
-4. **Production auth e-mail** needs a custom SMTP provider and redirect URLs configured in Supabase.
+4. **Production auth e-mail** needs a custom SMTP provider and redirect URLs configured in Supabase. Without one, Supabase's built-in mail service only sends to the project's team, about two e-mails an hour, and its messages often land in spam. DEPLOYMENT.md has the steps (own domain with Resend recommended).
 5. **Scheduled jobs:** `vercel.json` runs `/api/cron` daily (the Vercel Hobby limit). The 15-minute cadence needs the `Scheduled jobs` GitHub workflow secrets or a Vercel Pro schedule.
 6. **404 responses** return HTTP 200 with a `noindex` not-found page, because of the root loading boundary (see ARCHITECTURE.md).
 7. A React dev-mode warning ("Each child in a list should have a unique key", reported for `Select` in `LocationFields`) appears in the browser console in development. Every option list is keyed and the production build does not report it. The cause has not been identified yet.

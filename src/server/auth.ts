@@ -6,6 +6,7 @@ import { redirect } from "@/i18n/navigation";
 import { isLocale, type Locale } from "@/i18n/routing";
 import { fail, ok, zodFieldErrors, type ActionState } from "@/lib/actions";
 import { safeNext } from "@/lib/auth";
+import { authErrorCode, emailDeliveryError } from "@/lib/auth-errors";
 import { publicEnv } from "@/lib/env";
 import { logger } from "@/lib/log";
 import { clearPendingEmail, getPendingEmail, setPendingEmail } from "@/lib/pending-email";
@@ -21,14 +22,16 @@ async function currentLocale(): Promise<Locale> {
   return isLocale(l) ? l : "ar";
 }
 
-function authErrorCode(message: string | undefined, status?: number): string {
-  const m = (message ?? "").toLowerCase();
-  if (m.includes("invalid login") || m.includes("invalid credentials")) return "invalid_credentials";
-  if (m.includes("email not confirmed")) return "email_not_confirmed";
-  if (m.includes("already registered") || m.includes("already been registered")) return "email_taken";
-  if (m.includes("weak") || m.includes("password should")) return "weak_password";
-  if (status === 429 || m.includes("rate limit")) return "rate_limited";
-  return "auth_failed";
+/** E-mail that could not go out is the site's problem, not the visitor's: it is logged too. */
+function reportDelivery(code: string, status?: number): string {
+  if (code === "email_not_authorized") {
+    logger.error("auth_email_not_authorized", { hint: "Supabase's built-in mail service only sends to the project team; set up custom SMTP (DEPLOYMENT.md)" });
+  } else if (code === "email_send_failed") {
+    logger.error("auth_email_send_failed", { status });
+  } else if (code === "email_limit_reached") {
+    logger.warn("auth_email_limit_reached", { hint: "raise Authentication > Rate Limits in Supabase" });
+  }
+  return code;
 }
 
 export async function signInAction(_: ActionState, fd: FormData): Promise<ActionState> {
@@ -54,7 +57,7 @@ export async function signInAction(_: ActionState, fd: FormData): Promise<Action
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signInWithPassword({ email: address, password: pass.data });
   if (error) {
-    const code = authErrorCode(error.message, error.status);
+    const code = authErrorCode(error);
     if (code === "email_not_confirmed") {
       await setPendingEmail(address);
       redirect({ href: "/verify-email", locale: await currentLocale() });
@@ -92,7 +95,11 @@ export async function signUpAction(_: ActionState, fd: FormData): Promise<Action
       emailRedirectTo: `${publicEnv.siteUrl}/auth/callback?next=/${locale}/onboarding`,
     },
   });
-  if (error) return fail(authErrorCode(error.message, error.status));
+  if (error) return fail(reportDelivery(authErrorCode(error), error.status));
+  // An address that already has a confirmed account: depending on the project,
+  // Supabase refuses (above) or answers with an empty stand-in user and sends
+  // nothing. Either way, no code is coming.
+  if (data.user && data.user.identities?.length === 0) return fail("email_taken");
   // With e-mail confirmation enabled there is no session until the code is entered.
   if (!data.session) {
     await setPendingEmail(parsed.data.email);
@@ -125,9 +132,8 @@ export async function resendEmailCodeAction(): Promise<ActionState> {
     email: address,
     options: { emailRedirectTo: `${publicEnv.siteUrl}/auth/callback?next=/${locale}/onboarding` },
   });
-  if (error?.code === "over_email_send_rate_limit") return fail("resend_too_soon");
-  if (error && error.status === 429) return fail("rate_limited");
-  if (error) logger.warn("resend_code_failed", { status: error.status });
+  // "Sent" only when Supabase accepted the e-mail.
+  if (error) return fail(reportDelivery(emailDeliveryError(error) ?? (error.status === 429 ? "rate_limited" : "email_send_failed"), error.status));
   return ok("code_sent");
 }
 
@@ -139,9 +145,12 @@ export async function forgotPasswordAction(_: ActionState, fd: FormData): Promis
   const { error } = await supabase.auth.resetPasswordForEmail(parsed.data, {
     redirectTo: `${publicEnv.siteUrl}/auth/callback?next=/${locale}/reset-password`,
   });
-  // Same response whether or not the address exists (no account enumeration).
-  if (error && error.status === 429) return fail("rate_limited");
-  if (error) logger.warn("password_reset_failed", { status: error.status });
+  // Supabase answers an unknown address without sending anything, so the reply
+  // never reveals whether an account exists; e-mail that failed is reported.
+  if (error) {
+    const code = emailDeliveryError(error) ?? (error.status === 429 ? "rate_limited" : "email_send_failed");
+    return fail(reportDelivery(code === "resend_too_soon" ? "rate_limited" : code, error.status));
+  }
   return ok("reset_sent");
 }
 
@@ -155,7 +164,7 @@ export async function resetPasswordAction(_: ActionState, fd: FormData): Promise
   const { data: user } = await supabase.auth.getUser();
   if (!user.user) return fail("reset_link_expired");
   const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
-  if (error) return fail(authErrorCode(error.message, error.status));
+  if (error) return fail(authErrorCode(error));
   redirect({ href: "/dashboard", locale: await currentLocale() });
   return ok();
 }

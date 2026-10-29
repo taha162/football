@@ -88,6 +88,18 @@ export async function emailedCode(email: string, timeoutMs = 15_000): Promise<st
   throw new Error(`no code e-mailed to ${email}`);
 }
 
+/** HTML of the latest e-mail sent to `email` (local Mailpit inbox). */
+export async function emailedHtml(email: string, timeoutMs = 15_000): Promise<string> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const res = await fetch(`${MAILPIT}/api/v1/search?query=${encodeURIComponent(`to:"${email}"`)}`);
+    const id = ((await res.json()) as { messages?: { ID: string }[] }).messages?.[0]?.ID;
+    if (id) return ((await (await fetch(`${MAILPIT}/api/v1/message/${id}`)).json()) as { HTML?: string }).HTML ?? "";
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  throw new Error(`no e-mail sent to ${email}`);
+}
+
 /** Posts an inbound WhatsApp text to the app's webhook, signed like Meta does. */
 export async function whatsappInbound(baseURL: string, from: string, body: string, secret = process.env.WHATSAPP_APP_SECRET ?? "") {
   const payload = JSON.stringify({
