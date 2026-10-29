@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { admin, emailedCode, expect, PASSWORD, test, whatsappInbound } from "./fixtures";
+import { admin, createAuthUser, emailedCode, emailedHtml, expect, PASSWORD, test, whatsappInbound } from "./fixtures";
 
 const phone = () => `9647${String(Math.floor(Math.random() * 1e9)).padStart(9, "0")}`;
 const localFormat = (e164: string) => `0${e164.slice(3)}`;
@@ -10,6 +10,18 @@ test.beforeAll(() => admin("update public.platform_settings set value = '1000' w
 test.afterAll(() => admin("update public.platform_settings set value = '10' where key = 'whatsapp.max_starts_per_hour'"));
 
 test.describe("Account verification", () => {
+  test("e-mail: signing up with an address that already has an account says so, instead of waiting for a code", async ({ page }) => {
+    const existing = await createAuthUser("Existing");
+    await page.goto("/ar/sign-up");
+    await page.getByRole("textbox", { name: "الاسم الظاهر" }).fill("لاعب مكرر");
+    await page.getByRole("textbox", { name: "البريد الإلكتروني" }).fill(existing.email);
+    await page.getByRole("textbox", { name: "كلمة المرور" }).fill(PASSWORD);
+    await page.getByRole("checkbox").check();
+    await page.getByRole("button", { name: "إنشاء حساب" }).click();
+    await expect(page.getByText("يوجد حساب بهذا البريد الإلكتروني بالفعل.")).toBeVisible();
+    await expect(page).toHaveURL(/\/ar\/sign-up/);
+  });
+
   test("e-mail: a user who signs in before confirming is sent to the code page, can resend and verify", async ({ page }) => {
     const email = `e2e-code-${randomUUID().slice(0, 8)}@example.test`;
     await page.goto("/ar/sign-up");
@@ -20,6 +32,8 @@ test.describe("Account verification", () => {
     await page.getByRole("button", { name: "إنشاء حساب" }).click();
     await page.waitForURL(/\/ar\/verify-email/);
     const firstCode = await emailedCode(email);
+    // The code e-mail carries no links: links to another domain look like phishing to spam filters.
+    expect(await emailedHtml(email)).not.toContain("href=");
 
     // Leave and sign in instead: the account is not confirmed yet.
     await page.goto("/ar/sign-in");

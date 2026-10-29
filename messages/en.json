@@ -109,7 +109,7 @@
     "verifyEmailTitle": "Enter your code",
     "verifyEmailSubtitle": "We sent a verification code to <email></email>. Enter it here to activate your account.",
     "code": "Verification code",
-    "codeHint": "Can't find it? Check your spam folder.",
+    "codeHint": "Can't find it? Check your spam or junk folder. If it's there, mark it as \"Not spam\" so the next ones reach your inbox.",
     "verify": "Verify",
     "resendCode": "Resend code",
     "changeEmail": "Use a different e-mail",
@@ -416,7 +416,10 @@
     "verification_missing": "This session has ended. Please start again.",
     "whatsapp_unavailable": "WhatsApp verification isn't available right now.",
     "invalid_user": "Couldn't start verification. Please try again.",
-    "resend_too_soon": "Please wait a minute before requesting a new code — the previous one may already be in your inbox."
+    "resend_too_soon": "Please wait a minute before requesting a new code — the previous one may already be in your inbox.",
+    "email_limit_reached": "The site has sent too many e-mails in the last hour, so this one couldn't go out. Please try again later.",
+    "email_not_authorized": "We can't send e-mail to this address yet: the site's e-mail service isn't fully set up. Please tell the site team.",
+    "email_send_failed": "We couldn't send the e-mail. Please try again in a few minutes, and tell the site team if it keeps happening."
   },
   "validation": {
     "invalid": "Invalid value.",

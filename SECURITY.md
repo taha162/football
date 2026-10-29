@@ -55,6 +55,7 @@ Server Action body size is capped at 6 MB.
 ## Account verification
 
 - **E-mail code:** Supabase Auth issues and checks the code (`verifyOtp`, type `email`). It expires (1 h by default) and resends are throttled. The pending address is kept in an httpOnly cookie, not in the URL.
+- **Password reset replies** are the same whether or not an account exists, because Supabase answers unknown addresses without sending anything. The one exception is an e-mail that fails to send. That can only happen for an existing account, and the site reports it rather than claiming the link is on its way.
 - **WhatsApp (user sends the code):**
   - The webhook accepts only requests whose `X-Hub-Signature-256` HMAC matches `WHATSAPP_APP_SECRET`, compared in constant time.
   - The verified number is the sender id Meta delivers. The user never types it, so nobody can claim someone else's number.
