@@ -9,7 +9,8 @@ import { bool, dbErrorCode, fail, intIn, localDateTime, ok, str, strs, uuid, zod
 import { MATCH_FORMATS, POSITIONS, SKILL_LEVELS } from "@/lib/domain/match";
 import { parseMoneyInput } from "@/lib/domain/money";
 import { toRpcLocal } from "@/lib/format";
-import { inspectImage, randomFileName } from "@/lib/storage";
+import { logger } from "@/lib/log";
+import { inspectImage, isPubliclyServed, randomFileName } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 
 type Rpc = Parameters<Awaited<ReturnType<typeof createClient>>["rpc"]>[0];
@@ -115,6 +116,11 @@ export async function uploadTeamLogoAction(_: ActionState, fd: FormData): Promis
   const path = `${id.data}/${randomFileName(img.ext)}`;
   const { error: upErr } = await supabase.storage.from("team-logos").upload(path, img.bytes, { contentType: img.mime });
   if (upErr) return fail("upload_failed");
+  if (!(await isPubliclyServed("team-logos", path))) {
+    await supabase.storage.from("team-logos").remove([path]);
+    logger.error("storage_not_public", { bucket: "team-logos" });
+    return fail("storage_not_public");
+  }
   const { error } = await supabase.rpc("set_team_logo", { p_team_id: id.data, p_path: path });
   if (error) {
     await supabase.storage.from("team-logos").remove([path]);

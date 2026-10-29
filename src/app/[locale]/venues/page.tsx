@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { MapPinned } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import Form from "next/form";
-import { Link } from "@/i18n/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { MATCH_FORMATS } from "@/lib/domain/match";
 import { getAreas, getCities, localizedName } from "@/server/reference";
@@ -12,6 +11,7 @@ import { buttonClass } from "@/components/ui/button";
 import { Checkbox, Input, Select } from "@/components/ui/field";
 import { Container, EmptyState, PageHeader } from "@/components/ui/primitives";
 import { Pagination } from "@/components/ui/pagination";
+import { LinkButton } from "@/components/ui/link-button";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/venues">): Promise<Metadata> {
   const t = await getTranslations({ locale: (await params).locale, namespace: "venues" });
@@ -39,7 +39,7 @@ export default async function VenuesPage({ params, searchParams }: PageProps<"/[
       <PageHeader
         title={t("title")}
         description={t("description")}
-        actions={<Link href="/manage/venues/new" className={buttonClass("outline", "md")}>{t("listVenue")}</Link>}
+        actions={<LinkButton href="/manage/venues/new" className={buttonClass("outline", "md")}>{t("listVenue")}</LinkButton>}
       />
       <Form action="" scroll={false} className="mb-6 grid gap-3 rounded-[var(--radius-card)] border border-line bg-surface p-4 sm:grid-cols-5">
         <label className="flex flex-col gap-1 text-sm sm:col-span-2">

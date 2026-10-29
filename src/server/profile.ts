@@ -8,7 +8,8 @@ import { isLocale } from "@/i18n/routing";
 import { bool, dbErrorCode, fail, ok, str, strs, uuid, zodFieldErrors, type ActionState } from "@/lib/actions";
 import { getCurrentUser, safeNext } from "@/lib/auth";
 import { MATCH_FORMATS, POSITIONS, SKILL_LEVELS } from "@/lib/domain/match";
-import { inspectImage, randomFileName } from "@/lib/storage";
+import { logger } from "@/lib/log";
+import { inspectImage, isPubliclyServed, randomFileName } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 
 const TIMES = [
@@ -78,6 +79,11 @@ export async function uploadAvatarAction(_: ActionState, fd: FormData): Promise<
   // Storage policies only allow writing into the caller's own folder.
   const { error: upErr } = await supabase.storage.from("avatars").upload(path, img.bytes, { contentType: img.mime, upsert: false });
   if (upErr) return fail("upload_failed");
+  if (!(await isPubliclyServed("avatars", path))) {
+    await supabase.storage.from("avatars").remove([path]);
+    logger.error("storage_not_public", { bucket: "avatars" });
+    return fail("storage_not_public");
+  }
   const { error } = await supabase.rpc("set_my_avatar", { p_path: path });
   if (error) {
     await supabase.storage.from("avatars").remove([path]);

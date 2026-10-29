@@ -11,7 +11,7 @@
 | `vercel.json` | إطار Next.js، تثبيت بـ `pnpm --frozen-lockfile`، منطقة الدوال `fra1` (فرانكفورت، الأقرب للعراق)، ومهمة Cron يومية لـ `/api/cron` |
 | `.github/workflows/scheduled-jobs.yml` | يستدعي `/api/cron` كل 15 دقيقة (تذكيرات المباريات، انتهاء طلبات الحجز…). لا يفعل شيئاً حتى تضيف أسراره |
 | `.github/workflows/db-migrate.yml` | تشغيل يدوي فقط لتطبيق ملفات `supabase/migrations` على مشروع Supabase |
-| `next.config.ts` | يوقف البناء على Vercel برسالة واضحة إذا نقص `NEXT_PUBLIC_SUPABASE_URL` أو `NEXT_PUBLIC_SUPABASE_ANON_KEY`، أو إذا كان الرابط محلياً (`http`) |
+| `next.config.ts` | يوقف البناء على Vercel برسالة واضحة إذا نقص `NEXT_PUBLIC_SUPABASE_URL` أو `NEXT_PUBLIC_SUPABASE_ANON_KEY`، أو إذا كان الرابط محلياً (`http`). ويُطفئ ذاكرة Turbopack المؤقتة على القرص، لأنها كانت تعيد ملف تنسيق قديماً فتُنشر نسخة بلا آخر التعديلات على الشكل والحركة |
 | `src/lib/env.ts` | إن لم تحدد `NEXT_PUBLIC_SITE_URL` يُستخدم رابط Vercel تلقائياً، فتصل روابط البريد في نسخ المعاينة (Preview) إلى رابطها الصحيح |
 | `package.json` | `engines.node = 22.x` و `packageManager = pnpm@10.28.0` |
 
@@ -210,3 +210,5 @@
 | "انتظر دقيقة قبل طلب رمز جديد" | Supabase يسمح برسالة رمز واحدة كل 60 ثانية افتراضيًا، فانتظر قليلًا |
 | `/api/cron` يعطي 503 | `SUPABASE_SERVICE_ROLE_KEY` غير مضاف لبيئة Production |
 | الصور لا تظهر | أعد النشر بعد تعديل `NEXT_PUBLIC_SUPABASE_URL`، لأن نطاق الصور يُقرأ وقت البناء |
+| الموقع المنشور لا يُظهر آخر تعديلات الشكل أو الحركة | نسخة قديمة من التنسيق من ذاكرة البناء. ذاكرة Turbopack مُطفأة في `next.config.ts`، فإن تكرر ذلك: Deployments ← آخر نشر ← Redeploy، وأزل علامة Use existing Build Cache |
+| رفع صورة يعطي "مخزن الصور غير مفتوح للعرض العام" | مخازن الصور خاصة. شغّل في SQL Editor: `update storage.buckets set public = true where id in ('avatars', 'team-logos', 'venue-images');` ثم أعد رفع الصورة. يتحقق الموقع بعد كل رفع من أن الصورة تُعرض فعلاً، ويلغي الرفع إن لم تُعرض |

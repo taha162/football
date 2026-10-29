@@ -7,6 +7,7 @@ import { Link } from "@/i18n/navigation";
 import { buttonClass } from "@/components/ui/button";
 import { Alert } from "@/components/ui/primitives";
 import { pollWhatsappAction, type WhatsappPoll } from "@/server/whatsapp";
+import { ExternalLinkButton } from "@/components/ui/link-button";
 
 const POLL_MS = 3000;
 
@@ -108,10 +109,10 @@ export function WhatsappWaiter({
           {copied ? t("waCopied") : t("waCopy")}
         </button>
       </div>
-      <a href={link} target="_blank" rel="noopener noreferrer" className={buttonClass("primary", "lg", "w-full")}>
+      <ExternalLinkButton href={link} className={buttonClass("primary", "lg", "w-full")}>
         <MessageCircle aria-hidden="true" className="size-5" />
         {t("waOpen")}
-      </a>
+      </ExternalLinkButton>
       <p className="text-center text-xs text-muted">
         {t("waSendTo")} <span className="num font-semibold text-ink" dir="ltr">+{number}</span>
       </p>

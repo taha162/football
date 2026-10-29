@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { cubicBezier, damp, ease, mirrorPose, Path, scrollPose, type Pose } from "@/lib/stage/camera";
-import { FrameGovernor, initialTier, isSoftwareRenderer } from "@/lib/stage/quality";
+import { FrameGovernor, initialTier, isSoftwareRenderer, LOWER, TIERS, type Tier } from "@/lib/stage/quality";
 
 const pose = (x: number): Pose => ({ p: [x, 0, 0], t: [x, 0, -1], fov: 40, roll: 0, shift: [0.3, 0] });
 
@@ -66,13 +66,26 @@ describe("camera math", () => {
 
 describe("quality tiers", () => {
   it("chooses a tier from device hints", () => {
-    expect(initialTier({ renderer: "Google SwiftShader", coarse: false, pixels: 2e6 })).toBe("low");
+    expect(initialTier({ renderer: "Google SwiftShader", coarse: false, pixels: 2e6 })).toBe("rescue");
     expect(initialTier({ renderer: "ANGLE (NVIDIA GeForce RTX 3070)", memory: 8, cores: 12, coarse: false, pixels: 4e6 })).toBe("high");
     expect(initialTier({ memory: 4, cores: 8, coarse: true, pixels: 3e6 })).toBe("low");
     expect(initialTier({ memory: 8, cores: 8, coarse: true, pixels: 3e6 })).toBe("medium");
     expect(initialTier({ memory: 4, cores: 8, coarse: false, pixels: 3e6 })).toBe("medium");
     expect(isSoftwareRenderer("llvmpipe (LLVM 15.0.7, 256 bits)")).toBe(true);
     expect(isSoftwareRenderer("Apple M2")).toBe(false);
+  });
+
+  it("keeps full sharpness and sheds detail first; resolution drops only as the last resort", () => {
+    const order: Tier[] = ["high"];
+    for (let t = LOWER.high; t; t = LOWER[t]) order.push(t);
+    expect(order).toEqual(["high", "medium", "low", "rescue"]);
+    for (const tier of ["high", "medium", "low"] as const) {
+      expect(TIERS[tier].pixelRatio).toBe(2);
+      expect(TIERS[tier].antialias).toBe(true);
+    }
+    expect(TIERS.medium.grass).toBeLessThan(TIERS.high.grass);
+    expect(TIERS.low.shadowMap).toBe(0);
+    expect(TIERS.rescue.pixelRatio).toBeLessThan(2);
   });
 
   it("asks for a lower tier only when the median frame is too slow", () => {

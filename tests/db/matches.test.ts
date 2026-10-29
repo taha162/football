@@ -313,17 +313,18 @@ describe("discovery", () => {
     const visible = await createMatch(organizer, { extra: { p_title: `${tag} public`, p_total_cost: 20_000 } });
     await createMatch(organizer, { type: "private", extra: { p_title: `${tag} private` } });
     await createMatch(organizer, { publish: false, extra: { p_title: `${tag} draft` } });
+    // Searching by the tag keeps the test independent of other matches in the database.
     const rows = await asUser<{ id: string; title: string }>(
       viewer,
-      "select id, title from public.search_matches(p_limit => 100) where title like $1",
-      [`${tag}%`],
+      "select id, title from public.search_matches(p_query => $1, p_limit => 100) where title like $2",
+      [tag, `${tag}%`],
     );
     expect(rows.map((r) => r.id)).toEqual([visible]);
 
     const cheap = await asUser<{ id: string }>(
       null,
-      "select id from public.search_matches(p_max_price => 1000, p_limit => 100) where title like $1",
-      [`${tag}%`],
+      "select id from public.search_matches(p_query => $1, p_max_price => 1000, p_limit => 100) where title like $2",
+      [tag, `${tag}%`],
     );
     expect(cheap).toEqual([]);
   });

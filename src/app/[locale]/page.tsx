@@ -13,6 +13,8 @@ import { listVenues, type VenueCardData } from "@/server/venues/queries";
 import { StageHost } from "@/components/stage/stage-host";
 import { Container } from "@/components/ui/primitives";
 import { cn } from "@/lib/cn";
+import { LinkButton } from "@/components/ui/link-button";
+import { CardCover } from "@/components/ui/card-cover";
 
 type Translator = Awaited<ReturnType<typeof getTranslations>>;
 
@@ -95,13 +97,13 @@ export default async function LandingPage({ params }: PageProps<"/[locale]">) {
               {t("hero.subtitle")}
             </p>
             <div className="stage-panel intro-reveal flex flex-wrap items-center gap-x-7 gap-y-4" style={{ "--d": "680ms" } as React.CSSProperties}>
-              <Link href="/matches" className="cta-primary group">
+              <LinkButton href="/matches" className="cta-primary group">
                 {t("hero.primary")}
                 <Forward aria-hidden="true" className="size-[18px] transition-transform duration-300 group-hover:translate-x-[var(--nudge)]" />
-              </Link>
-              <Link href={{ pathname: "/venues", query: { bookable: "1" } }} className="cta-secondary">
+              </LinkButton>
+              <LinkButton href={{ pathname: "/venues", query: { bookable: "1" } }} className="cta-secondary">
                 {t("hero.secondary")}
-              </Link>
+              </LinkButton>
             </div>
           </Container>
           <div className="hero-strip intro-reveal" style={{ "--d": "900ms" } as React.CSSProperties}>
@@ -112,10 +114,10 @@ export default async function LandingPage({ params }: PageProps<"/[locale]">) {
               </span>
               <span className="stage-panel ms-auto flex flex-col items-start gap-1 md:items-end">
                 {matches.length > 0 ? (
-                  <Link href="/matches" className="font-medium text-ink/90 underline-offset-4 hover:text-accent hover:underline">
+                  <LinkButton href="/matches" className="font-medium text-ink/90 underline-offset-4 hover:text-accent hover:underline">
                     <span aria-hidden="true" className="me-2 inline-block size-1.5 rounded-full bg-accent align-middle" />
                     {t("hero.openNow", { count: matches.length })}
-                  </Link>
+                  </LinkButton>
                 ) : null}
                 <span className="num hidden sm:inline" dir="ltr">
                   {t("hero.coords")}
@@ -140,16 +142,16 @@ export default async function LandingPage({ params }: PageProps<"/[locale]">) {
                 </ol>
               ) : (
                 <EmptyBoard title={t("matches.emptyTitle")} body={t("matches.emptyBody")}>
-                  <Link href={user ? "/matches/new" : "/sign-up"} className="cta-primary">
+                  <LinkButton href={user ? "/matches/new" : "/sign-up"} className="cta-primary">
                     {t("matches.emptyAction")}
-                  </Link>
+                  </LinkButton>
                 </EmptyBoard>
               )}
               <div className="scene-links">
-                <Link href="/matches" className="link-arrow group">
+                <LinkButton href="/matches" className="link-arrow group">
                   {t("matches.all")}
                   <Forward aria-hidden="true" className="size-4 transition-transform duration-300 group-hover:translate-x-[var(--nudge)]" />
-                </Link>
+                </LinkButton>
               </div>
             </div>
           </Container>
@@ -165,24 +167,24 @@ export default async function LandingPage({ params }: PageProps<"/[locale]">) {
               <ul className="scene-board">
                 {POSITIONS.map((p) => (
                   <li key={p}>
-                    <Link href={{ pathname: "/recruitment", query: { position: p } }} data-position={p} className="board-row board-link group">
+                    <LinkButton href={{ pathname: "/recruitment", query: { position: p } }} data-position={p} className="board-row board-link ripple group">
                       <span className="font-display text-lg font-bold transition-colors duration-300 group-hover:text-accent sm:text-xl">{te(`position.${p}`)}</span>
                       <span className={cn("text-sm", (recruiting?.[p] ?? 0) > 0 ? "text-accent" : "text-muted")}>{recruitingText(recruiting?.[p])}</span>
                       <Forward aria-hidden="true" className="size-5 text-faint transition-all duration-300 group-hover:translate-x-[var(--nudge)] group-hover:text-accent" />
-                    </Link>
+                    </LinkButton>
                   </li>
                 ))}
               </ul>
               <div className="scene-links">
-                <Link href="/teams" className="link-arrow">
+                <LinkButton href="/teams" className="link-arrow">
                   {t("squad.teams")}
-                </Link>
-                <Link href="/teams/new" className="link-arrow">
+                </LinkButton>
+                <LinkButton href="/teams/new" className="link-arrow">
                   {t("squad.createTeam")}
-                </Link>
-                <Link href="/opponents" className="link-arrow">
+                </LinkButton>
+                <LinkButton href="/opponents" className="link-arrow">
                   {t("squad.opponents")}
-                </Link>
+                </LinkButton>
               </div>
             </div>
           </Container>
@@ -203,20 +205,20 @@ export default async function LandingPage({ params }: PageProps<"/[locale]">) {
                 </ul>
               ) : (
                 <EmptyBoard title={t("venues.emptyTitle")} body={t("venues.emptyBody")}>
-                  <Link href="/manage/venues/new" className="cta-primary">
+                  <LinkButton href="/manage/venues/new" className="cta-primary">
                     {t("venues.list")}
-                  </Link>
+                  </LinkButton>
                 </EmptyBoard>
               )}
               <div className="scene-links">
-                <Link href="/venues" className="link-arrow group">
+                <LinkButton href="/venues" className="link-arrow group">
                   {t("venues.all")}
                   <Forward aria-hidden="true" className="size-4 transition-transform duration-300 group-hover:translate-x-[var(--nudge)]" />
-                </Link>
+                </LinkButton>
                 {venues.length > 0 ? (
-                  <Link href="/manage/venues/new" className="link-arrow">
+                  <LinkButton href="/manage/venues/new" className="link-arrow">
                     {t("venues.list")}
-                  </Link>
+                  </LinkButton>
                 ) : null}
               </div>
             </div>
@@ -242,7 +244,7 @@ export default async function LandingPage({ params }: PageProps<"/[locale]">) {
                     const approved = (r.teams ?? []).filter((x) => x.status === "approved").length;
                     return (
                       <li key={r.id}>
-                        <Link href={`/tournaments/${r.id}`} className="board-row board-link group">
+                        <LinkButton href={`/tournaments/${r.id}`} className="board-row board-link ripple group">
                           <span className="flex min-w-0 flex-col gap-1">
                             <span className="truncate font-display text-lg font-bold transition-colors duration-300 group-hover:text-accent sm:text-xl">{r.name}</span>
                             <span className="text-sm text-muted">
@@ -254,27 +256,27 @@ export default async function LandingPage({ params }: PageProps<"/[locale]">) {
                             <span className="num text-muted">{tt("teamsCount", { count: approved, capacity: r.team_capacity })}</span>
                           </span>
                           <Forward aria-hidden="true" className="size-5 text-faint transition-all duration-300 group-hover:translate-x-[var(--nudge)] group-hover:text-accent" />
-                        </Link>
+                        </LinkButton>
                       </li>
                     );
                   })}
                 </ul>
               ) : (
                 <EmptyBoard title={t("tournaments.emptyTitle")} body={t("tournaments.emptyBody")}>
-                  <Link href="/tournaments/new" className="cta-primary">
+                  <LinkButton href="/tournaments/new" className="cta-primary">
                     {t("tournaments.create")}
-                  </Link>
+                  </LinkButton>
                 </EmptyBoard>
               )}
               <div className="scene-links">
-                <Link href="/tournaments" className="link-arrow group">
+                <LinkButton href="/tournaments" className="link-arrow group">
                   {t("tournaments.all")}
                   <Forward aria-hidden="true" className="size-4 transition-transform duration-300 group-hover:translate-x-[var(--nudge)]" />
-                </Link>
+                </LinkButton>
                 {tournaments.length > 0 ? (
-                  <Link href="/tournaments/new" className="link-arrow">
+                  <LinkButton href="/tournaments/new" className="link-arrow">
                     {t("tournaments.create")}
-                  </Link>
+                  </LinkButton>
                 ) : null}
               </div>
             </div>
@@ -295,13 +297,13 @@ export default async function LandingPage({ params }: PageProps<"/[locale]">) {
                 {t("final.title")}
               </h2>
               <div className="flex flex-wrap items-center gap-x-7 gap-y-4">
-                <Link href="/matches" className="cta-primary group">
+                <LinkButton href="/matches" className="cta-primary group">
                   {t("final.primary")}
                   <Forward aria-hidden="true" className="size-[18px] transition-transform duration-300 group-hover:translate-x-[var(--nudge)]" />
-                </Link>
-                <Link href={user ? "/matches/new" : "/sign-up"} className="cta-secondary">
+                </LinkButton>
+                <LinkButton href={user ? "/matches/new" : "/sign-up"} className="cta-secondary">
                   {user ? t("final.create") : t("final.join")}
-                </Link>
+                </LinkButton>
               </div>
               <ul className="trust-list">
                 {(["verified", "reviews", "privacy", "payments"] as const).map((k) => (
@@ -311,10 +313,10 @@ export default async function LandingPage({ params }: PageProps<"/[locale]">) {
                   </li>
                 ))}
               </ul>
-              <Link href="/legal/safety" className="link-arrow group self-start">
+              <LinkButton href="/legal/safety" className="link-arrow group self-start">
                 {t("final.trust.more")}
                 <Forward aria-hidden="true" className="size-4 transition-transform duration-300 group-hover:translate-x-[var(--nudge)]" />
-              </Link>
+              </LinkButton>
             </div>
           </Container>
         </section>
@@ -391,6 +393,7 @@ function MatchRow({ match, locale, t, tm, Forward }: { match: MatchCardData; loc
           {t("matches.join")}
           <Forward className="size-4 transition-transform duration-300 group-hover:translate-x-[var(--nudge)]" />
         </span>
+        <CardCover href={`/matches/${match.id}`} />
       </div>
     </li>
   );
@@ -402,7 +405,7 @@ function VenueRow({ venue, locale, t, tv, Forward }: { venue: VenueCardData; loc
   const bookable = acceptsPlatformBookings(venue);
   return (
     <li>
-      <Link href={`/venues/${venue.id}`} className="board-row board-link group">
+      <LinkButton href={`/venues/${venue.id}`} className="board-row board-link ripple group">
         <span className="flex min-w-0 flex-col gap-1">
           <span className="flex items-center gap-1.5 truncate font-display text-lg font-bold transition-colors duration-300 group-hover:text-accent sm:text-xl">
             {venue.name}
@@ -418,7 +421,7 @@ function VenueRow({ venue, locale, t, tv, Forward }: { venue: VenueCardData; loc
           {bookable ? t("venues.book") : t("venues.view")}
           <Forward aria-hidden="true" className="size-4 transition-transform duration-300 group-hover:translate-x-[var(--nudge)]" />
         </span>
-      </Link>
+      </LinkButton>
     </li>
   );
 }

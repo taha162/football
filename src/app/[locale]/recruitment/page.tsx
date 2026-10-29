@@ -10,6 +10,7 @@ import { TeamLogo } from "@/components/team/team-card";
 import { buttonClass } from "@/components/ui/button";
 import { Select } from "@/components/ui/field";
 import { Badge, Card, CardBody, Container, EmptyState, PageHeader } from "@/components/ui/primitives";
+import { LinkButton } from "@/components/ui/link-button";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/recruitment">): Promise<Metadata> {
   const t = await getTranslations({ locale: (await params).locale, namespace: "recruitment" });
@@ -72,7 +73,7 @@ export default async function RecruitmentPage({ params, searchParams }: PageProp
                 {r.description ? <p className="text-sm text-muted">{r.description}</p> : null}
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-faint">{t("expires", { date: formatDate(r.expires_at, loc, r.team!.city?.timezone ?? "Asia/Baghdad") })}</span>
-                  <Link href={`/teams/${r.team!.id}#recruiting`} className={buttonClass("primary", "sm")}>{t("apply")}</Link>
+                  <LinkButton href={`/teams/${r.team!.id}#recruiting`} className={buttonClass("primary", "sm")}>{t("apply")}</LinkButton>
                 </div>
               </CardBody>
             </Card>

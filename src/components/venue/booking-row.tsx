@@ -8,6 +8,7 @@ import { ActionForm, Hidden, InlineAction, SubmitButton } from "@/components/ui/
 import { buttonClass } from "@/components/ui/button";
 import { ConfirmAction } from "@/components/ui/confirm-action";
 import { Badge, type Tone } from "@/components/ui/primitives";
+import { LinkButton } from "@/components/ui/link-button";
 
 export interface BookingRowData {
   id: string;
@@ -52,7 +53,7 @@ export async function BookingRow({ b, mode, tz, conversationId }: { b: BookingRo
         <Badge tone={tone[b.status]}>{t(`status.${b.status}`)}</Badge>
         {b.kind !== "customer" ? <Badge>{t(`kind.${b.kind}`)}</Badge> : null}
         {b.match_id ? (
-          <Link href={`/matches/${b.match_id}`}><Badge tone="info">{t("linkedMatch")}</Badge></Link>
+          <LinkButton href={`/matches/${b.match_id}`}><Badge tone="info">{t("linkedMatch")}</Badge></LinkButton>
         ) : null}
       </div>
       <p className="num text-sm text-muted">
@@ -99,13 +100,13 @@ export async function BookingRow({ b, mode, tz, conversationId }: { b: BookingRo
           />
         ) : null}
         {conversationId ? (
-          <Link href={`/messages/${conversationId}`} className={buttonClass("ghost", "sm")}>
+          <LinkButton href={`/messages/${conversationId}`} className={buttonClass("ghost", "sm")}>
             <MessageCircle aria-hidden="true" className="size-4" />
             {t("message")}
-          </Link>
+          </LinkButton>
         ) : null}
         {mode === "customer" && (b.status === "completed" || (b.status === "confirmed" && ended)) && b.venue ? (
-          <Link href={{ pathname: `/venues/${b.venue.id}/review`, query: { booking: b.id } }} className={buttonClass("outline", "sm")}>{t("review")}</Link>
+          <LinkButton href={{ pathname: `/venues/${b.venue.id}/review`, query: { booking: b.id } }} className={buttonClass("outline", "sm")}>{t("review")}</LinkButton>
         ) : null}
       </div>
     </li>

@@ -1,26 +1,23 @@
+import { FILL_FRAMES, REVEALS_START, RISE_FRAMES, RISE_TIMING } from "./enter-script";
 import { prefersReducedMotion } from "./scroll";
 
 /** Marked content: `.reveal` elements, and every child of a `.reveal-children` element. */
 const ITEMS = ".reveal, .reveal-children > *";
 
-const EASE_OUT = "cubic-bezier(0.16, 1, 0.3, 1)";
-const RISE: Keyframe[] = [
-  { opacity: 0, transform: "translate3d(0, 18px, 0) scale(0.985)" },
-  { opacity: 1, transform: "none" },
-];
-
 /**
  * Marked content rises into place:
- * - below the fold, the first time it is scrolled into view;
- * - added later while on screen (new results, a new item), straight away.
- * What is on screen when a page arrives is left alone (the page transition
- * already moves it), and so is marked content inside a `.reveal`. Several
- * arriving together follow each other in reading order.
+ * - on screen when a page arrives (a navigation, or results replacing
+ *   others): straight away, one after another in reading order;
+ * - below the fold: the first time it is scrolled into view.
+ * The first page load is handled before hydration by ENTER_SCRIPT, which
+ * stops watching for streamed sections once this takes over; marked content
+ * inside a `.reveal` moves with it. Capacity bars inside fill up after their
+ * card.
  *
  * Everything runs on Web Animations, never on attributes: server-rendered
  * content may still be waiting for hydration when it is first seen here.
  */
-export function startReveals(pageArriving: () => boolean): () => void {
+export function startReveals(): () => void {
   if (prefersReducedMotion()) return () => undefined;
 
   const seen = new WeakSet<Element>();
@@ -31,7 +28,11 @@ export function startReveals(pageArriving: () => boolean): () => void {
     els.forEach((el, i) => {
       waiting.get(el)?.cancel();
       waiting.delete(el);
-      el.animate(RISE, { duration: 700, delay: Math.min(i, 6) * 70, easing: EASE_OUT, fill: "backwards" });
+      const delay = Math.min(i, RISE_TIMING.maxStagger) * RISE_TIMING.stagger;
+      el.animate(RISE_FRAMES, { duration: RISE_TIMING.duration, delay, easing: RISE_TIMING.easing, fill: "backwards" });
+      el.querySelectorAll(".meter-fill").forEach((bar) =>
+        bar.animate(FILL_FRAMES, { duration: 1100, delay: delay + 250, easing: RISE_TIMING.easing, fill: "backwards" }),
+      );
     });
   };
 
@@ -57,17 +58,20 @@ export function startReveals(pageArriving: () => boolean): () => void {
       seen.add(el);
       if (el.parentElement?.closest(".reveal")) return;
       const r = el.getBoundingClientRect();
-      const onScreen = (r.width > 0 || r.height > 0) && r.bottom > 0 && r.top < window.innerHeight * 0.94;
+      // Anything already showing counts as on screen, so nothing visible is ever hidden again.
+      const onScreen = (r.width > 0 || r.height > 0) && r.bottom > 0 && r.top < window.innerHeight;
       if (!onScreen) {
         waiting.set(el, el.animate([{ opacity: 0 }], { duration: 0, fill: "forwards" }));
         io.observe(el);
-      } else if (!first && !pageArriving()) {
+      } else if (!first) {
         now.push(el);
       }
     });
     if (now.length) rise(now);
   };
 
+  // The entrance finishes what it has started, so what is on screen now has been handled.
+  document.dispatchEvent(new Event(REVEALS_START));
   scan(true);
   // New content is checked before it is first painted (mutations → next frame).
   let frame = 0;

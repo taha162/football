@@ -15,6 +15,7 @@ import { buttonClass } from "@/components/ui/button";
 import { ConfirmAction } from "@/components/ui/confirm-action";
 import { Input, Textarea, controlProps } from "@/components/ui/field";
 import { Alert, Badge, Card, CardBody, Container, PageHeader, Section } from "@/components/ui/primitives";
+import { LinkButton } from "@/components/ui/link-button";
 
 export default async function ManageTournamentPage({ params }: PageProps<"/[locale]/tournaments/[id]/manage">) {
   const { locale, id } = await params;
@@ -41,7 +42,7 @@ export default async function ManageTournamentPage({ params }: PageProps<"/[loca
       <PageHeader
         eyebrow={tt(`status.${s}`)}
         title={tournament.name}
-        actions={<Link href={`/tournaments/${id}`} className={buttonClass("ghost", "md")}>{t("viewPublic")}</Link>}
+        actions={<LinkButton href={`/tournaments/${id}`} className={buttonClass("ghost", "md")}>{t("viewPublic")}</LinkButton>}
       />
 
       <Section title={t("lifecycle")} id="lifecycle">

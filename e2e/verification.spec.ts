@@ -53,7 +53,7 @@ test.describe("Account verification", () => {
     const code = (await page.getByTestId("wa-code").textContent())!.trim();
     expect(code).toMatch(/^[A-Z0-9]{4}-[A-Z0-9]{4}$/);
     const open = page.getByRole("link", { name: "Open WhatsApp and send the code" });
-    await expect(open).toHaveAttribute("href", new RegExp(`^https://wa\\.me/9647700000000\\?text=.*${code}`));
+    await expect(open).toHaveAttribute("data-href", new RegExp(`^https://wa\\.me/9647700000000\\?text=.*${code}`));
 
     // Unsigned or wrongly signed requests are rejected.
     expect((await whatsappInbound(baseURL!, from, code, "wrong-secret")).status).toBe(401);

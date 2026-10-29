@@ -70,11 +70,11 @@ export function PageHeader({ title, description, actions, eyebrow }: { title: Re
   return (
     <div className="flex flex-col gap-4 pb-6 sm:flex-row sm:items-end sm:justify-between">
       <div className="flex flex-col gap-1.5">
-        {eyebrow ? <p className="text-xs font-semibold uppercase tracking-widest text-accent">{eyebrow}</p> : null}
-        <h1 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">{title}</h1>
-        {description ? <p className="max-w-2xl text-muted">{description}</p> : null}
+        {eyebrow ? <p className="reveal text-xs font-semibold uppercase tracking-widest text-accent">{eyebrow}</p> : null}
+        <h1 className="reveal page-title font-display text-3xl font-bold tracking-tight sm:text-4xl">{title}</h1>
+        {description ? <p className="reveal max-w-2xl text-muted">{description}</p> : null}
       </div>
-      {actions ? <div className="flex flex-wrap gap-2">{actions}</div> : null}
+      {actions ? <div className="reveal flex flex-wrap gap-2">{actions}</div> : null}
     </div>
   );
 }
@@ -83,7 +83,7 @@ export function Section({ title, actions, children, className, id }: { title?: R
   return (
     <section className={cn("flex flex-col gap-4", className)} aria-labelledby={id && title ? `${id}-title` : undefined}>
       {title || actions ? (
-        <div className="flex items-center justify-between gap-3">
+        <div className="reveal flex items-center justify-between gap-3">
           {title ? (
             <h2 id={id ? `${id}-title` : undefined} className="font-display text-xl font-semibold">
               {title}
@@ -105,7 +105,7 @@ export function Container({ className, ...props }: HTMLAttributes<HTMLDivElement
 
 export function Stat({ label, value, hint }: { label: ReactNode; value: ReactNode; hint?: ReactNode }) {
   return (
-    <div className="flex flex-col gap-1 rounded-xl border border-line bg-surface-2 p-4">
+    <div className="reveal flex flex-col gap-1 rounded-xl border border-line bg-surface-2 p-4">
       <dt className="text-xs font-medium text-muted">{label}</dt>
       <dd className="num font-display text-2xl font-bold">{value}</dd>
       {hint ? <dd className="text-xs text-faint">{hint}</dd> : null}

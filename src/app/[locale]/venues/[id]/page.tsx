@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { BadgeCheck, CalendarCheck, Phone, Settings } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { Link } from "@/i18n/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { formatMoney } from "@/lib/domain/money";
 import { acceptsPlatformBookings } from "@/lib/domain/venue";
@@ -19,6 +18,7 @@ import { OpeningHours } from "@/components/venue/opening-hours";
 import { StorageImage } from "@/components/ui/avatar";
 import { buttonClass } from "@/components/ui/button";
 import { Alert, Badge, Card, CardBody, Container, Section } from "@/components/ui/primitives";
+import { ExternalLinkButton, LinkButton } from "@/components/ui/link-button";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/venues/[id]">): Promise<Metadata> {
   const v = await getVenue((await params).id);
@@ -53,14 +53,16 @@ export default async function VenuePage({ params }: PageProps<"/[locale]/venues/
   return (
     <Container className="py-8">
       {venue.is_hidden ? <Alert tone="warning" className="mb-4" title={t("hidden")}>{venue.hidden_reason}</Alert> : null}
-      <div className="relative mb-6 aspect-[21/8] overflow-hidden rounded-[var(--radius-card)] border border-line bg-surface-3">
-        {cover ? <StorageImage src={cover} alt={venue.name} fill priority sizes="100vw" className="object-cover" /> : <div className="pitch-lines size-full" />}
+      <div className="reveal relative mb-6 aspect-[21/8] overflow-hidden rounded-[var(--radius-card)] border border-line bg-surface-3">
+        {cover ? <StorageImage src={cover} alt={venue.name} fill priority sizes="100vw" className="object-cover" fallback={<div className="pitch-lines size-full" />} /> : <div className="pitch-lines size-full" />}
       </div>
-      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div className="reveal-children mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="flex flex-col gap-2">
-          <h1 className="flex items-center gap-2 font-display text-3xl font-bold sm:text-4xl">
-            {venue.name}
-            {venue.verification_status === "verified" ? <BadgeCheck aria-label={v("verified")} className="size-6 text-accent" /> : null}
+          <h1 className="page-title font-display text-3xl font-bold sm:text-4xl">
+            <span className="inline-flex items-center gap-2">
+              {venue.name}
+              {venue.verification_status === "verified" ? <BadgeCheck aria-label={v("verified")} className="size-6 text-accent" /> : null}
+            </span>
           </h1>
           <p className="text-muted">{[venue.address, localizedName(venue.area, locale), localizedName(venue.city, locale)].filter(Boolean).join("، ")}</p>
           <div className="flex flex-wrap gap-1.5">
@@ -71,18 +73,18 @@ export default async function VenuePage({ params }: PageProps<"/[locale]/venues/
         </div>
         <div className="flex flex-wrap gap-2">
           {staff ? (
-            <Link href={`/manage/venues/${id}`} className={buttonClass("secondary", "md")}>
+            <LinkButton href={`/manage/venues/${id}`} className={buttonClass("secondary", "md")}>
               <Settings aria-hidden="true" className="size-4" />
               {t("manage")}
-            </Link>
+            </LinkButton>
           ) : null}
           {bookable ? (
-            <Link href={`/venues/${id}/book`} className={buttonClass("primary", "md")}>
+            <LinkButton href={`/venues/${id}/book`} className={buttonClass("primary", "md")}>
               <CalendarCheck aria-hidden="true" className="size-4" />
               {t("book")}
-            </Link>
+            </LinkButton>
           ) : null}
-          <Link href={{ pathname: "/matches/new", query: { venue: id } }} className={buttonClass("outline", "md")}>{t("createMatchHere")}</Link>
+          <LinkButton href={{ pathname: "/matches/new", query: { venue: id } }} className={buttonClass("outline", "md")}>{t("createMatchHere")}</LinkButton>
         </div>
       </div>
 
@@ -130,7 +132,7 @@ export default async function VenuePage({ params }: PageProps<"/[locale]/venues/
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {venue.images!.map((img) => (
                   <div key={img.id} className="relative aspect-[4/3] overflow-hidden rounded-xl border border-line">
-                    <StorageImage src={publicStorageUrl("venue-images", img.path)!} alt="" fill sizes="33vw" className="object-cover" />
+                    <StorageImage src={publicStorageUrl("venue-images", img.path)!} alt="" fill sizes="33vw" className="object-cover" fallback={<div className="pitch-lines size-full" />} />
                   </div>
                 ))}
               </div>
@@ -182,7 +184,7 @@ export default async function VenuePage({ params }: PageProps<"/[locale]/venues/
               ) : null}
               {!venue.phone && !venue.whatsapp ? <p className="text-sm text-muted">{t("noContact")}</p> : null}
               {point ? (
-                <a href={provider.directionsUrl(point)} target="_blank" rel="noopener noreferrer" className={buttonClass("outline", "sm")}>{t("directions")}</a>
+                <ExternalLinkButton href={provider.directionsUrl(point)} className={buttonClass("outline", "sm")}>{t("directions")}</ExternalLinkButton>
               ) : null}
               {mapUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element

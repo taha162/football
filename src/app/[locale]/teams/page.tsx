@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Users } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import Form from "next/form";
-import { Link } from "@/i18n/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { MATCH_FORMATS, SKILL_LEVELS } from "@/lib/domain/match";
 import { getAreas, getCities, localizedName } from "@/server/reference";
@@ -12,6 +11,7 @@ import { buttonClass } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/field";
 import { Container, EmptyState, PageHeader } from "@/components/ui/primitives";
 import { Pagination } from "@/components/ui/pagination";
+import { LinkButton } from "@/components/ui/link-button";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/teams">): Promise<Metadata> {
   const t = await getTranslations({ locale: (await params).locale, namespace: "teams" });
@@ -43,8 +43,8 @@ export default async function TeamsPage({ params, searchParams }: PageProps<"/[l
         description={t("description")}
         actions={
           <>
-            <Link href="/recruitment" className={buttonClass("outline", "md")}>{t("recruiting")}</Link>
-            <Link href="/teams/new" className={buttonClass("primary", "md")}>{t("create")}</Link>
+            <LinkButton href="/recruitment" className={buttonClass("outline", "md")}>{t("recruiting")}</LinkButton>
+            <LinkButton href="/teams/new" className={buttonClass("primary", "md")}>{t("create")}</LinkButton>
           </>
         }
       />
@@ -96,7 +96,7 @@ export default async function TeamsPage({ params, searchParams }: PageProps<"/[l
           <Pagination pathname="/teams" query={query} page={page} hasMore={hasMore} />
         </div>
       ) : (
-        <EmptyState icon={<Users className="size-10" />} title={t("empty")} action={<Link href="/teams/new" className={buttonClass("primary", "md")}>{t("create")}</Link>} />
+        <EmptyState icon={<Users className="size-10" />} title={t("empty")} action={<LinkButton href="/teams/new" className={buttonClass("primary", "md")}>{t("create")}</LinkButton>} />
       )}
     </Container>
   );

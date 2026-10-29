@@ -1,6 +1,5 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import type { Locale } from "@/i18n/routing";
-import { Link } from "@/i18n/navigation";
 import { requireUser } from "@/lib/auth";
 import { OPTIONAL_NOTIFICATION_TYPES } from "@/lib/notifications";
 import { isPhoneAccountEmail } from "@/lib/phone";
@@ -11,6 +10,7 @@ import { ActionForm, InlineAction, SubmitButton } from "@/components/ui/action-f
 import { buttonClass } from "@/components/ui/button";
 import { Select } from "@/components/ui/field";
 import { Card, CardBody, Container, DefinitionList, PageHeader, Section } from "@/components/ui/primitives";
+import { LinkButton } from "@/components/ui/link-button";
 
 export default async function SettingsPage({ params }: PageProps<"/[locale]/settings">) {
   const { locale } = await params;
@@ -46,8 +46,8 @@ export default async function SettingsPage({ params }: PageProps<"/[locale]/sett
               ]}
             />
             <div className="flex flex-wrap gap-2">
-              <Link href="/profile" className={buttonClass("secondary", "sm")}>{t("editProfile")}</Link>
-              <Link href="/forgot-password" className={buttonClass("ghost", "sm")}>{t("changePassword")}</Link>
+              <LinkButton href="/profile" className={buttonClass("secondary", "sm")}>{t("editProfile")}</LinkButton>
+              <LinkButton href="/forgot-password" className={buttonClass("ghost", "sm")}>{t("changePassword")}</LinkButton>
               <form action={signOutAction}>
                 <button type="submit" className={buttonClass("ghost", "sm")}>{t("signOut")}</button>
               </form>

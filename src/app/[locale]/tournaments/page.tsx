@@ -7,6 +7,8 @@ import { createClient } from "@/lib/supabase/server";
 import { localizedName } from "@/server/reference";
 import { buttonClass } from "@/components/ui/button";
 import { Badge, Container, EmptyState, PageHeader } from "@/components/ui/primitives";
+import { LinkButton } from "@/components/ui/link-button";
+import { CardCover } from "@/components/ui/card-cover";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/tournaments">): Promise<Metadata> {
   const t = await getTranslations({ locale: (await params).locale, namespace: "tournament" });
@@ -34,8 +36,8 @@ export default async function TournamentsPage({ params, searchParams }: PageProp
         description={t("directoryDescription")}
         actions={
           <>
-            <Link href={{ pathname: "/tournaments", query: past ? {} : { show: "past" } }} className={buttonClass("ghost", "md")}>{past ? t("showCurrent") : t("showPast")}</Link>
-            <Link href="/tournaments/new" className={buttonClass("primary", "md")}>{t("create")}</Link>
+            <LinkButton href={{ pathname: "/tournaments", query: past ? {} : { show: "past" } }} className={buttonClass("ghost", "md")}>{past ? t("showCurrent") : t("showPast")}</LinkButton>
+            <LinkButton href="/tournaments/new" className={buttonClass("primary", "md")}>{t("create")}</LinkButton>
           </>
         }
       />
@@ -53,7 +55,7 @@ export default async function TournamentsPage({ params, searchParams }: PageProp
                   <Badge>{t(`structureShort.${r.tournament_format}`)}</Badge>
                 </div>
                 <h2 className="font-display text-lg font-semibold">
-                  <Link href={`/tournaments/${r.id}`} className="after:absolute after:inset-0 focus-visible:outline-none">{r.name}</Link>
+                  <Link href={`/tournaments/${r.id}`} className="focus-visible:outline-none">{r.name}</Link>
                 </h2>
                 <p className="text-sm text-muted">
                   {localizedName(r.city, locale)} · {formatDate(r.starts_on, locale, "UTC")} – {formatDate(r.ends_on, locale, "UTC")}
@@ -62,6 +64,7 @@ export default async function TournamentsPage({ params, searchParams }: PageProp
                 {r.status === "registration_open" ? (
                   <p className="text-xs text-accent">{t("registerBy", { date: formatDate(r.registration_deadline, locale, r.city?.timezone ?? "Asia/Baghdad") })}</p>
                 ) : null}
+                <CardCover href={`/tournaments/${r.id}`} />
               </li>
             );
           })}

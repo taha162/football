@@ -16,6 +16,7 @@ import { ActionForm, Hidden, SubmitButton } from "@/components/ui/action-form";
 import { buttonClass } from "@/components/ui/button";
 import { Input, Select, Textarea } from "@/components/ui/field";
 import { Alert, Card, CardBody, Container, PageHeader } from "@/components/ui/primitives";
+import { LinkButton } from "@/components/ui/link-button";
 
 export default async function BookVenuePage({ params, searchParams }: PageProps<"/[locale]/venues/[id]/book">) {
   const { locale, id } = await params;
@@ -39,7 +40,7 @@ export default async function BookVenuePage({ params, searchParams }: PageProps<
       <Container className="max-w-2xl py-10">
         <PageHeader title={t("title", { name: venue.name })} />
         <Alert tone="info" title={t("notBookableTitle")}>{t("notBookableBody")}</Alert>
-        <Link href={`/venues/${id}`} className={buttonClass("outline", "md", "mt-4")}>{t("back")}</Link>
+        <LinkButton href={`/venues/${id}`} className={buttonClass("outline", "md", "mt-4")}>{t("back")}</LinkButton>
       </Container>
     );
   }

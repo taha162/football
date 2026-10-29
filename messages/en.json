@@ -260,6 +260,7 @@
     "file_too_large": "The file is larger than 5 MB.",
     "file_type_not_allowed": "Only JPG, PNG or WebP images are allowed.",
     "upload_failed": "Upload failed. Please try again.",
+    "storage_not_public": "The picture couldn't be published: picture storage isn't open to the public yet. Please tell the site team.",
     "user_not_found": "User not found.",
     "user_blocked": "This action isn't possible because one of you has blocked the other.",
     "cannot_block_self": "You can't block yourself.",

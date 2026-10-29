@@ -1,8 +1,8 @@
 import { getTranslations } from "next-intl/server";
-import { Link } from "@/i18n/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { buttonClass } from "@/components/ui/button";
 import { Alert, PageHeader, Section, Stat } from "@/components/ui/primitives";
+import { LinkButton } from "@/components/ui/link-button";
 
 export default async function AdminOverviewPage() {
   const t = await getTranslations("admin");
@@ -24,8 +24,8 @@ export default async function AdminOverviewPage() {
         </dl>
       </Section>
       <div className="flex flex-wrap gap-2">
-        {(s.reports_open ?? 0) > 0 ? <Link href="/admin/reports" className={buttonClass("primary", "md")}>{t("reviewReports")}</Link> : null}
-        {(s.venues_pending_verification ?? 0) > 0 ? <Link href="/admin/venues" className={buttonClass("secondary", "md")}>{t("reviewVenues")}</Link> : null}
+        {(s.reports_open ?? 0) > 0 ? <LinkButton href="/admin/reports" className={buttonClass("primary", "md")}>{t("reviewReports")}</LinkButton> : null}
+        {(s.venues_pending_verification ?? 0) > 0 ? <LinkButton href="/admin/venues" className={buttonClass("secondary", "md")}>{t("reviewVenues")}</LinkButton> : null}
       </div>
     </>
   );

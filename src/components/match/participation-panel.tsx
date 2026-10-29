@@ -1,5 +1,4 @@
 import { getLocale, getTranslations } from "next-intl/server";
-import { Link } from "@/i18n/navigation";
 import type { CurrentUser } from "@/lib/auth";
 import { isJoinableStatus, isLateWithdrawal, openSlots, POSITIONS } from "@/lib/domain/match";
 import { formatDateTime } from "@/lib/format";
@@ -11,6 +10,7 @@ import { buttonClass } from "@/components/ui/button";
 import { ConfirmAction } from "@/components/ui/confirm-action";
 import { Select } from "@/components/ui/field";
 import { Alert, Card, CardBody } from "@/components/ui/primitives";
+import { LinkButton } from "@/components/ui/link-button";
 
 interface MyState {
   participant: { status: string; position: string | null } | null;
@@ -46,9 +46,9 @@ export async function ParticipationPanel({ match, user, mine, isOrganizer }: { m
     body = (
       <div className="flex flex-col gap-3">
         <p className="text-sm text-muted">{t("signInToJoin")}</p>
-        <Link href={{ pathname: "/sign-in", query: { next: `/matches/${match.id}` } }} className={buttonClass("primary", "lg")}>
+        <LinkButton href={{ pathname: "/sign-in", query: { next: `/matches/${match.id}` } }} className={buttonClass("primary", "lg")}>
           {t("signInCta")}
-        </Link>
+        </LinkButton>
       </div>
     );
   } else if (mine?.participant?.status === "confirmed") {
@@ -108,9 +108,9 @@ export async function ParticipationPanel({ match, user, mine, isOrganizer }: { m
     body = <p className="text-sm text-muted">{t("notJoinable", { status: t(`statusLabel.${match.status}`) })}</p>;
   } else if (!user.profile.onboarded_at) {
     body = (
-      <Link href={{ pathname: "/onboarding", query: { next: `/matches/${match.id}` } }} className={buttonClass("primary", "lg")}>
+      <LinkButton href={{ pathname: "/onboarding", query: { next: `/matches/${match.id}` } }} className={buttonClass("primary", "lg")}>
         {t("completeProfile")}
-      </Link>
+      </LinkButton>
     );
   } else if (match.join_policy === "invite_only" && match.match_type !== "team_vs_team") {
     body = <p className="text-sm text-muted">{t("inviteOnly")}</p>;

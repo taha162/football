@@ -9,6 +9,7 @@ import { buttonClass } from "@/components/ui/button";
 import { ConfirmAction } from "@/components/ui/confirm-action";
 import { Input, Select } from "@/components/ui/field";
 import { Badge, Card, CardBody, EmptyState, PageHeader } from "@/components/ui/primitives";
+import { LinkButton } from "@/components/ui/link-button";
 
 const FILTERS = ["pending", "unverified", "verified", "rejected"] as const;
 
@@ -30,9 +31,9 @@ export default async function AdminVenuesPage({ searchParams }: PageProps<"/[loc
       <PageHeader title={t("nav.venues")} description={t("venuesDescription")} />
       <nav className="flex flex-wrap gap-2" aria-label={t("verificationStatus")}>
         {FILTERS.map((f) => (
-          <Link key={f} href={{ pathname: "/admin/venues", query: { status: f } }} aria-current={f === status ? "page" : undefined} className={buttonClass(f === status ? "secondary" : "ghost", "sm")}>
+          <LinkButton key={f} href={{ pathname: "/admin/venues", query: { status: f } }} aria-current={f === status ? "page" : undefined} className={buttonClass(f === status ? "secondary" : "ghost", "sm")}>
             {vp(`verification.${f}`)}
-          </Link>
+          </LinkButton>
         ))}
       </nav>
       {(data ?? []).length === 0 ? <EmptyState title={t("noVenues")} /> : null}

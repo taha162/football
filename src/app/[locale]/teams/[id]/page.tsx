@@ -19,6 +19,7 @@ import { buttonClass } from "@/components/ui/button";
 import { ConfirmAction } from "@/components/ui/confirm-action";
 import { Select, Textarea } from "@/components/ui/field";
 import { Alert, Badge, Card, CardBody, Container, Section, Stat } from "@/components/ui/primitives";
+import { LinkButton } from "@/components/ui/link-button";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/teams/[id]">): Promise<Metadata> {
   const team = await getTeam((await params).id);
@@ -53,10 +54,10 @@ export default async function TeamPage({ params }: PageProps<"/[locale]/teams/[i
     <Container className="py-8">
       {team.is_archived ? <Alert tone="warning" className="mb-4">{t("archived")}</Alert> : null}
       {team.is_hidden ? <Alert tone="warning" className="mb-4" title={t("hidden")}>{team.hidden_reason}</Alert> : null}
-      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center">
+      <div className="reveal-children mb-8 flex flex-col gap-4 sm:flex-row sm:items-center">
         <TeamLogo path={team.logo_path} name={team.name} size={80} />
         <div className="flex flex-1 flex-col gap-1.5">
-          <h1 className="font-display text-3xl font-bold sm:text-4xl">{team.name}</h1>
+          <h1 className="page-title font-display text-3xl font-bold sm:text-4xl">{team.name}</h1>
           <p className="text-muted">{[localizedName(team.area, locale), localizedName(team.city, locale)].filter(Boolean).join("، ")}</p>
           <div className="flex flex-wrap gap-1.5">
             {team.preferred_format ? <Badge>{team.preferred_format}</Badge> : null}
@@ -64,28 +65,28 @@ export default async function TeamPage({ params }: PageProps<"/[locale]/teams/[i
             {team.skill_level ? <Badge tone="info">{e(`skill.${team.skill_level}`)}</Badge> : null}
             <Badge tone={team.visibility === "public" ? "neutral" : "warning"}>{t(`visibility.${team.visibility}`)}</Badge>
             {team.home_venue ? (
-              <Link href={`/venues/${team.home_venue.id}`}><Badge tone="accent">{t("homeVenue", { name: team.home_venue.name })}</Badge></Link>
+              <LinkButton href={`/venues/${team.home_venue.id}`}><Badge tone="accent">{t("homeVenue", { name: team.home_venue.name })}</Badge></LinkButton>
             ) : null}
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
           {isManager ? (
-            <Link href={`/teams/${id}/manage`} className={buttonClass("primary", "md")}>
+            <LinkButton href={`/teams/${id}/manage`} className={buttonClass("primary", "md")}>
               <Settings aria-hidden="true" className="size-4" />
               {t("manage")}
-            </Link>
+            </LinkButton>
           ) : null}
           {conversationId ? (
-            <Link href={`/messages/${conversationId}`} className={buttonClass("secondary", "md")}>
+            <LinkButton href={`/messages/${conversationId}`} className={buttonClass("secondary", "md")}>
               <MessageCircle aria-hidden="true" className="size-4" />
               {t("chat")}
-            </Link>
+            </LinkButton>
           ) : null}
           {user && !me && !team.is_archived ? (
-            <Link href={{ pathname: "/opponents", query: { target: id } }} className={buttonClass("outline", "md")}>
+            <LinkButton href={{ pathname: "/opponents", query: { target: id } }} className={buttonClass("outline", "md")}>
               <Swords aria-hidden="true" className="size-4" />
               {t("challenge")}
-            </Link>
+            </LinkButton>
           ) : null}
         </div>
       </div>
@@ -203,7 +204,7 @@ export default async function TeamPage({ params }: PageProps<"/[locale]/teams/[i
             </Card>
           ) : null}
           {!user ? (
-            <Link href={{ pathname: "/sign-in", query: { next: `/teams/${id}` } }} className={buttonClass("primary", "md")}>{t("signInToJoin")}</Link>
+            <LinkButton href={{ pathname: "/sign-in", query: { next: `/teams/${id}` } }} className={buttonClass("primary", "md")}>{t("signInToJoin")}</LinkButton>
           ) : null}
           {me ? (
             <ConfirmAction

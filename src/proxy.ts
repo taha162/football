@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import createMiddleware from "next-intl/middleware";
-import { NextResponse, type NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { routing } from "./i18n/routing";
 
 const intl = createMiddleware(routing);
@@ -12,7 +12,13 @@ const intl = createMiddleware(routing);
  * server-side, and the database enforces RLS.
  */
 export async function proxy(request: NextRequest) {
-  const response = intl(request);
+  // The site opens in Arabic whatever the browser's language: next-intl does
+  // not see Accept-Language, so a first visit falls through to the default
+  // locale. A language chosen with the switcher is kept in next-intl's cookie
+  // and still wins on later visits.
+  const headers = new Headers(request.headers);
+  headers.delete("accept-language");
+  const response = intl(new NextRequest(request, { headers }));
   // Redirect responses don't need a session refresh.
   if (response.headers.get("location")) return response;
 

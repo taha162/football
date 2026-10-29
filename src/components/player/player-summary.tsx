@@ -7,6 +7,7 @@ import type { Profile } from "@/lib/auth";
 import { localizedName } from "@/server/reference";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge, Card, CardBody, Section, Stat } from "@/components/ui/primitives";
+import { LinkButton } from "@/components/ui/link-button";
 
 /** Public view of a player: identity, preferences, teams, statistics, reputation, history. */
 export async function PlayerSummary({ profile, viewerId }: { profile: Profile; viewerId: string | null }) {
@@ -38,10 +39,10 @@ export async function PlayerSummary({ profile, viewerId }: { profile: Profile; v
 
   return (
     <div className="flex flex-col gap-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+      <div className="reveal-children flex flex-col gap-4 sm:flex-row sm:items-center">
         <Avatar src={publicStorageUrl("avatars", profile.avatar_path)} name={profile.display_name} size={88} />
         <div className="flex flex-col gap-1.5">
-          <h1 className="font-display text-3xl font-bold">{profile.display_name}</h1>
+          <h1 className="page-title font-display text-3xl font-bold">{profile.display_name}</h1>
           <p className="text-muted">{[localizedName(area, locale), localizedName(city, locale)].filter(Boolean).join("، ")}</p>
           <div className="flex flex-wrap gap-1.5">
             {profile.positions.map((p) => <Badge key={p} tone="accent">{e(`position.${p}`)}</Badge>)}
@@ -51,7 +52,7 @@ export async function PlayerSummary({ profile, viewerId }: { profile: Profile; v
           </div>
         </div>
       </div>
-      {profile.bio ? <p className="max-w-2xl whitespace-pre-line text-muted" dir="auto">{profile.bio}</p> : null}
+      {profile.bio ? <p className="reveal max-w-2xl whitespace-pre-line text-muted" dir="auto">{profile.bio}</p> : null}
 
       <Section title={t("stats")} id="stats">
         {s ? (
@@ -88,9 +89,9 @@ export async function PlayerSummary({ profile, viewerId }: { profile: Profile; v
         <Section title={t("teams")} id="teams">
           <div className="flex flex-wrap gap-2">
             {visibleTeams.map((x) => (
-              <Link key={x.team!.id} href={`/teams/${x.team!.id}`} className="rounded-xl border border-line bg-surface px-3 py-2 text-sm hover:border-accent/50">
+              <LinkButton key={x.team!.id} href={`/teams/${x.team!.id}`} className="ripple rounded-xl border border-line bg-surface px-3 py-2 text-sm transition-colors hover:border-accent/50">
                 {x.team!.name} {x.role !== "player" ? <span className="text-xs text-accent">· {t(`role.${x.role}`)}</span> : null}
-              </Link>
+              </LinkButton>
             ))}
           </div>
         </Section>

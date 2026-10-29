@@ -1,11 +1,11 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import type { Locale } from "@/i18n/routing";
-import { Link } from "@/i18n/navigation";
 import { requireOnboardedUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { BookingRow, type BookingRowData } from "@/components/venue/booking-row";
 import { buttonClass } from "@/components/ui/button";
 import { Container, EmptyState, PageHeader } from "@/components/ui/primitives";
+import { LinkButton } from "@/components/ui/link-button";
 
 export default async function MyBookingsPage({ params }: PageProps<"/[locale]/my/bookings">) {
   const { locale } = await params;
@@ -26,7 +26,7 @@ export default async function MyBookingsPage({ params }: PageProps<"/[locale]/my
   const convByBooking = new Map((convs ?? []).map((c) => [c.booking_id, c.id]));
   return (
     <Container className="max-w-3xl py-10">
-      <PageHeader title={t("mineTitle")} description={t("mineDescription")} actions={<Link href="/venues" className={buttonClass("primary", "md")}>{t("findVenue")}</Link>} />
+      <PageHeader title={t("mineTitle")} description={t("mineDescription")} actions={<LinkButton href="/venues" className={buttonClass("primary", "md")}>{t("findVenue")}</LinkButton>} />
       {rows.length === 0 ? (
         <EmptyState title={t("noneMine")} />
       ) : (

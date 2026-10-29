@@ -1,7 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import Form from "next/form";
 import { getNow } from "@/lib/now";
-import { Link } from "@/i18n/navigation";
 import { publicStorageUrl } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 import type { MatchDetail } from "@/server/matches/queries";
@@ -12,6 +11,7 @@ import { buttonClass } from "@/components/ui/button";
 import { ConfirmAction } from "@/components/ui/confirm-action";
 import { Input } from "@/components/ui/field";
 import { Card, CardBody } from "@/components/ui/primitives";
+import { LinkButton } from "@/components/ui/link-button";
 
 export async function OrganizerPanel({
   match,
@@ -47,7 +47,7 @@ export async function OrganizerPanel({
         <h2 className="font-display text-xl font-semibold">{t("title")}</h2>
         <div className="flex flex-wrap gap-2">
           {active && !started ? (
-            <Link href={`/matches/${match.id}/edit`} className={buttonClass("secondary", "sm")}>{t("edit")}</Link>
+            <LinkButton href={`/matches/${match.id}/edit`} className={buttonClass("secondary", "sm")}>{t("edit")}</LinkButton>
           ) : null}
           {match.status === "draft" ? (
             <InlineAction action={lifecycleAction} values={{ match_id: match.id, op: "publish_match" }} label={t("publish")} variant="primary" />
@@ -62,9 +62,9 @@ export async function OrganizerPanel({
             <InlineAction action={lifecycleAction} values={{ match_id: match.id, op: "complete_match" }} label={t("complete")} />
           ) : null}
           {active && !started && match.venue_id && match.booking_status !== "confirmed" && match.booking_status !== "requested" ? (
-            <Link href={{ pathname: `/venues/${match.venue_id}/book`, query: { match: match.id } }} className={buttonClass("outline", "sm")}>
+            <LinkButton href={{ pathname: `/venues/${match.venue_id}/book`, query: { match: match.id } }} className={buttonClass("outline", "sm")}>
               {t("bookVenue")}
-            </Link>
+            </LinkButton>
           ) : null}
           {active ? (
             <ConfirmAction

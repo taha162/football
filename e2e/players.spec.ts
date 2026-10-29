@@ -31,7 +31,8 @@ test.describe("Journey A — register, onboard, discover and join", () => {
 
     // Discover via server-side filtered search.
     await page.goto(`/en/matches?open=1&format=5v5&q=${encodeURIComponent(title)}`);
-    await page.getByRole("link", { name: title }).click();
+    // The whole card opens the match (its title link sits under the card's click layer).
+    await page.locator("article", { hasText: title }).click();
     await page.waitForURL(new RegExp(`/en/matches/${matchId}`));
     await page.getByRole("button", { name: "Join match" }).click();
     await expect(page.getByText("You're in", { exact: true })).toBeVisible();
@@ -83,6 +84,13 @@ test.describe("Journey C — waiting list promotion", () => {
 });
 
 test.describe("Journey J — Arabic and English", () => {
+  test("a first visit opens in Arabic even when the browser prefers English", async ({ page }) => {
+    // The test browser sends Accept-Language: en-GB (playwright.config.ts).
+    await page.goto("/");
+    await expect(page).toHaveURL(/\/ar$/);
+    await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+  });
+
   test("switching language flips direction and translates the interface", async ({ page }) => {
     await page.goto("/ar");
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");

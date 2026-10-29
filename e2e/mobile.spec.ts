@@ -22,7 +22,8 @@ test.describe("Mobile (Arabic, RTL)", () => {
     await page.getByText("التصفية", { exact: true }).click();
     await page.getByPlaceholder("عنوان المباراة أو الملعب").fill(title);
     await page.getByPlaceholder("عنوان المباراة أو الملعب").press("Enter");
-    await page.getByRole("link", { name: title }).click();
+    // The whole card opens the match (its title link sits under the card's click layer).
+    await page.locator("article", { hasText: title }).click();
     await page.waitForURL(new RegExp(`/ar/matches/${matchId}`));
 
     await page.getByRole("button", { name: "انضم للمباراة" }).click();

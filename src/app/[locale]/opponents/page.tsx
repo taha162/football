@@ -22,6 +22,7 @@ import { ActionForm, FormField, Hidden, InlineAction, SubmitButton } from "@/com
 import { buttonClass } from "@/components/ui/button";
 import { ChoiceChips, Input, Select, Textarea, controlProps } from "@/components/ui/field";
 import { Alert, Badge, Card, CardBody, Container, EmptyState, PageHeader, Section } from "@/components/ui/primitives";
+import { LinkButton } from "@/components/ui/link-button";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/opponents">): Promise<Metadata> {
   const t = await getTranslations({ locale: (await params).locale, namespace: "opponents" });
@@ -192,12 +193,12 @@ export default async function OpponentsPage({ params, searchParams }: PageProps<
                         <InlineAction action={respondChallengeAction} values={{ challenge_id: c.id }} label={t("decline")} variant="ghost" />
                       </>
                     ) : null}
-                    {c.match_id ? <Link href={`/matches/${c.match_id}`} className={buttonClass("secondary", "sm")}>{t("viewMatch")}</Link> : null}
+                    {c.match_id ? <LinkButton href={`/matches/${c.match_id}`} className={buttonClass("secondary", "sm")}>{t("viewMatch")}</LinkButton> : null}
                     {challengeConvs.get(c.id) ? (
-                      <Link href={`/messages/${challengeConvs.get(c.id)}`} className={buttonClass("ghost", "sm")}>
+                      <LinkButton href={`/messages/${challengeConvs.get(c.id)}`} className={buttonClass("ghost", "sm")}>
                         <MessageCircle aria-hidden="true" className="size-4" />
                         {t("negotiate")}
-                      </Link>
+                      </LinkButton>
                     ) : null}
                   </div>
                 </li>
@@ -216,9 +217,9 @@ export default async function OpponentsPage({ params, searchParams }: PageProps<
                   </span>
                   <Badge tone={statusTone[c.status]}>{t(`status.${c.status}`)}</Badge>
                   {c.status === "pending" ? <InlineAction action={withdrawChallengeAction} values={{ challenge_id: c.id }} label={t("withdraw")} variant="ghost" /> : null}
-                  {c.match_id ? <Link href={`/matches/${c.match_id}`} className={buttonClass("secondary", "sm")}>{t("viewMatch")}</Link> : null}
+                  {c.match_id ? <LinkButton href={`/matches/${c.match_id}`} className={buttonClass("secondary", "sm")}>{t("viewMatch")}</LinkButton> : null}
                   {challengeConvs.get(c.id) ? (
-                    <Link href={`/messages/${challengeConvs.get(c.id)}`} className={buttonClass("ghost", "sm")}>{t("negotiate")}</Link>
+                    <LinkButton href={`/messages/${challengeConvs.get(c.id)}`} className={buttonClass("ghost", "sm")}>{t("negotiate")}</LinkButton>
                   ) : null}
                 </li>
               ))}
@@ -286,7 +287,7 @@ export default async function OpponentsPage({ params, searchParams }: PageProps<
                   </span>
                   <Badge tone={r.status === "open" ? "success" : "neutral"}>{t(`requestStatus.${r.status}`)}</Badge>
                   {r.status === "open" ? <InlineAction action={closeOpponentRequestAction} values={{ request_id: r.id }} label={t("close")} variant="ghost" /> : null}
-                  {r.match_id ? <Link href={`/matches/${r.match_id}`} className={buttonClass("secondary", "sm")}>{t("viewMatch")}</Link> : null}
+                  {r.match_id ? <LinkButton href={`/matches/${r.match_id}`} className={buttonClass("secondary", "sm")}>{t("viewMatch")}</LinkButton> : null}
                 </li>
               ))}
             </ul>
