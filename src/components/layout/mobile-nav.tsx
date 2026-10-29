@@ -2,8 +2,9 @@
 
 import { CalendarSearch, Home, MessageCircle, Plus, Users } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { Link, usePathname } from "@/i18n/navigation";
+import { usePathname } from "@/i18n/navigation";
 import { cn } from "@/lib/cn";
+import { LinkButton } from "@/components/ui/link-button";
 
 /**
  * Bottom navigation on small screens; the primary action sits in the middle.
@@ -28,10 +29,10 @@ export function MobileNav({ signedIn }: { signedIn: boolean }) {
           const Icon = item.icon;
           return (
             <li key={item.label}>
-              <Link
+              <LinkButton
                 href={item.href}
                 aria-current={active ? "page" : undefined}
-                className={cn("mnav-link flex h-16 flex-col items-center justify-center gap-1 text-[11px] font-medium", active ? "text-accent" : "text-muted")}
+                className={cn("mnav-link ripple flex h-16 flex-col items-center justify-center gap-1 text-[11px] font-medium", active ? "text-accent" : "text-muted")}
               >
                 {"primary" in item ? (
                   <span className="mnav-plus flex size-11 items-center justify-center rounded-2xl bg-accent text-accent-ink shadow-lg shadow-accent/20">
@@ -41,7 +42,7 @@ export function MobileNav({ signedIn }: { signedIn: boolean }) {
                   <Icon aria-hidden="true" className="size-5" />
                 )}
                 <span className={"primary" in item ? "sr-only" : undefined}>{item.label}</span>
-              </Link>
+              </LinkButton>
             </li>
           );
         })}

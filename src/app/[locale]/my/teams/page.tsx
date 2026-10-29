@@ -1,11 +1,11 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import type { Locale } from "@/i18n/routing";
-import { Link } from "@/i18n/navigation";
 import { requireOnboardedUser } from "@/lib/auth";
 import { myTeams } from "@/server/teams/queries";
 import { TeamCard } from "@/components/team/team-card";
 import { buttonClass } from "@/components/ui/button";
 import { Container, EmptyState, PageHeader } from "@/components/ui/primitives";
+import { LinkButton } from "@/components/ui/link-button";
 
 export default async function MyTeamsPage({ params }: PageProps<"/[locale]/my/teams">) {
   const { locale } = await params;
@@ -15,13 +15,13 @@ export default async function MyTeamsPage({ params }: PageProps<"/[locale]/my/te
   const teams = await myTeams(user.id);
   return (
     <Container className="py-10">
-      <PageHeader title={t("mine")} actions={<Link href="/teams/new" className={buttonClass("primary", "md")}>{t("create")}</Link>} />
+      <PageHeader title={t("mine")} actions={<LinkButton href="/teams/new" className={buttonClass("primary", "md")}>{t("create")}</LinkButton>} />
       {teams.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {teams.map(({ team, role }) => <TeamCard key={team.id} team={team} role={role} />)}
         </div>
       ) : (
-        <EmptyState title={t("noneMine")} action={<Link href="/teams" className={buttonClass("primary", "md")}>{t("browse")}</Link>}>{t("noneMineBody")}</EmptyState>
+        <EmptyState title={t("noneMine")} action={<LinkButton href="/teams" className={buttonClass("primary", "md")}>{t("browse")}</LinkButton>}>{t("noneMineBody")}</EmptyState>
       )}
     </Container>
   );

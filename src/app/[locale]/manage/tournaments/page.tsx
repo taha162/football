@@ -6,6 +6,7 @@ import { formatDate } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 import { buttonClass } from "@/components/ui/button";
 import { Badge, Container, EmptyState, PageHeader } from "@/components/ui/primitives";
+import { LinkButton } from "@/components/ui/link-button";
 
 export default async function MyTournamentsPage({ params }: PageProps<"/[locale]/manage/tournaments">) {
   const { locale } = await params;
@@ -16,7 +17,7 @@ export default async function MyTournamentsPage({ params }: PageProps<"/[locale]
   const { data } = await supabase.from("tournaments").select("id, name, status, starts_on, teams:tournament_teams(status)").eq("organizer_id", user.id).order("starts_on", { ascending: false });
   return (
     <Container className="max-w-3xl py-10">
-      <PageHeader title={t("mine")} actions={<Link href="/tournaments/new" className={buttonClass("primary", "md")}>{t("create")}</Link>} />
+      <PageHeader title={t("mine")} actions={<LinkButton href="/tournaments/new" className={buttonClass("primary", "md")}>{t("create")}</LinkButton>} />
       {(data ?? []).length === 0 ? (
         <EmptyState title={t("noneMine")} />
       ) : (

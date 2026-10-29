@@ -8,6 +8,7 @@ import { localizedName } from "@/server/reference";
 import type { MatchCardData } from "@/server/matches/queries";
 import { Badge, type Tone } from "@/components/ui/primitives";
 import { cn } from "@/lib/cn";
+import { CardCover } from "@/components/ui/card-cover";
 
 const availabilityTone: Record<ReturnType<typeof availability>, Tone> = {
   available: "accent",
@@ -37,7 +38,7 @@ export async function MatchCard({ match, role }: { match: MatchCardData; role?: 
             {role ? <Badge tone="accent">{t(`role.${role}`)}</Badge> : null}
           </div>
           <h3 className="truncate font-display text-lg font-semibold">
-            <Link href={`/matches/${match.id}`} className="after:absolute after:inset-0 after:rounded-[var(--radius-card)] focus-visible:outline-none">
+            <Link href={`/matches/${match.id}`} className="focus-visible:outline-none">
               {match.title}
             </Link>
           </h3>
@@ -82,7 +83,7 @@ export async function MatchCard({ match, role }: { match: MatchCardData; role?: 
           </div>
           <div className="h-1.5 overflow-hidden rounded-full bg-surface-3" aria-hidden="true">
             <div
-              className={cn("h-full rounded-full", state === "full" ? "bg-danger" : state === "almost_full" ? "bg-warning" : "bg-accent")}
+              className={cn("meter-fill h-full rounded-full", state === "full" ? "bg-danger" : state === "almost_full" ? "bg-warning" : "bg-accent")}
               style={{ width: `${Math.round(((filled + match.reserved_spots) / match.total_players) * 100)}%` }}
             />
           </div>
@@ -98,6 +99,7 @@ export async function MatchCard({ match, role }: { match: MatchCardData; role?: 
           )}
         </p>
       </div>
+      <CardCover href={`/matches/${match.id}`} />
     </article>
   );
 }

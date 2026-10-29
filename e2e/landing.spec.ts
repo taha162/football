@@ -25,8 +25,9 @@ test.describe("Landing stage", () => {
     await page.goto("/en");
     await expect(page.locator("[data-scene]")).toHaveCount(6);
     await expect(page.getByRole("heading", { level: 1, name: "Your next game starts here." })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Find a match" }).first()).toHaveAttribute("href", "/en/matches");
-    await expect(page.getByRole("link", { name: "Book a pitch" })).toHaveAttribute("href", "/en/venues?bookable=1");
+    // Button-like controls navigate without an href (no address preview); data-href names the destination.
+    await expect(page.getByRole("link", { name: "Find a match" }).first()).toHaveAttribute("data-href", "/en/matches");
+    await expect(page.getByRole("link", { name: "Book a pitch" })).toHaveAttribute("data-href", "/en/venues?bookable=1");
     for (const title of [
       "Matches looking for players.",
       "Build your squad, position by position.",
@@ -37,7 +38,7 @@ test.describe("Landing stage", () => {
       await expect(page.getByRole("heading", { level: 2, name: title })).toBeAttached();
     }
     for (const position of ["goalkeeper", "defender", "midfielder", "forward"]) {
-      await expect(page.locator(`a[data-position="${position}"]`)).toHaveAttribute("href", `/en/recruitment?position=${position}`);
+      await expect(page.locator(`a[data-position="${position}"]`)).toHaveAttribute("data-href", `/en/recruitment?position=${position}`);
     }
     // Every match on the board links to its own page, where the real join flow lives.
     for (const href of await page.locator('[data-scene="matches"] a.board-stretch').evaluateAll((els) => els.map((e) => e.getAttribute("href")))) {

@@ -1,8 +1,9 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Link, usePathname } from "@/i18n/navigation";
+import { usePathname } from "@/i18n/navigation";
 import { buttonClass } from "@/components/ui/button";
+import { LinkButton } from "@/components/ui/link-button";
 
 export function AdminNav({ isAdmin }: { isAdmin: boolean }) {
   const t = useTranslations("admin.nav");
@@ -22,9 +23,9 @@ export function AdminNav({ isAdmin }: { isAdmin: boolean }) {
       {items.map((i) => {
         const active = i.href === "/admin" ? pathname === "/admin" : pathname.startsWith(i.href);
         return (
-          <Link key={i.href} href={i.href} aria-current={active ? "page" : undefined} className={buttonClass(active ? "secondary" : "ghost", "sm")}>
+          <LinkButton key={i.href} href={i.href} aria-current={active ? "page" : undefined} className={buttonClass(active ? "secondary" : "ghost", "sm")}>
             {t(i.key)}
-          </Link>
+          </LinkButton>
         );
       })}
     </nav>

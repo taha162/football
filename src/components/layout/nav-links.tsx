@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { Link, usePathname } from "@/i18n/navigation";
+import { usePathname } from "@/i18n/navigation";
 import { cn } from "@/lib/cn";
+import { LinkButton } from "@/components/ui/link-button";
 
 type Href = "/matches" | "/teams" | "/venues" | "/tournaments";
 
@@ -48,13 +49,13 @@ export function NavLinks({ items }: { items: { href: Href; label: string }[] }) 
           const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
             <li key={item.href}>
-              <Link
+              <LinkButton
                 href={item.href}
                 aria-current={active ? "page" : undefined}
                 className={cn("nav-link inline-flex h-9 items-center rounded-lg px-3 text-sm font-medium", active ? "text-ink" : "text-muted hover:text-ink")}
               >
                 {item.label}
-              </Link>
+              </LinkButton>
             </li>
           );
         })}

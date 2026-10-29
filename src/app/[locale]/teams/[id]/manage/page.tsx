@@ -30,6 +30,7 @@ import { buttonClass } from "@/components/ui/button";
 import { ConfirmAction } from "@/components/ui/confirm-action";
 import { ChoiceChips, Input, Select, Textarea, controlProps } from "@/components/ui/field";
 import { Badge, Card, CardBody, Container, PageHeader, Section } from "@/components/ui/primitives";
+import { LinkButton } from "@/components/ui/link-button";
 
 export default async function ManageTeamPage({ params, searchParams }: PageProps<"/[locale]/teams/[id]/manage">) {
   const { locale, id } = await params;
@@ -69,9 +70,9 @@ export default async function ManageTeamPage({ params, searchParams }: PageProps
         title={t("title", { name: team.name })}
         actions={
           <>
-            <Link href={`/teams/${id}`} className={buttonClass("ghost", "md")}>{t("viewPublic")}</Link>
-            <Link href={{ pathname: "/matches/new", query: { team: id } }} className={buttonClass("outline", "md")}>{t("needPlayers")}</Link>
-            <Link href={{ pathname: "/opponents", query: { team: id } }} className={buttonClass("primary", "md")}>{t("findOpponent")}</Link>
+            <LinkButton href={`/teams/${id}`} className={buttonClass("ghost", "md")}>{t("viewPublic")}</LinkButton>
+            <LinkButton href={{ pathname: "/matches/new", query: { team: id } }} className={buttonClass("outline", "md")}>{t("needPlayers")}</LinkButton>
+            <LinkButton href={{ pathname: "/opponents", query: { team: id } }} className={buttonClass("primary", "md")}>{t("findOpponent")}</LinkButton>
           </>
         }
       />

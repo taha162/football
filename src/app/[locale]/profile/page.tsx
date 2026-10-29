@@ -1,6 +1,5 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import type { Locale } from "@/i18n/routing";
-import { Link } from "@/i18n/navigation";
 import { requireOnboardedUser } from "@/lib/auth";
 import { publicStorageUrl } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
@@ -10,6 +9,7 @@ import { ProfileForm } from "@/components/forms/profile-form";
 import { Avatar } from "@/components/ui/avatar";
 import { buttonClass } from "@/components/ui/button";
 import { Card, CardBody, Container, PageHeader } from "@/components/ui/primitives";
+import { LinkButton } from "@/components/ui/link-button";
 
 export default async function ProfilePage({ params }: PageProps<"/[locale]/profile">) {
   const { locale } = await params;
@@ -25,7 +25,7 @@ export default async function ProfilePage({ params }: PageProps<"/[locale]/profi
   const p = user.profile;
   return (
     <Container className="max-w-3xl py-10">
-      <PageHeader title={t("title")} actions={<Link href={`/players/${user.id}`} className={buttonClass("outline", "md")}>{t("viewPublic")}</Link>} />
+      <PageHeader title={t("title")} actions={<LinkButton href={`/players/${user.id}`} className={buttonClass("outline", "md")}>{t("viewPublic")}</LinkButton>} />
       <Card className="mb-8">
         <CardBody className="flex flex-col gap-4 sm:flex-row sm:items-start">
           <Avatar src={publicStorageUrl("avatars", p.avatar_path)} name={p.display_name} size={80} />

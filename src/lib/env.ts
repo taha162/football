@@ -20,7 +20,9 @@ function resolveSiteUrl(): string {
 }
 
 export const publicEnv = {
-  supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
+  // Without a trailing slash, so storage URLs never get a double slash (which
+  // the image optimizer's path pattern rejects).
+  supabaseUrl: (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").replace(/\/+$/, ""),
   supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
   siteUrl: resolveSiteUrl(),
   mapProvider: (process.env.NEXT_PUBLIC_MAP_PROVIDER ?? "none") as "none" | "mapbox",

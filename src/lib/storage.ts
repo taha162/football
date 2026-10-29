@@ -9,6 +9,21 @@ export function publicStorageUrl(bucket: Bucket, path: string | null | undefined
   return `${publicEnv.supabaseUrl}/storage/v1/object/public/${bucket}/${path.split("/").map(encodeURIComponent).join("/")}`;
 }
 
+/**
+ * True when a just-uploaded object is actually served from its public URL.
+ * That fails when the bucket is not public: the upload succeeds, but every
+ * page would show a broken picture. Callers undo the upload instead.
+ */
+export async function isPubliclyServed(bucket: Bucket, path: string): Promise<boolean> {
+  const url = publicStorageUrl(bucket, path);
+  if (!url) return false;
+  try {
+    return (await fetch(url, { method: "HEAD", cache: "no-store" })).ok;
+  } catch {
+    return false;
+  }
+}
+
 const SIGNATURES: { mime: string; ext: string; test: (b: Uint8Array) => boolean }[] = [
   { mime: "image/jpeg", ext: "jpg", test: (b) => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff },
   { mime: "image/png", ext: "png", test: (b) => [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a].every((v, i) => b[i] === v) },

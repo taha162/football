@@ -23,7 +23,7 @@ export function Field({
   required?: boolean;
 }) {
   return (
-    <div className={cn("flex flex-col gap-1.5", className)}>
+    <div className={cn("field flex flex-col gap-1.5", className)}>
       <label htmlFor={htmlFor} className="text-sm font-medium text-ink">
         {label}
         {required ? <span aria-hidden="true" className="text-accent"> *</span> : null}
@@ -105,7 +105,7 @@ export function ChoiceChips({
         {options.map((o) => (
           <label key={o.value} className="cursor-pointer">
             <input type={type} name={name} value={o.value} defaultChecked={selected.has(o.value)} className="peer sr-only" />
-            <span className="chip inline-flex min-h-10 items-center rounded-full border border-line bg-surface-2 px-4 text-sm text-muted hover:border-line-strong peer-checked:border-accent peer-checked:bg-accent/10 peer-checked:text-accent peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-accent">
+            <span className="chip ripple inline-flex min-h-10 items-center rounded-full border border-line bg-surface-2 px-4 text-sm text-muted hover:border-line-strong peer-checked:border-accent peer-checked:bg-accent/10 peer-checked:text-accent peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-accent">
               {o.label}
             </span>
           </label>

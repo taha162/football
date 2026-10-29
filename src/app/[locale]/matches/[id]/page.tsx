@@ -19,6 +19,7 @@ import { ReportButton } from "@/components/report-button";
 import { Avatar } from "@/components/ui/avatar";
 import { buttonClass } from "@/components/ui/button";
 import { Alert, Badge, Card, CardBody, Container, Section } from "@/components/ui/primitives";
+import { LinkButton } from "@/components/ui/link-button";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/matches/[id]">): Promise<Metadata> {
   const { id } = await params;
@@ -74,7 +75,7 @@ export default async function MatchPage({ params, searchParams }: PageProps<"/[l
 
   return (
     <Container className="py-8">
-      <div className="mb-6 flex flex-col gap-3">
+      <div className="reveal-children mb-6 flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <Badge tone={match.status === "cancelled" ? "danger" : match.status === "completed" ? "neutral" : "accent"}>{m(`status.${match.status}`)}</Badge>
           <Badge>{match.format}</Badge>
@@ -82,7 +83,7 @@ export default async function MatchPage({ params, searchParams }: PageProps<"/[l
           {match.skill_level ? <Badge>{e(`skill.${match.skill_level}`)}</Badge> : <Badge>{t("allLevels")}</Badge>}
           {match.join_policy !== "open" ? <Badge tone="warning">{t(`policy.${match.join_policy}`)}</Badge> : null}
         </div>
-        <h1 className="font-display text-3xl font-bold sm:text-4xl">{match.title}</h1>
+        <h1 className="page-title font-display text-3xl font-bold sm:text-4xl">{match.title}</h1>
         {match.home_team && match.away_team ? (
           <p className="text-lg">
             <Link href={`/teams/${match.home_team.id}`} className="font-semibold hover:underline">{match.home_team.name}</Link>
@@ -228,16 +229,16 @@ export default async function MatchPage({ params, searchParams }: PageProps<"/[l
         <div className="flex flex-col gap-4">
           <ParticipationPanel match={match} user={user} mine={mine} isOrganizer={isOrganizer} />
           {conversationId ? (
-            <Link href={`/messages/${conversationId}`} className={buttonClass("secondary", "md")}>
+            <LinkButton href={`/messages/${conversationId}`} className={buttonClass("secondary", "md")}>
               <MessageCircle aria-hidden="true" className="size-4" />
               {t("chat")}
-            </Link>
+            </LinkButton>
           ) : null}
           {canReview ? (
-            <Link href={`/matches/${match.id}/review`} className={buttonClass("outline", "md")}>
+            <LinkButton href={`/matches/${match.id}/review`} className={buttonClass("outline", "md")}>
               <Star aria-hidden="true" className="size-4" />
               {t("review")}
-            </Link>
+            </LinkButton>
           ) : null}
           {isOrganizer ? (
             <OrganizerPanel

@@ -12,6 +12,7 @@ import { MatchCard } from "@/components/match/match-card";
 import { ActionForm, Hidden, SubmitButton } from "@/components/ui/action-form";
 import { buttonClass } from "@/components/ui/button";
 import { Card, CardBody, Container, EmptyState, PageHeader, Section } from "@/components/ui/primitives";
+import { LinkButton } from "@/components/ui/link-button";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/dashboard">): Promise<Metadata> {
   const t = await getTranslations({ locale: (await params).locale, namespace: "dashboard" });
@@ -56,10 +57,10 @@ export default async function DashboardPage({ params }: PageProps<"/[locale]/das
 
       <nav aria-label={t("quickActions")} className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {quick.map((q) => (
-          <Link key={q.href} href={q.href} className="flex flex-col gap-2 rounded-[var(--radius-card)] border border-line bg-surface p-4 transition-colors hover:border-accent/50">
+          <LinkButton key={q.href} href={q.href} className="reveal card-hover spotlight ripple flex flex-col gap-2 rounded-[var(--radius-card)] border border-line bg-surface p-4 hover:border-accent/50">
             <q.icon aria-hidden="true" className="size-5 text-accent" />
             <span className="text-sm font-semibold">{q.label}</span>
-          </Link>
+          </LinkButton>
         ))}
       </nav>
 
@@ -112,7 +113,7 @@ export default async function DashboardPage({ params }: PageProps<"/[locale]/das
               <Card>
                 <CardBody className="flex items-center justify-between gap-3">
                   <p className="text-sm">{t("pendingBookings", { count: pendingBookings })}</p>
-                  <Link href="/manage/venues" className={buttonClass("primary", "sm")}>{t("review")}</Link>
+                  <LinkButton href="/manage/venues" className={buttonClass("primary", "sm")}>{t("review")}</LinkButton>
                 </CardBody>
               </Card>
             ) : null}
@@ -120,7 +121,7 @@ export default async function DashboardPage({ params }: PageProps<"/[locale]/das
         </Section>
       ) : null}
 
-      <Section title={t("upcoming")} id="upcoming" actions={<Link href="/my/matches" className={buttonClass("ghost", "sm")}>{t("allMine")}</Link>}>
+      <Section title={t("upcoming")} id="upcoming" actions={<LinkButton href="/my/matches" className={buttonClass("ghost", "sm")}>{t("allMine")}</LinkButton>}>
         {upcoming.length > 0 ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {upcoming.slice(0, 6).map((m) => (
@@ -128,7 +129,7 @@ export default async function DashboardPage({ params }: PageProps<"/[locale]/das
             ))}
           </div>
         ) : (
-          <EmptyState title={t("noUpcoming")} action={<Link href="/matches" className={buttonClass("primary", "md")}>{t("quick.find")}</Link>}>
+          <EmptyState title={t("noUpcoming")} action={<LinkButton href="/matches" className={buttonClass("primary", "md")}>{t("quick.find")}</LinkButton>}>
             {t("noUpcomingBody")}
           </EmptyState>
         )}

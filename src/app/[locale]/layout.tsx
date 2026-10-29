@@ -10,6 +10,7 @@ import { MobileNav } from "@/components/layout/mobile-nav";
 import { getCurrentUser } from "@/lib/auth";
 import { publicEnv } from "@/lib/env";
 import { INTRO_SCRIPT } from "@/components/stage/intro-script";
+import { ENTER_SCRIPT } from "@/components/motion/enter-script";
 import { MotionRoot } from "@/components/motion/motion-root";
 import { PageTransition } from "@/components/motion/page-transition";
 import "../globals.css";
@@ -67,6 +68,8 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
       <body className="flex min-h-svh flex-col">
         {/* Landing page only: decides before first paint whether the opening plays. */}
         <script dangerouslySetInnerHTML={{ __html: INTRO_SCRIPT }} />
+        {/* Every page: content rises into place at first paint (components/motion/enter-script.ts). */}
+        <script dangerouslySetInnerHTML={{ __html: ENTER_SCRIPT }} />
         <NextIntlClientProvider>
           <a
             href="#main"

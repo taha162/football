@@ -16,7 +16,7 @@ if (process.env.VERCEL) {
   }
 }
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/+$/, "");
 const storageHost = supabaseUrl ? new URL(supabaseUrl) : null;
 
 const securityHeaders = [
@@ -45,6 +45,13 @@ const nextConfig: NextConfig = {
       // Image uploads (validated to <= 5 MB server-side).
       bodySizeLimit: "6mb",
     },
+    // Turbopack's on-disk cache (on by default since Next 16.3) has served a
+    // stale globals.css from earlier runs, both in production builds and
+    // after restarting `next dev`: new styles were missing from the output.
+    // Vercel restores `.next/cache` between deployments, so a deployment
+    // could ship old styles. Every run compiles from the source instead.
+    turbopackFileSystemCacheForBuild: false,
+    turbopackFileSystemCacheForDev: false,
   },
   images: {
     remotePatterns: storageHost

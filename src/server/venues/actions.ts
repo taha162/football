@@ -10,7 +10,8 @@ import { MATCH_FORMATS } from "@/lib/domain/match";
 import { FACILITIES, SURFACES } from "@/lib/domain/venue";
 import { parseMoneyInput } from "@/lib/domain/money";
 import { toRpcLocal } from "@/lib/format";
-import { inspectImage, randomFileName } from "@/lib/storage";
+import { logger } from "@/lib/log";
+import { inspectImage, isPubliclyServed, randomFileName } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 
 type Rpc = Parameters<Awaited<ReturnType<typeof createClient>>["rpc"]>[0];
@@ -256,6 +257,11 @@ export async function uploadVenueImageAction(_: ActionState, fd: FormData): Prom
   const path = `${venue.data}/${randomFileName(img.ext)}`;
   const { error: upErr } = await supabase.storage.from("venue-images").upload(path, img.bytes, { contentType: img.mime });
   if (upErr) return fail("upload_failed");
+  if (!(await isPubliclyServed("venue-images", path))) {
+    await supabase.storage.from("venue-images").remove([path]);
+    logger.error("storage_not_public", { bucket: "venue-images" });
+    return fail("storage_not_public");
+  }
   const cover = bool(fd, "as_cover");
   const { error } = cover
     ? await supabase.rpc("set_venue_cover", { p_venue_id: venue.data, p_path: path })

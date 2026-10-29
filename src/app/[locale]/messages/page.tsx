@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import { MessageCircle } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import type { Locale } from "@/i18n/routing";
-import { Link } from "@/i18n/navigation";
 import { requireOnboardedUser } from "@/lib/auth";
 import { formatDateTime } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 import { Badge, Container, EmptyState, PageHeader } from "@/components/ui/primitives";
+import { LinkButton } from "@/components/ui/link-button";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/messages">): Promise<Metadata> {
   const t = await getTranslations({ locale: (await params).locale, namespace: "messages" });
@@ -30,7 +30,7 @@ export default async function MessagesPage({ params }: PageProps<"/[locale]/mess
         <ul className="flex flex-col divide-y divide-line rounded-[var(--radius-card)] border border-line bg-surface">
           {rows.map((c) => (
             <li key={c.conversation_id}>
-              <Link href={`/messages/${c.conversation_id}`} className="flex items-center gap-3 p-4 hover:bg-surface-2">
+              <LinkButton href={`/messages/${c.conversation_id}`} className="ripple flex items-center gap-3 p-4 transition-colors hover:bg-surface-2">
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
                   <div className="flex items-center gap-2">
                     <span className="truncate font-semibold">{c.title ?? t("untitled")}</span>
@@ -47,7 +47,7 @@ export default async function MessagesPage({ params }: PageProps<"/[locale]/mess
                     </span>
                   ) : null}
                 </div>
-              </Link>
+              </LinkButton>
             </li>
           ))}
         </ul>

@@ -6,6 +6,7 @@ import { AuthShell } from "@/components/auth/auth-shell";
 import { SignUpForm, WhatsappSignUpForm } from "@/components/auth/auth-forms";
 import { buttonClass } from "@/components/ui/button";
 import { whatsappConfig } from "@/lib/whatsapp";
+import { LinkButton } from "@/components/ui/link-button";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/sign-up">): Promise<Metadata> {
   const t = await getTranslations({ locale: (await params).locale, namespace: "auth" });
@@ -35,14 +36,14 @@ export default async function SignUpPage({ params, searchParams }: PageProps<"/[
       {waEnabled ? (
         <nav aria-label={t("verifyMethod")} className="grid grid-cols-2 gap-1 rounded-xl border border-line bg-surface-2 p-1">
           {(["email", "whatsapp"] as const).map((m) => (
-            <Link
+            <LinkButton
               key={m}
               href={{ pathname: "/sign-up", query: m === "email" ? {} : { method: m } }}
               aria-current={method === m ? "page" : undefined}
               className={buttonClass(method === m ? "secondary" : "ghost", "sm", "w-full")}
             >
               {m === "email" ? t("methodEmail") : t("methodWhatsapp")}
-            </Link>
+            </LinkButton>
           ))}
         </nav>
       ) : null}

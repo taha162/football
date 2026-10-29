@@ -1,8 +1,11 @@
 /**
  * Rendering quality tiers and the runtime governor that steps them down when
- * a device cannot hold a smooth frame rate.
+ * a device cannot hold a smooth frame rate. Sharpness comes first: every tier
+ * renders at the screen's own density (up to 2×) with antialiasing, and a
+ * struggling device sheds detail instead (grass blades, dust, the shadow
+ * map). Only the last resort, after that, lowers the resolution.
  */
-export type Tier = "high" | "medium" | "low";
+export type Tier = "high" | "medium" | "low" | "rescue";
 
 export interface TierSettings {
   /** Upper bound for the device pixel ratio. */
@@ -19,12 +22,15 @@ export interface TierSettings {
 }
 
 export const TIERS: Record<Tier, TierSettings> = {
-  high: { pixelRatio: 2, shadowMap: 2048, grass: 70000, dust: 1100, antialias: true, ballSegments: 96 },
-  medium: { pixelRatio: 1.5, shadowMap: 1024, grass: 26000, dust: 600, antialias: true, ballSegments: 64 },
-  low: { pixelRatio: 1, shadowMap: 0, grass: 0, dust: 260, antialias: false, ballSegments: 48 },
+  // The shadow map is drawn once (nothing that casts it moves), so its size costs memory, not frame time.
+  high: { pixelRatio: 2, shadowMap: 4096, grass: 70000, dust: 1100, antialias: true, ballSegments: 96 },
+  medium: { pixelRatio: 2, shadowMap: 2048, grass: 26000, dust: 600, antialias: true, ballSegments: 64 },
+  low: { pixelRatio: 2, shadowMap: 0, grass: 0, dust: 260, antialias: true, ballSegments: 64 },
+  // Last resort, and the start for software rendering (virtual machines, test runners).
+  rescue: { pixelRatio: 1, shadowMap: 0, grass: 0, dust: 160, antialias: false, ballSegments: 48 },
 };
 
-export const LOWER: Record<Tier, Tier | null> = { high: "medium", medium: "low", low: null };
+export const LOWER: Record<Tier, Tier | null> = { high: "medium", medium: "low", low: "rescue", rescue: null };
 
 export interface DeviceInfo {
   /** Unmasked GPU renderer string, when the browser exposes it. */
@@ -44,7 +50,7 @@ export function isSoftwareRenderer(renderer = ""): boolean {
 
 /** A starting tier from what the device tells us; the governor corrects it with real frame times. */
 export function initialTier(d: DeviceInfo): Tier {
-  if (isSoftwareRenderer(d.renderer)) return "low";
+  if (isSoftwareRenderer(d.renderer)) return "rescue";
   if ((d.memory !== undefined && d.memory <= 2) || (d.cores !== undefined && d.cores <= 2)) return "low";
   if (d.coarse) return (d.memory ?? 4) >= 6 && (d.cores ?? 4) >= 6 ? "medium" : "low";
   if ((d.memory !== undefined && d.memory <= 4) || d.pixels > 9_000_000) return "medium";

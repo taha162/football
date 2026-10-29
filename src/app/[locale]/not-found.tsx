@@ -1,7 +1,7 @@
 import { useTranslations } from "next-intl";
-import { Link } from "@/i18n/navigation";
 import { buttonClass } from "@/components/ui/button";
 import { Container } from "@/components/ui/primitives";
+import { LinkButton } from "@/components/ui/link-button";
 
 export default function NotFound() {
   const t = useTranslations("notFound");
@@ -10,7 +10,7 @@ export default function NotFound() {
       <p className="font-display text-7xl font-extrabold text-accent">404</p>
       <h1 className="font-display text-2xl font-bold">{t("title")}</h1>
       <p className="max-w-md text-muted">{t("body")}</p>
-      <Link href="/" className={buttonClass("primary", "md")}>{t("home")}</Link>
+      <LinkButton href="/" className={buttonClass("primary", "md")}>{t("home")}</LinkButton>
     </Container>
   );
 }

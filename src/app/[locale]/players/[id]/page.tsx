@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { Link } from "@/i18n/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { blockUserAction } from "@/server/profile";
@@ -11,6 +10,7 @@ import { ReportButton } from "@/components/report-button";
 import { ActionForm, Hidden, SubmitButton } from "@/components/ui/action-form";
 import { buttonClass } from "@/components/ui/button";
 import { Container } from "@/components/ui/primitives";
+import { LinkButton } from "@/components/ui/link-button";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/players/[id]">): Promise<Metadata> {
   const supabase = await createClient();
@@ -35,7 +35,7 @@ export default async function PlayerPage({ params }: PageProps<"/[locale]/player
   return (
     <Container className="max-w-4xl py-10">
       <div className="mb-6 flex flex-wrap justify-end gap-2">
-        {isSelf ? <Link href="/profile" className={buttonClass("secondary", "sm")}>{t("editProfile")}</Link> : null}
+        {isSelf ? <LinkButton href="/profile" className={buttonClass("secondary", "sm")}>{t("editProfile")}</LinkButton> : null}
         {viewer && !isSelf && !block ? (
           <ActionForm action={startDirectConversationAction}>
             <Hidden values={{ user_id: id }} />

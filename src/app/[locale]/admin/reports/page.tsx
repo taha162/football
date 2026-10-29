@@ -1,5 +1,4 @@
 import { getLocale, getTranslations } from "next-intl/server";
-import { Link } from "@/i18n/navigation";
 import { formatDateTime } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 import { removeMessageAction, setHiddenAction, setUserStatusAction, updateReportAction } from "@/server/admin";
@@ -8,6 +7,7 @@ import { buttonClass } from "@/components/ui/button";
 import { ConfirmAction } from "@/components/ui/confirm-action";
 import { Select, Textarea } from "@/components/ui/field";
 import { Badge, Card, CardBody, EmptyState, PageHeader } from "@/components/ui/primitives";
+import { LinkButton } from "@/components/ui/link-button";
 
 const STATUSES = ["open", "in_review", "resolved", "dismissed"] as const;
 
@@ -42,9 +42,9 @@ export default async function AdminReportsPage({ searchParams }: PageProps<"/[lo
       <PageHeader title={t("nav.reports")} description={t("reportsDescription")} />
       <nav className="flex flex-wrap gap-2" aria-label={t("reportStatus")}>
         {STATUSES.map((s) => (
-          <Link key={s} href={{ pathname: "/admin/reports", query: { status: s } }} aria-current={s === status ? "page" : undefined} className={buttonClass(s === status ? "secondary" : "ghost", "sm")}>
+          <LinkButton key={s} href={{ pathname: "/admin/reports", query: { status: s } }} aria-current={s === status ? "page" : undefined} className={buttonClass(s === status ? "secondary" : "ghost", "sm")}>
             {t(`reportStatuses.${s}`)}
-          </Link>
+          </LinkButton>
         ))}
       </nav>
       {rows.length === 0 ? <EmptyState title={t("noReports")} /> : null}
@@ -67,7 +67,7 @@ export default async function AdminReportsPage({ searchParams }: PageProps<"/[lo
                   {rep.details ? <p className="text-sm" dir="auto">{rep.details}</p> : null}
                   <pre className="max-h-40 overflow-auto whitespace-pre-wrap rounded-lg bg-surface-2 p-3 text-xs text-muted" dir="auto">{JSON.stringify(snapshot, null, 2)}</pre>
                   <div className="flex flex-wrap gap-2">
-                    {href ? <Link href={href} className={buttonClass("outline", "sm")}>{t("viewTarget")}</Link> : null}
+                    {href ? <LinkButton href={href} className={buttonClass("outline", "sm")}>{t("viewTarget")}</LinkButton> : null}
                     {hideable ? (
                       <ConfirmAction
                         action={setHiddenAction}

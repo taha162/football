@@ -18,6 +18,7 @@ import { ActionForm, Hidden, InlineAction, SubmitButton } from "@/components/ui/
 import { buttonClass } from "@/components/ui/button";
 import { Select } from "@/components/ui/field";
 import { Alert, Badge, Card, CardBody, Container, DefinitionList, Section } from "@/components/ui/primitives";
+import { LinkButton } from "@/components/ui/link-button";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/tournaments/[id]">): Promise<Metadata> {
   const t = await getTournament((await params).id);
@@ -55,28 +56,28 @@ export default async function TournamentPage({ params }: PageProps<"/[locale]/to
   return (
     <Container className="py-8">
       {tournament.is_hidden ? <Alert tone="warning" className="mb-4" title={t("hidden")}>{tournament.hidden_reason}</Alert> : null}
-      <div className="mb-8 flex flex-col gap-3">
+      <div className="reveal-children mb-8 flex flex-col gap-3">
         <div className="flex flex-wrap gap-1.5">
           <Badge tone={regOpen ? "accent" : "neutral"}>{t(`status.${tournament.status}`)}</Badge>
           <Badge>{tournament.format}</Badge>
           <Badge>{t(`structureShort.${tournament.tournament_format}`)}</Badge>
         </div>
-        <h1 className="font-display text-3xl font-bold sm:text-4xl">{tournament.name}</h1>
+        <h1 className="page-title font-display text-3xl font-bold sm:text-4xl">{tournament.name}</h1>
         <p className="text-muted">
           {t("organizedBy")} <Link href={`/players/${tournament.organizer_id}`} className="text-ink hover:underline">{tournament.organizer?.display_name}</Link>
         </p>
         <div className="flex flex-wrap gap-2">
           {isOrganizer ? (
-            <Link href={`/tournaments/${id}/manage`} className={buttonClass("primary", "md")}>
+            <LinkButton href={`/tournaments/${id}/manage`} className={buttonClass("primary", "md")}>
               <Settings aria-hidden="true" className="size-4" />
               {t("manage")}
-            </Link>
+            </LinkButton>
           ) : null}
           {conversationId ? (
-            <Link href={`/messages/${conversationId}`} className={buttonClass("secondary", "md")}>
+            <LinkButton href={`/messages/${conversationId}`} className={buttonClass("secondary", "md")}>
               <MessageCircle aria-hidden="true" className="size-4" />
               {t("chat")}
-            </Link>
+            </LinkButton>
           ) : null}
         </div>
       </div>

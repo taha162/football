@@ -3,7 +3,7 @@ import { getNow } from "@/lib/now";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import Form from "next/form";
 import type { Locale } from "@/i18n/routing";
-import { Link, redirect } from "@/i18n/navigation";
+import { redirect } from "@/i18n/navigation";
 import { requireOnboardedUser } from "@/lib/auth";
 import { MATCH_FORMATS } from "@/lib/domain/match";
 import { formatMoney } from "@/lib/domain/money";
@@ -33,6 +33,7 @@ import { ConfirmAction } from "@/components/ui/confirm-action";
 import { Checkbox, ChoiceChips, Input, Select, controlProps } from "@/components/ui/field";
 import { Alert, Badge, Card, CardBody, Container, PageHeader, Section, Stat } from "@/components/ui/primitives";
 import { cn } from "@/lib/cn";
+import { LinkButton } from "@/components/ui/link-button";
 
 const TABS = ["bookings", "fields", "hours", "profile", "staff", "reports"] as const;
 type Tab = (typeof TABS)[number];
@@ -62,7 +63,7 @@ export default async function ManageVenuePage({ params, searchParams }: PageProp
       <PageHeader
         eyebrow={t(`role.${role}`)}
         title={venue.name}
-        actions={<Link href={`/venues/${id}`} className={buttonClass("ghost", "md")}>{t("viewPublic")}</Link>}
+        actions={<LinkButton href={`/venues/${id}`} className={buttonClass("ghost", "md")}>{t("viewPublic")}</LinkButton>}
       />
       {venue.verification_status !== "verified" ? (
         <Alert tone={venue.verification_status === "rejected" ? "danger" : "info"} title={vp(`verification.${venue.verification_status}`)}>
@@ -77,9 +78,9 @@ export default async function ManageVenuePage({ params, searchParams }: PageProp
 
       <nav aria-label={t("sections")} className="flex flex-wrap gap-2 border-b border-line pb-3">
         {visibleTabs.map((x) => (
-          <Link key={x} href={{ pathname: `/manage/venues/${id}`, query: { tab: x } }} aria-current={tab === x ? "page" : undefined} className={cn(buttonClass(tab === x ? "secondary" : "ghost", "sm"))}>
+          <LinkButton key={x} href={{ pathname: `/manage/venues/${id}`, query: { tab: x } }} aria-current={tab === x ? "page" : undefined} className={cn(buttonClass(tab === x ? "secondary" : "ghost", "sm"))}>
             {t(`tabs.${x}`)}
-          </Link>
+          </LinkButton>
         ))}
       </nav>
 
@@ -142,14 +143,14 @@ export default async function ManageVenuePage({ params, searchParams }: PageProp
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {venue.cover_image_path ? (
                 <div className="relative aspect-[4/3] overflow-hidden rounded-xl border-2 border-accent">
-                  <StorageImage src={publicStorageUrl("venue-images", venue.cover_image_path)!} alt={t("cover")} fill sizes="25vw" className="object-cover" />
+                  <StorageImage src={publicStorageUrl("venue-images", venue.cover_image_path)!} alt={t("cover")} fill sizes="25vw" className="object-cover" fallback={<div className="pitch-lines size-full" />} />
                   <Badge tone="accent" className="absolute start-2 top-2">{t("cover")}</Badge>
                 </div>
               ) : null}
               {(venue.images ?? []).map((img) => (
                 <div key={img.id} className="flex flex-col gap-1">
                   <div className="relative aspect-[4/3] overflow-hidden rounded-xl border border-line">
-                    <StorageImage src={publicStorageUrl("venue-images", img.path)!} alt="" fill sizes="25vw" className="object-cover" />
+                    <StorageImage src={publicStorageUrl("venue-images", img.path)!} alt="" fill sizes="25vw" className="object-cover" fallback={<div className="pitch-lines size-full" />} />
                   </div>
                   <InlineAction action={removeVenueImageAction} values={{ image_id: img.id, venue_id: id }} label={t("removePhoto")} variant="ghost" />
                 </div>

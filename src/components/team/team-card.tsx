@@ -6,12 +6,17 @@ import { localizedName } from "@/server/reference";
 import type { TeamCardData } from "@/server/teams/queries";
 import { StorageImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/primitives";
+import { CardCover } from "@/components/ui/card-cover";
 
 export function TeamLogo({ path, name, size = 48 }: { path: string | null; name: string; size?: number }) {
   const url = publicStorageUrl("team-logos", path);
   return (
     <span className="relative flex shrink-0 items-center justify-center overflow-hidden rounded-xl border border-line bg-surface-3 text-accent" style={{ width: size, height: size }}>
-      {url ? <StorageImage src={url} alt="" width={size} height={size} className="size-full object-cover" /> : <Shield aria-hidden="true" className="size-1/2" />}
+      {url ? (
+        <StorageImage src={url} alt="" width={size} height={size} className="size-full object-cover" fallback={<Shield aria-hidden="true" className="size-1/2" />} />
+      ) : (
+        <Shield aria-hidden="true" className="size-1/2" />
+      )}
       <span className="sr-only">{name}</span>
     </span>
   );
@@ -28,7 +33,7 @@ export async function TeamCard({ team, role }: { team: TeamCardData; role?: stri
         <TeamLogo path={team.logo_path} name={team.name} />
         <div className="min-w-0">
           <h3 className="truncate font-display text-lg font-semibold">
-            <Link href={`/teams/${team.id}`} className="after:absolute after:inset-0 focus-visible:outline-none">{team.name}</Link>
+            <Link href={`/teams/${team.id}`} className="focus-visible:outline-none">{team.name}</Link>
           </h3>
           <p className="text-xs text-muted">{[localizedName(team.area, locale), localizedName(team.city, locale)].filter(Boolean).join("، ")}</p>
         </div>
@@ -44,6 +49,7 @@ export async function TeamCard({ team, role }: { team: TeamCardData; role?: stri
         {team.visibility === "private" ? <Badge tone="warning">{t("private")}</Badge> : null}
         {role ? <Badge tone="accent">{t(`role.${role}`)}</Badge> : null}
       </div>
+      <CardCover href={`/teams/${team.id}`} />
     </article>
   );
 }

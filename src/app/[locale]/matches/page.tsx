@@ -4,7 +4,6 @@ import { CalendarSearch, SlidersHorizontal } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { z } from "zod";
 import Form from "next/form";
-import { Link } from "@/i18n/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { JOIN_POLICIES, MATCH_FORMATS, POSITIONS, SKILL_LEVELS } from "@/lib/domain/match";
 import { parseMoneyInput } from "@/lib/domain/money";
@@ -17,6 +16,7 @@ import { buttonClass } from "@/components/ui/button";
 import { Checkbox, Input, Select } from "@/components/ui/field";
 import { Alert, Container, EmptyState, PageHeader } from "@/components/ui/primitives";
 import { Pagination } from "@/components/ui/pagination";
+import { LinkButton } from "@/components/ui/link-button";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/matches">): Promise<Metadata> {
   const t = await getTranslations({ locale: (await params).locale, namespace: "discovery" });
@@ -100,9 +100,9 @@ export default async function MatchesPage({ params, searchParams }: PageProps<"/
         title={t("title")}
         description={t("description")}
         actions={
-          <Link href="/matches/new" className={buttonClass("primary", "md")}>
+          <LinkButton href="/matches/new" className={buttonClass("primary", "md")}>
             {t("create")}
-          </Link>
+          </LinkButton>
         }
       />
       <div className="grid gap-6 lg:grid-cols-[18rem_1fr]">
@@ -226,7 +226,7 @@ export default async function MatchesPage({ params, searchParams }: PageProps<"/
               ) : null}
               <div className="flex gap-2">
                 <button type="submit" className={buttonClass("primary", "md", "flex-1")}>{t("apply")}</button>
-                <Link href="/matches" className={buttonClass("ghost", "md")}>{t("reset")}</Link>
+                <LinkButton href="/matches" className={buttonClass("ghost", "md")}>{t("reset")}</LinkButton>
               </div>
             </Form>
             <div className="border-t border-line p-4">
@@ -260,8 +260,8 @@ export default async function MatchesPage({ params, searchParams }: PageProps<"/
               title={t("emptyTitle")}
               action={
                 <div className="flex flex-wrap justify-center gap-2">
-                  <Link href="/matches/new" className={buttonClass("primary", "md")}>{t("create")}</Link>
-                  {activeFilters > 0 ? <Link href="/matches" className={buttonClass("outline", "md")}>{t("reset")}</Link> : null}
+                  <LinkButton href="/matches/new" className={buttonClass("primary", "md")}>{t("create")}</LinkButton>
+                  {activeFilters > 0 ? <LinkButton href="/matches" className={buttonClass("outline", "md")}>{t("reset")}</LinkButton> : null}
                 </div>
               }
             >

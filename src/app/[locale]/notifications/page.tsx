@@ -13,6 +13,7 @@ import { buttonClass } from "@/components/ui/button";
 import { Container, EmptyState, PageHeader } from "@/components/ui/primitives";
 import { Pagination } from "@/components/ui/pagination";
 import { cn } from "@/lib/cn";
+import { LinkButton } from "@/components/ui/link-button";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/notifications">): Promise<Metadata> {
   const t = await getTranslations({ locale: (await params).locale, namespace: "notificationsPage" });
@@ -45,7 +46,7 @@ export default async function NotificationsPage({ params, searchParams }: PagePr
         title={t("title")}
         actions={
           <>
-            <Link href="/settings" className={buttonClass("ghost", "sm")}>{t("preferences")}</Link>
+            <LinkButton href="/settings" className={buttonClass("ghost", "sm")}>{t("preferences")}</LinkButton>
             {unread ? <InlineAction action={markNotificationsReadAction} values={{}} label={t("markAll")} /> : null}
           </>
         }

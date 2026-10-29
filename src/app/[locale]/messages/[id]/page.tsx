@@ -1,12 +1,12 @@
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import type { Locale } from "@/i18n/routing";
-import { Link } from "@/i18n/navigation";
 import { requireOnboardedUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { Thread, type ThreadMessage } from "@/components/messages/thread";
 import { Badge, Container, PageHeader } from "@/components/ui/primitives";
 import { buttonClass } from "@/components/ui/button";
+import { LinkButton } from "@/components/ui/link-button";
 
 const PAGE = 100;
 
@@ -50,15 +50,15 @@ export default async function ConversationPage({ params, searchParams }: PagePro
         eyebrow={<Badge>{t(`kind.${conv.kind}`)}</Badge>}
         actions={
           <>
-            <Link href="/messages" className={buttonClass("ghost", "sm")}>{t("all")}</Link>
-            {link ? <Link href={link} className={buttonClass("outline", "sm")}>{t("open")}</Link> : null}
+            <LinkButton href="/messages" className={buttonClass("ghost", "sm")}>{t("all")}</LinkButton>
+            {link ? <LinkButton href={link} className={buttonClass("outline", "sm")}>{t("open")}</LinkButton> : null}
           </>
         }
       />
       {hasOlder ? (
-        <Link href={{ pathname: `/messages/${id}`, query: { before: String(messages[0]?.id) } }} className={buttonClass("ghost", "sm", "mb-3")}>
+        <LinkButton href={{ pathname: `/messages/${id}`, query: { before: String(messages[0]?.id) } }} className={buttonClass("ghost", "sm", "mb-3")}>
           {t("older")}
-        </Link>
+        </LinkButton>
       ) : null}
       <Thread conversationId={id} me={user.id} names={names} initial={messages} locked={conv.is_locked} timeZone="Asia/Baghdad" />
       <p className="mt-4 text-xs text-muted">{t("safetyNote")}</p>

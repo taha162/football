@@ -1,7 +1,15 @@
-import { CanvasTexture, LinearFilter, RepeatWrapping, SRGBColorSpace } from "three";
+import { CanvasTexture, RepeatWrapping, SRGBColorSpace } from "three";
+
+/**
+ * Canvas textures are drawn at twice their layout size, so text and edges stay
+ * crisp on high-density screens and in close-ups; three.js clamps the
+ * anisotropy to what the GPU supports.
+ */
+const DENSITY = 2;
+const ANISOTROPY = 16;
 
 /** Soft radial glow for lamp heads (white core, falling off to nothing). */
-export function glowTexture(size = 256): CanvasTexture {
+export function glowTexture(size = 256 * DENSITY): CanvasTexture {
   const c = document.createElement("canvas");
   c.width = c.height = size;
   const g = c.getContext("2d")!;
@@ -22,8 +30,8 @@ export function glowTexture(size = 256): CanvasTexture {
 /** Horizontal anamorphic streak: the long flare a cinema lens draws through a bright light. */
 export function streakTexture(): CanvasTexture {
   const c = document.createElement("canvas");
-  c.width = 512;
-  c.height = 32;
+  c.width = 512 * DENSITY;
+  c.height = 32 * DENSITY;
   const g = c.getContext("2d")!;
   const img = g.createImageData(c.width, c.height);
   for (let y = 0; y < c.height; y++) {
@@ -55,15 +63,17 @@ export interface BoardItem {
  * Drawn with the page's own fonts so Arabic is shaped by the browser.
  */
 export function boardTexture(items: BoardItem[], fonts: { arabic: string; latin: string }): CanvasTexture {
+  const [W, H] = [2048, 96]; // layout units; the canvas has DENSITY× the pixels
   const c = document.createElement("canvas");
-  c.width = 2048;
-  c.height = 96;
+  c.width = W * DENSITY;
+  c.height = H * DENSITY;
   const g = c.getContext("2d")!;
+  g.scale(DENSITY, DENSITY);
   g.fillStyle = "#040604";
-  g.fillRect(0, 0, c.width, c.height);
+  g.fillRect(0, 0, W, H);
   // LED pixel grid, barely visible.
   g.fillStyle = "rgba(184,242,63,0.035)";
-  for (let x = 0; x < c.width; x += 4) g.fillRect(x, 0, 1, c.height);
+  for (let x = 0; x < W; x += 4) g.fillRect(x, 0, 1, H);
   g.textBaseline = "middle";
   const styleOf = (it: BoardItem) => {
     const arabic = /[؀-ۿ]/.test(it.text);
@@ -78,8 +88,8 @@ export function boardTexture(items: BoardItem[], fonts: { arabic: string; latin:
     return g.measureText(it.text).width + 44;
   });
   const period = widths.reduce((a, b) => a + b, 0);
-  const repeats = Math.max(1, Math.round(c.width / period));
-  const scale = c.width / (period * repeats);
+  const repeats = Math.max(1, Math.round(W / period));
+  const scale = W / (period * repeats);
   g.save();
   g.scale(scale, 1);
   let x = 22;
@@ -91,7 +101,7 @@ export function boardTexture(items: BoardItem[], fonts: { arabic: string; latin:
       const rtl = /[؀-ۿ]/.test(it.text);
       g.direction = rtl ? "rtl" : "ltr";
       g.textAlign = rtl ? "right" : "left";
-      g.fillText(it.text, rtl ? x + widths[i] - 44 : x, c.height / 2 + 2);
+      g.fillText(it.text, rtl ? x + widths[i] - 44 : x, H / 2 + 2);
       x += widths[i];
     });
   }
@@ -99,28 +109,29 @@ export function boardTexture(items: BoardItem[], fonts: { arabic: string; latin:
   const t = new CanvasTexture(c);
   t.colorSpace = SRGBColorSpace;
   t.wrapS = RepeatWrapping;
-  t.minFilter = LinearFilter;
-  t.anisotropy = 4;
+  t.anisotropy = ANISOTROPY; // mipmapped: sharp along the board even at grazing angles
   return t;
 }
 
 /** Text label for a tactical marker, drawn flat on the pitch like a broadcast graphic. */
 export function labelTexture(lines: { text: string; font: string; color: string }[], rtl: boolean): CanvasTexture {
+  const [W, H] = [1024, 256];
   const c = document.createElement("canvas");
-  c.width = 1024;
-  c.height = 256;
+  c.width = W * DENSITY;
+  c.height = H * DENSITY;
   const g = c.getContext("2d")!;
+  g.scale(DENSITY, DENSITY);
   g.direction = rtl ? "rtl" : "ltr";
   g.textAlign = "center";
   g.textBaseline = "middle";
-  const step = c.height / (lines.length + 1);
+  const step = H / (lines.length + 1);
   lines.forEach((l, i) => {
     g.font = l.font;
     g.fillStyle = l.color;
-    g.fillText(l.text, c.width / 2, step * (i + 1));
+    g.fillText(l.text, W / 2, step * (i + 1));
   });
   const t = new CanvasTexture(c);
   t.colorSpace = SRGBColorSpace;
-  t.anisotropy = 8;
+  t.anisotropy = ANISOTROPY;
   return t;
 }

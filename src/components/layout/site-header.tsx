@@ -1,6 +1,5 @@
 import { Bell, MessageCircle, Plus, ShieldCheck } from "lucide-react";
 import { getLocale, getTranslations } from "next-intl/server";
-import { Link } from "@/i18n/navigation";
 import type { CurrentUser } from "@/lib/auth";
 import { publicStorageUrl } from "@/lib/storage";
 import { getUnreadCounts } from "@/server/reference";
@@ -11,6 +10,7 @@ import { Logo } from "./logo";
 import { LocaleSwitcher } from "./locale-switcher";
 import { NavLinks } from "./nav-links";
 import { UserMenu } from "./user-menu";
+import { LinkButton } from "@/components/ui/link-button";
 
 export async function SiteHeader({ user }: { user: CurrentUser | null }) {
   const t = await getTranslations("nav");
@@ -20,9 +20,9 @@ export async function SiteHeader({ user }: { user: CurrentUser | null }) {
   return (
     <HeaderFrame>
       <div className="mx-auto flex h-16 w-full max-w-6xl items-center gap-2 px-4 sm:gap-4 sm:px-6">
-        <Link href="/" className="shrink-0 rounded-lg" aria-label={t("home")}>
+        <LinkButton href="/" className="logo-link shrink-0 rounded-lg" aria-label={t("home")}>
           <Logo />
-        </Link>
+        </LinkButton>
         <nav aria-label={t("primary")} className="hidden flex-1 md:block">
           <NavLinks
             items={[
@@ -37,14 +37,14 @@ export async function SiteHeader({ user }: { user: CurrentUser | null }) {
           <LocaleSwitcher />
           {user ? (
             <>
-              <Link href="/matches/new" className={buttonClass("primary", "sm", "hidden md:inline-flex")}>
+              <LinkButton href="/matches/new" className={buttonClass("primary", "sm", "hidden md:inline-flex")}>
                 <Plus aria-hidden="true" className="size-4" />
                 {t("createMatch")}
-              </Link>
+              </LinkButton>
               {user.isModerator ? (
-                <Link href="/admin" className={buttonClass("ghost", "sm", "hidden md:inline-flex")} aria-label={t("admin")}>
+                <LinkButton href="/admin" className={buttonClass("ghost", "sm", "hidden md:inline-flex")} aria-label={t("admin")}>
                   <ShieldCheck aria-hidden="true" className="size-5" />
-                </Link>
+                </LinkButton>
               ) : null}
               <CountLink href="/messages" label={t("messages")} count={counts.messages} className="hidden md:inline-flex">
                 <MessageCircle aria-hidden="true" className="size-5" />
@@ -61,12 +61,12 @@ export async function SiteHeader({ user }: { user: CurrentUser | null }) {
             </>
           ) : (
             <>
-              <Link href="/sign-in" className={buttonClass("ghost", "sm")}>
+              <LinkButton href="/sign-in" className={buttonClass("ghost", "sm")}>
                 {t("signIn")}
-              </Link>
-              <Link href="/sign-up" className={buttonClass("primary", "sm")}>
+              </LinkButton>
+              <LinkButton href="/sign-up" className={buttonClass("primary", "sm")}>
                 {t("signUp")}
-              </Link>
+              </LinkButton>
             </>
           )}
         </div>
@@ -91,13 +91,13 @@ async function CountLink({
   const t = await getTranslations("nav");
   const accessible = count > 0 ? t("withUnread", { label, count }) : label;
   return (
-    <Link href={href} className={buttonClass("ghost", "sm", `relative px-2.5 ${className ?? ""}`)} aria-label={accessible}>
+    <LinkButton href={href} className={buttonClass("ghost", "sm", `relative px-2.5 ${className ?? ""}`)} aria-label={accessible}>
       {children}
       {count > 0 ? (
         <span key={count} aria-hidden="true" className="badge-pop num absolute -end-0.5 -top-0.5 min-w-5 rounded-full bg-accent px-1 text-center text-[11px] font-bold leading-5 text-accent-ink">
           {count > 99 ? "99+" : count}
         </span>
       ) : null}
-    </Link>
+    </LinkButton>
   );
 }

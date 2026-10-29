@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { Link, usePathname } from "@/i18n/navigation";
+import { usePathname } from "@/i18n/navigation";
 import { signOutAction } from "@/server/auth";
+import { LinkButton } from "@/components/ui/link-button";
 
-const itemClass = "flex min-h-10 w-full items-center rounded-lg px-3 text-start text-sm text-ink hover:bg-surface-3";
+const itemClass = "ripple flex min-h-10 w-full items-center rounded-lg px-3 text-start text-sm text-ink transition-[background-color,translate] hover:bg-surface-3 hover:translate-x-[var(--nudge)]";
 
 /** Disclosure menu built on <details>; closes on navigation and Escape. */
 export function UserMenu({ name, avatar, isModerator }: { name: string; avatar: ReactNode; isModerator: boolean; locale: string }) {
@@ -43,17 +44,17 @@ export function UserMenu({ name, avatar, isModerator }: { name: string; avatar: 
       <div className="menu-panel absolute end-0 top-12 z-50 w-60 rounded-2xl border border-line bg-surface p-2 shadow-2xl">
         <p className="truncate px-3 py-2 text-sm font-semibold">{name}</p>
         <ul className="flex flex-col">
-          <li><Link className={itemClass} href="/dashboard">{t("dashboard")}</Link></li>
-          <li><Link className={itemClass} href="/profile">{t("profile")}</Link></li>
-          <li><Link className={itemClass} href="/my/matches">{t("myMatches")}</Link></li>
-          <li><Link className={itemClass} href="/my/teams">{t("myTeams")}</Link></li>
-          <li><Link className={itemClass} href="/my/bookings">{t("myBookings")}</Link></li>
-          <li><Link className={itemClass} href="/opponents">{t("opponents")}</Link></li>
-          <li><Link className={itemClass} href="/manage/venues">{t("venueDashboard")}</Link></li>
-          <li><Link className={itemClass} href="/manage/tournaments">{t("tournamentDashboard")}</Link></li>
-          <li><Link className={itemClass} href="/messages">{t("messages")}</Link></li>
-          <li><Link className={itemClass} href="/settings">{t("settings")}</Link></li>
-          {isModerator ? <li><Link className={itemClass} href="/admin">{t("admin")}</Link></li> : null}
+          <li><LinkButton className={itemClass} href="/dashboard">{t("dashboard")}</LinkButton></li>
+          <li><LinkButton className={itemClass} href="/profile">{t("profile")}</LinkButton></li>
+          <li><LinkButton className={itemClass} href="/my/matches">{t("myMatches")}</LinkButton></li>
+          <li><LinkButton className={itemClass} href="/my/teams">{t("myTeams")}</LinkButton></li>
+          <li><LinkButton className={itemClass} href="/my/bookings">{t("myBookings")}</LinkButton></li>
+          <li><LinkButton className={itemClass} href="/opponents">{t("opponents")}</LinkButton></li>
+          <li><LinkButton className={itemClass} href="/manage/venues">{t("venueDashboard")}</LinkButton></li>
+          <li><LinkButton className={itemClass} href="/manage/tournaments">{t("tournamentDashboard")}</LinkButton></li>
+          <li><LinkButton className={itemClass} href="/messages">{t("messages")}</LinkButton></li>
+          <li><LinkButton className={itemClass} href="/settings">{t("settings")}</LinkButton></li>
+          {isModerator ? <li><LinkButton className={itemClass} href="/admin">{t("admin")}</LinkButton></li> : null}
         </ul>
         <form action={signOutAction} className="mt-1 border-t border-line pt-1">
           <button type="submit" className={`${itemClass} text-danger`}>
