@@ -10,7 +10,9 @@ import {
 } from "react";
 import { useFormStatus } from "react-dom";
 import { useTranslations } from "next-intl";
-import { Loader2 } from "lucide-react";
+import { armCelebration } from "@/components/motion/celebrate";
+import { bringIntoView, shake } from "@/components/motion/scroll";
+import { BallSpinner } from "./ball-spinner";
 import { Button, type ButtonProps } from "./button";
 import { Alert } from "./primitives";
 import { Field, controlProps, describedBy } from "./field";
@@ -45,6 +47,7 @@ export function ActionForm({
   hideSuccess = false,
   onSuccess,
   id,
+  celebrate,
 }: {
   action: FormAction;
   children: ReactNode;
@@ -54,6 +57,8 @@ export function ActionForm({
   hideSuccess?: boolean;
   onSuccess?: (data: unknown) => void;
   id?: string;
+  /** Key of the <Celebration> that confirms this action's success (see components/motion/celebrate.tsx). */
+  celebrate?: string;
 }) {
   const [state, formAction] = useActionState(action, null);
   const formRef = useRef<HTMLFormElement>(null);
@@ -70,7 +75,12 @@ export function ActionForm({
       onSuccess?.(state.data);
     } else if (state.fieldErrors) {
       const first = Object.keys(state.fieldErrors)[0];
-      formRef.current?.querySelector<HTMLElement>(`[name="${CSS.escape(first)}"]`)?.focus();
+      const field = formRef.current?.querySelector<HTMLElement>(`[name="${CSS.escape(first)}"]`);
+      if (field) {
+        field.focus({ preventScroll: true });
+        bringIntoView(field);
+        shake(field);
+      }
     }
   }, [state, resetOnSuccess, onSuccess]);
 
@@ -79,14 +89,26 @@ export function ActionForm({
 
   return (
     <FieldErrorsContext.Provider value={translatedFieldErrors}>
-      <form ref={formRef} action={formAction} className={cn("flex flex-col gap-4", className)} id={id} noValidate={false}>
+      <form
+        ref={formRef}
+        action={formAction}
+        onSubmit={celebrate ? () => armCelebration(celebrate) : undefined}
+        className={cn("flex flex-col gap-4", className)}
+        id={id}
+        noValidate={false}
+      >
         {children}
         <div aria-live="polite" aria-atomic="true">
+          {/* Keyed by the response, so the same message sent again still pops (and an error shakes). */}
           {state && !state.ok ? (
-            <Alert tone="danger">{state.fieldErrors && state.error === "validation" ? t("fixErrors") : text.error(state.error)}</Alert>
+            <Alert key={state.at} tone="danger" className="alert-pop">
+              {state.fieldErrors && state.error === "validation" ? t("fixErrors") : text.error(state.error)}
+            </Alert>
           ) : null}
           {state?.ok && !hideSuccess && (state.message || successMessage) ? (
-            <Alert tone="success">{state.message ? successText(state.message) : successMessage}</Alert>
+            <Alert key={state.at} tone="success" className="alert-pop">
+              {state.message ? successText(state.message) : successMessage}
+            </Alert>
           ) : null}
         </div>
       </form>
@@ -148,7 +170,7 @@ export function SubmitButton({ children, pendingLabel, ...props }: ButtonProps &
   const { pending } = useFormStatus();
   return (
     <Button type="submit" disabled={pending || props.disabled} aria-disabled={pending} {...props}>
-      {pending ? <Loader2 aria-hidden="true" className="size-4 animate-spin" /> : null}
+      {pending ? <BallSpinner /> : null}
       {pending && pendingLabel ? pendingLabel : children}
     </Button>
   );

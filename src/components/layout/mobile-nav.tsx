@@ -5,7 +5,11 @@ import { useTranslations } from "next-intl";
 import { Link, usePathname } from "@/i18n/navigation";
 import { cn } from "@/lib/cn";
 
-/** Bottom navigation on small screens; the primary action sits in the middle. */
+/**
+ * Bottom navigation on small screens; the primary action sits in the middle.
+ * The current tab lights a segment of the top line (globals.css: mnav-link);
+ * the bar is named for view transitions, so it holds still while pages change.
+ */
 export function MobileNav({ signedIn }: { signedIn: boolean }) {
   const t = useTranslations("nav");
   const pathname = usePathname();
@@ -17,7 +21,7 @@ export function MobileNav({ signedIn }: { signedIn: boolean }) {
     { href: signedIn ? "/messages" : "/sign-in", label: signedIn ? t("messages") : t("signIn"), icon: MessageCircle },
   ] as const;
   return (
-    <nav aria-label={t("mobile")} className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-bg/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
+    <nav aria-label={t("mobile")} style={{ viewTransitionName: "mobile-nav" }} className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-bg/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
       <ul className="mx-auto grid max-w-md grid-cols-5">
         {items.map((item) => {
           const active = pathname === item.href;
@@ -27,10 +31,10 @@ export function MobileNav({ signedIn }: { signedIn: boolean }) {
               <Link
                 href={item.href}
                 aria-current={active ? "page" : undefined}
-                className={cn("flex h-16 flex-col items-center justify-center gap-1 text-[11px] font-medium", active ? "text-accent" : "text-muted")}
+                className={cn("mnav-link flex h-16 flex-col items-center justify-center gap-1 text-[11px] font-medium", active ? "text-accent" : "text-muted")}
               >
                 {"primary" in item ? (
-                  <span className="flex size-11 items-center justify-center rounded-2xl bg-accent text-accent-ink shadow-lg shadow-accent/20">
+                  <span className="mnav-plus flex size-11 items-center justify-center rounded-2xl bg-accent text-accent-ink shadow-lg shadow-accent/20">
                     <Icon aria-hidden="true" className="size-5" />
                   </span>
                 ) : (

@@ -1,4 +1,5 @@
 import { getLocale, getTranslations } from "next-intl/server";
+import Form from "next/form";
 import { Link } from "@/i18n/navigation";
 import { formatDate } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
@@ -36,7 +37,7 @@ export default async function AdminContentPage({ searchParams }: PageProps<"/[lo
   return (
     <>
       <PageHeader title={t("nav.content")} description={t("contentDescription")} />
-      <form method="get" className="flex flex-wrap gap-2">
+      <Form action="" scroll={false} className="flex flex-wrap gap-2">
         {KINDS.map((k) => (
           <label key={k} className={buttonClass(k === kind ? "secondary" : "ghost", "sm", "cursor-pointer")}>
             <input type="radio" name="kind" value={k} defaultChecked={k === kind} className="sr-only" />
@@ -46,7 +47,7 @@ export default async function AdminContentPage({ searchParams }: PageProps<"/[lo
         <label htmlFor="content-q" className="sr-only">{t("search")}</label>
         <Input id="content-q" name="q" defaultValue={q} placeholder={t("search")} className="w-56" />
         <button type="submit" className={buttonClass("secondary", "sm")}>{t("search")}</button>
-      </form>
+      </Form>
       <ul className="flex flex-col divide-y divide-line rounded-xl border border-line">
         {rows.map((r) => (
           <li key={r.id} className="flex flex-wrap items-center gap-3 p-3 text-sm">

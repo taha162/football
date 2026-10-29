@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getNow } from "@/lib/now";
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import Form from "next/form";
 import type { Locale } from "@/i18n/routing";
 import { Link, redirect } from "@/i18n/navigation";
 import { requireOnboardedUser } from "@/lib/auth";
@@ -231,14 +232,14 @@ export default async function ManageVenuePage({ params, searchParams }: PageProp
           </ul>
         </Section>
         <Section title={t("calendar")} id="calendar">
-          <form method="get" className="flex items-end gap-2">
+          <Form action="" scroll={false} className="flex items-end gap-2">
             <input type="hidden" name="tab" value="bookings" />
             <label className="flex flex-col gap-1 text-sm">
               {t("date")}
               <Input type="date" name="date" defaultValue={date} dir="ltr" />
             </label>
             <button type="submit" className={buttonClass("secondary", "md")}>{t("show")}</button>
-          </form>
+          </Form>
           <div className="grid gap-4 md:grid-cols-2">
             {fs.filter((f) => f.is_active).map((f) => (
               <Card key={f.id}>
@@ -331,12 +332,12 @@ export default async function ManageVenuePage({ params, searchParams }: PageProp
         <p className="text-xs text-muted">{t("staffRoles")}</p>
         {isOwner ? (
           <div className="flex flex-col gap-3">
-            <form method="get" className="flex gap-2">
+            <Form action="" scroll={false} className="flex gap-2">
               <input type="hidden" name="tab" value="staff" />
               <label htmlFor="staff-q" className="sr-only">{t("searchPeople")}</label>
               <Input id="staff-q" name="q" defaultValue={query} placeholder={t("searchPeople")} />
               <button type="submit" className={buttonClass("secondary", "md")}>{t("search")}</button>
-            </form>
+            </Form>
             <ul className="flex flex-col gap-2">
               {candidates.map((p) => (
                 <li key={p.id} className="flex flex-wrap items-center gap-3">

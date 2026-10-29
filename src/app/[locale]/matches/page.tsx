@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { CalendarSearch, SlidersHorizontal } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { z } from "zod";
+import Form from "next/form";
 import { Link } from "@/i18n/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { JOIN_POLICIES, MATCH_FORMATS, POSITIONS, SKILL_LEVELS } from "@/lib/domain/match";
@@ -114,7 +115,7 @@ export default async function MatchesPage({ params, searchParams }: PageProps<"/
                 {activeFilters > 0 ? <span className="num rounded-full bg-accent px-2 text-xs text-accent-ink">{activeFilters}</span> : null}
               </span>
             </summary>
-            <form method="get" className="flex flex-col gap-4 border-t border-line p-4">
+            <Form action="" scroll={false} className="flex flex-col gap-4 border-t border-line p-4">
               <label className="flex flex-col gap-1 text-sm">
                 {t("search")}
                 <Input type="search" name="q" defaultValue={q.q} placeholder={t("searchPlaceholder")} />
@@ -227,7 +228,7 @@ export default async function MatchesPage({ params, searchParams }: PageProps<"/
                 <button type="submit" className={buttonClass("primary", "md", "flex-1")}>{t("apply")}</button>
                 <Link href="/matches" className={buttonClass("ghost", "md")}>{t("reset")}</Link>
               </div>
-            </form>
+            </Form>
             <div className="border-t border-line p-4">
               <Suspense fallback={null}>
                 <NearMe />

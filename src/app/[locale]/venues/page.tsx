@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { MapPinned } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import Form from "next/form";
 import { Link } from "@/i18n/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { MATCH_FORMATS } from "@/lib/domain/match";
@@ -40,7 +41,7 @@ export default async function VenuesPage({ params, searchParams }: PageProps<"/[
         description={t("description")}
         actions={<Link href="/manage/venues/new" className={buttonClass("outline", "md")}>{t("listVenue")}</Link>}
       />
-      <form method="get" className="mb-6 grid gap-3 rounded-[var(--radius-card)] border border-line bg-surface p-4 sm:grid-cols-5">
+      <Form action="" scroll={false} className="mb-6 grid gap-3 rounded-[var(--radius-card)] border border-line bg-surface p-4 sm:grid-cols-5">
         <label className="flex flex-col gap-1 text-sm sm:col-span-2">
           {t("search")}
           <Input name="q" defaultValue={one(sp.q)} placeholder={t("searchPlaceholder")} />
@@ -67,7 +68,7 @@ export default async function VenuesPage({ params, searchParams }: PageProps<"/[
         </label>
         <Checkbox name="bookable" value="1" defaultChecked={one(sp.bookable) === "1"} label={t("onlyBookable")} className="sm:col-span-3" />
         <button type="submit" className={buttonClass("primary", "md", "sm:col-span-2")}>{t("apply")}</button>
-      </form>
+      </Form>
       {items.length > 0 ? (
         <div className="flex flex-col gap-6">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

@@ -16,7 +16,7 @@ export async function VenueCard({ venue, role }: { venue: VenueCardData; role?: 
   const minPrice = active.length ? Math.min(...active.map((f) => f.price_per_hour)) : null;
   const cover = publicStorageUrl("venue-images", venue.cover_image_path);
   return (
-    <article className="relative flex flex-col overflow-hidden rounded-[var(--radius-card)] border border-line bg-surface transition-colors hover:border-line-strong">
+    <article className="reveal card-hover spotlight relative flex flex-col overflow-hidden rounded-[var(--radius-card)] border border-line bg-surface hover:border-line-strong">
       <div className="relative aspect-[16/9] bg-surface-3">
         {cover ? (
           <StorageImage src={cover} alt="" fill sizes="(min-width: 1024px) 33vw, 100vw" className="object-cover" />
@@ -28,7 +28,7 @@ export async function VenueCard({ venue, role }: { venue: VenueCardData; role?: 
       </div>
       <div className="flex flex-1 flex-col gap-2 p-4">
         <h3 className="flex items-center gap-1.5 font-display text-lg font-semibold">
-          <Link href={`/venues/${venue.id}`} className="after:absolute after:inset-0">{venue.name}</Link>
+          <Link href={`/venues/${venue.id}`} className="after:absolute after:inset-0 focus-visible:outline-none">{venue.name}</Link>
           {venue.verification_status === "verified" ? <BadgeCheck aria-label={t("verified")} className="size-4 text-accent" /> : null}
         </h3>
         <p className="text-xs text-muted">{[localizedName(venue.area, locale), localizedName(venue.city, locale)].filter(Boolean).join("، ")}</p>

@@ -1,4 +1,5 @@
 import { getLocale, getTranslations } from "next-intl/server";
+import Form from "next/form";
 import { Link, redirect } from "@/i18n/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
@@ -26,11 +27,11 @@ export default async function AdminUsersPage({ searchParams }: PageProps<"/[loca
   return (
     <>
       <PageHeader title={t("nav.users")} />
-      <form method="get" className="flex gap-2">
+      <Form action="" scroll={false} className="flex gap-2">
         <label htmlFor="admin-user-q" className="sr-only">{t("searchUsers")}</label>
         <Input id="admin-user-q" name="q" defaultValue={q} placeholder={t("searchUsers")} />
         <button type="submit" className={buttonClass("secondary", "md")}>{t("search")}</button>
-      </form>
+      </Form>
       <div className="overflow-x-auto rounded-xl border border-line">
         <table className="w-full text-sm">
           <thead className="bg-surface-2 text-xs text-muted">

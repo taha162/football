@@ -2,8 +2,9 @@ import type { HTMLAttributes, ReactNode } from "react";
 import { AlertTriangle, CheckCircle2, Info, XCircle } from "lucide-react";
 import { cn } from "@/lib/cn";
 
+/** A panel; below the fold it rises into place when scrolled to (`reveal`, see components/motion/reveal.ts). */
 export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("rounded-[var(--radius-card)] border border-line bg-surface shadow-[var(--shadow-card)]", className)} {...props} />;
+  return <div className={cn("reveal rounded-[var(--radius-card)] border border-line bg-surface shadow-[var(--shadow-card)]", className)} {...props} />;
 }
 
 export function CardBody({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
@@ -44,7 +45,7 @@ export function Alert({
 }) {
   const Icon = alertIcon[tone];
   return (
-    <div className={cn("flex gap-3 rounded-xl border p-3.5 text-sm", toneClass[tone], className)} role={tone === "danger" ? "alert" : "status"}>
+    <div data-tone={tone} className={cn("flex gap-3 rounded-xl border p-3.5 text-sm", toneClass[tone], className)} role={tone === "danger" ? "alert" : "status"}>
       <Icon aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
       <div className="flex flex-col gap-1 text-ink">
         {title ? <p className="font-semibold">{title}</p> : null}
@@ -56,7 +57,7 @@ export function Alert({
 
 export function EmptyState({ icon, title, children, action }: { icon?: ReactNode; title: ReactNode; children?: ReactNode; action?: ReactNode }) {
   return (
-    <div className="flex flex-col items-center gap-3 rounded-[var(--radius-card)] border border-dashed border-line px-6 py-12 text-center">
+    <div className="reveal flex flex-col items-center gap-3 rounded-[var(--radius-card)] border border-dashed border-line px-6 py-12 text-center">
       {icon ? <div className="text-faint" aria-hidden="true">{icon}</div> : null}
       <p className="font-display text-lg font-semibold">{title}</p>
       {children ? <div className="max-w-md text-sm text-muted">{children}</div> : null}

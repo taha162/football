@@ -1,4 +1,5 @@
 import { getTranslations } from "next-intl/server";
+import Form from "next/form";
 import { getNow } from "@/lib/now";
 import { Link } from "@/i18n/navigation";
 import { publicStorageUrl } from "@/lib/storage";
@@ -82,11 +83,11 @@ export async function OrganizerPanel({
         {active && !started ? (
           <div className="flex flex-col gap-3 border-t border-line pt-4">
             <h3 className="font-semibold">{t("invite")}</h3>
-            <form method="get" className="flex gap-2">
+            <Form action="" scroll={false} className="flex gap-2">
               <label className="sr-only" htmlFor="invite-q">{t("searchPlayers")}</label>
               <Input id="invite-q" name="invite" defaultValue={inviteQuery} placeholder={t("searchPlayers")} minLength={2} />
               <button type="submit" className={buttonClass("secondary", "md")}>{t("search")}</button>
-            </form>
+            </Form>
             {inviteQuery && candidates.length === 0 ? <p className="text-sm text-muted">{t("noPlayersFound")}</p> : null}
             <ul className="flex flex-col gap-2">
               {candidates.map((p) => (

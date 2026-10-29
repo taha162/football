@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Users } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import Form from "next/form";
 import { Link } from "@/i18n/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { MATCH_FORMATS, SKILL_LEVELS } from "@/lib/domain/match";
@@ -47,7 +48,7 @@ export default async function TeamsPage({ params, searchParams }: PageProps<"/[l
           </>
         }
       />
-      <form method="get" className="mb-6 grid gap-3 rounded-[var(--radius-card)] border border-line bg-surface p-4 sm:grid-cols-5">
+      <Form action="" scroll={false} className="mb-6 grid gap-3 rounded-[var(--radius-card)] border border-line bg-surface p-4 sm:grid-cols-5">
         <label className="flex flex-col gap-1 text-sm sm:col-span-2">
           {t("search")}
           <Input name="q" defaultValue={one(sp.q)} placeholder={t("searchPlaceholder")} />
@@ -86,7 +87,7 @@ export default async function TeamsPage({ params, searchParams }: PageProps<"/[l
           </label>
         </div>
         <button type="submit" className={buttonClass("primary", "md", "sm:col-start-5")}>{t("apply")}</button>
-      </form>
+      </Form>
       {items.length > 0 ? (
         <div className="flex flex-col gap-6">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

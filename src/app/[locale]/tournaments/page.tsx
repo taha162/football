@@ -46,14 +46,14 @@ export default async function TournamentsPage({ params, searchParams }: PageProp
           {rows.map((r) => {
             const approved = (r.teams ?? []).filter((x) => x.status === "approved").length;
             return (
-              <li key={r.id} className="relative flex flex-col gap-3 rounded-[var(--radius-card)] border border-line bg-surface p-4 hover:border-line-strong">
+              <li key={r.id} className="reveal card-hover spotlight relative flex flex-col gap-3 rounded-[var(--radius-card)] border border-line bg-surface p-4 hover:border-line-strong">
                 <div className="flex flex-wrap gap-1.5">
                   <Badge tone={r.status === "registration_open" ? "accent" : r.status === "in_progress" ? "info" : "neutral"}>{t(`status.${r.status}`)}</Badge>
                   <Badge>{r.format}</Badge>
                   <Badge>{t(`structureShort.${r.tournament_format}`)}</Badge>
                 </div>
                 <h2 className="font-display text-lg font-semibold">
-                  <Link href={`/tournaments/${r.id}`} className="after:absolute after:inset-0">{r.name}</Link>
+                  <Link href={`/tournaments/${r.id}`} className="after:absolute after:inset-0 focus-visible:outline-none">{r.name}</Link>
                 </h2>
                 <p className="text-sm text-muted">
                   {localizedName(r.city, locale)} · {formatDate(r.starts_on, locale, "UTC")} – {formatDate(r.ends_on, locale, "UTC")}

@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { ActionForm, Hidden, SubmitButton } from "@/components/ui/action-form";
 import { Textarea } from "@/components/ui/field";
 import { ReportButton } from "@/components/report-button";
+import { prefersReducedMotion } from "@/components/motion/scroll";
 import { getBrowserClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/cn";
 import { markConversationReadAction, sendMessageAction } from "@/server/messages";
@@ -41,7 +42,8 @@ export function Thread({
   const locale = useLocale();
   const [messages, setMessages] = useState(initial);
   const [prevInitial, setPrevInitial] = useState(initial);
-  const bottom = useRef<HTMLLIElement>(null);
+  const list = useRef<HTMLOListElement>(null);
+  const opened = useRef(false);
 
   // Server re-render (e.g. after sending) brings fresh history: merge by id
   // so realtime-delivered messages aren't lost (derived-state pattern).
@@ -73,15 +75,20 @@ export function Thread({
     };
   }, [conversationId]);
 
+  // The newest message is at the bottom: open there, then glide down to each
+  // new one. Only the list scrolls, so the composer stays where it is.
   useEffect(() => {
-    bottom.current?.scrollIntoView({ block: "end" });
+    const el = list.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior: opened.current && !prefersReducedMotion() ? "smooth" : "auto" });
+    opened.current = true;
   }, [messages.length]);
 
   const fmt = new Intl.DateTimeFormat(locale === "ar" ? "ar-IQ" : "en-GB", { timeZone, hour: "numeric", minute: "2-digit", day: "numeric", month: "short" });
 
   return (
     <div className="flex flex-col gap-4">
-      <ol className="flex max-h-[60vh] min-h-64 flex-col gap-3 overflow-y-auto rounded-[var(--radius-card)] border border-line bg-surface p-4" aria-live="polite" aria-label={t("history")}>
+      <ol ref={list} className="flex max-h-[60vh] min-h-64 flex-col gap-3 overflow-y-auto rounded-[var(--radius-card)] border border-line bg-surface p-4" aria-live="polite" aria-label={t("history")}>
         {messages.length === 0 ? <li className="m-auto text-sm text-muted">{t("noMessages")}</li> : null}
         {messages.map((m) => {
           const mine = m.sender_id === me;
@@ -98,7 +105,6 @@ export function Thread({
             </li>
           );
         })}
-        <li ref={bottom} aria-hidden="true" />
       </ol>
       {locked ? (
         <p className="text-sm text-muted">{t("lockedNote")}</p>

@@ -37,10 +37,10 @@ export function UserMenu({ name, avatar, isModerator }: { name: string; avatar: 
 
   return (
     <details ref={ref} className="relative">
-      <summary className="flex size-10 cursor-pointer list-none items-center justify-center rounded-full [&::-webkit-details-marker]:hidden" aria-label={t("accountMenu", { name })}>
+      <summary className="menu-trigger flex size-10 cursor-pointer list-none items-center justify-center rounded-full [&::-webkit-details-marker]:hidden" aria-label={t("accountMenu", { name })}>
         {avatar}
       </summary>
-      <div className="absolute end-0 top-12 z-50 w-60 rounded-2xl border border-line bg-surface p-2 shadow-2xl">
+      <div className="menu-panel absolute end-0 top-12 z-50 w-60 rounded-2xl border border-line bg-surface p-2 shadow-2xl">
         <p className="truncate px-3 py-2 text-sm font-semibold">{name}</p>
         <ul className="flex flex-col">
           <li><Link className={itemClass} href="/dashboard">{t("dashboard")}</Link></li>

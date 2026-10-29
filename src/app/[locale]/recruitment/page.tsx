@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getLocale, getTranslations, setRequestLocale } from "next-intl/server";
+import Form from "next/form";
 import { Link } from "@/i18n/navigation";
 import { POSITIONS } from "@/lib/domain/match";
 import { formatDate } from "@/lib/format";
@@ -38,7 +39,7 @@ export default async function RecruitmentPage({ params, searchParams }: PageProp
   return (
     <Container className="py-10">
       <PageHeader title={t("title")} description={t("description")} />
-      <form method="get" className="mb-6 flex items-end gap-2">
+      <Form action="" scroll={false} className="mb-6 flex items-end gap-2">
         <label className="flex flex-col gap-1 text-sm">
           {t("position")}
           <Select name="position" defaultValue={position ?? ""}>
@@ -47,7 +48,7 @@ export default async function RecruitmentPage({ params, searchParams }: PageProp
           </Select>
         </label>
         <button type="submit" className={buttonClass("secondary", "md")}>{t("filter")}</button>
-      </form>
+      </Form>
       {rows.length === 0 ? (
         <EmptyState title={t("empty")} />
       ) : (
