@@ -27,8 +27,9 @@ type Translator = Awaited<ReturnType<typeof getTranslations>>;
 export default async function LandingPage({ params }: PageProps<"/[locale]">) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const [t, tm, te, tt, tv, user] = await Promise.all([
+  const [t, tc, tm, te, tt, tv, user] = await Promise.all([
     getTranslations("home"),
+    getTranslations("common"),
     getTranslations("match"),
     getTranslations("enums"),
     getTranslations("tournament"),
@@ -96,6 +97,10 @@ export default async function LandingPage({ params }: PageProps<"/[locale]">) {
             </h1>
             <p className="hero-sub intro-reveal" style={{ "--d": "520ms" } as React.CSSProperties}>
               {t("hero.subtitle")}
+            </p>
+            {/* The brand's own line, in Arabic in both languages, as on the logo. */}
+            <p className="hero-slogan intro-reveal" style={{ "--d": "600ms" } as React.CSSProperties}>
+              <span lang="ar" dir="rtl">{tc("slogan")}</span>
             </p>
             <div className="stage-panel intro-reveal flex flex-wrap items-center gap-x-7 gap-y-4" style={{ "--d": "680ms" } as React.CSSProperties}>
               <LinkButton href="/matches" className="cta-primary group">

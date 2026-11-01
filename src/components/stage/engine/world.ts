@@ -328,9 +328,9 @@ export function buildWorld(o: WorldOptions): World {
 
   /* ---- Advertising boards (LED) ----------------------------------------- */
   const brandItems: BoardItem[] = [
-    { text: "MALAAB", kind: "display" },
+    { text: "AL-MALAB", kind: "display" },
     { text: "·", kind: "dot" },
-    { text: "ملعب", kind: "display" },
+    { text: "الملعب", kind: "display" },
     { text: "·", kind: "dot" },
     { text: "الموصل", kind: "body" },
     { text: "·", kind: "dot" },
@@ -342,7 +342,7 @@ export function buildWorld(o: WorldOptions): World {
     { text: "·", kind: "dot" },
     { text: "ليلة البطولة", kind: "display" },
     { text: "·", kind: "dot" },
-    { text: "MALAAB", kind: "body" },
+    { text: "AL-MALAB", kind: "body" },
     { text: "·", kind: "dot" },
   ];
   const brand = track(boardTexture(brandItems, o.fonts));

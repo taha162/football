@@ -5,12 +5,15 @@ import { Logo } from "./logo";
 export async function SiteFooter() {
   const t = await getTranslations("footer");
   const nav = await getTranslations("nav");
+  const common = await getTranslations("common");
   const year = new Date().getFullYear();
   return (
     <footer className="border-t border-line bg-surface/40">
       <div className="mx-auto grid w-full max-w-6xl gap-8 px-4 py-10 sm:px-6 md:grid-cols-4">
         <div className="reveal flex flex-col gap-3 md:col-span-2">
           <Logo />
+          {/* The brand's own line, in Arabic in both languages, as on the logo. */}
+          <p className="w-fit font-display text-base font-bold text-accent" lang="ar" dir="rtl">{common("slogan")}</p>
           <p className="max-w-sm text-sm text-muted">{t("tagline")}</p>
         </div>
         <nav aria-label={t("explore")} className="reveal flex flex-col gap-2 text-sm">

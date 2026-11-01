@@ -75,7 +75,7 @@
    | الحقل | القيمة |
    | --- | --- |
    | Sender email | `no-reply@<نطاقك>` |
-   | Sender name | `ملعب Malaab` |
+   | Sender name | `الملعب Al-Malab` |
    | Host | `smtp.resend.com` |
    | Port | `465` |
    | Username | `resend` |
@@ -96,11 +96,13 @@
 
 | القالب في Supabase | الملف | Subject |
 | --- | --- | --- |
-| Confirm signup | `confirmation.html` | `رمز تفعيل حسابك في ملعب \| Your Malaab activation code` |
-| Reset Password | `recovery.html` | `إعادة تعيين كلمة المرور \| Reset your Malaab password` |
-| Change Email Address | `email_change.html` | `تأكيد البريد الجديد \| Confirm your new Malaab e-mail` |
+| Confirm signup | `confirmation.html` | `رمز تفعيل حسابك في «الملعب» \| Your Al-Malab activation code` |
+| Reset Password | `recovery.html` | `إعادة تعيين كلمة المرور \| Reset your Al-Malab password` |
+| Change Email Address | `email_change.html` | `تأكيد البريد الجديد \| Confirm your new Al-Malab e-mail` |
 
 نفس القوالب مفعّلة محليًا عبر `supabase/config.toml`. عند تعديل قالب، عدّل الملف ثم الصقه من جديد في المشروع المستضاف.
+
+يظهر شعار «الملعب» في رأس كل رسالة كصورة من موقعك نفسه (`{{ .SiteURL }}/brand/al-malab-mark-96.png`)، فيجب أن يكون **Site URL** في Supabase هو رابط موقعك. إن حجب تطبيق البريد الصور يبقى الاسم مكتوباً بجانبه. **بعد تحديث الشعار والاسم الصق القوالب الثلاثة وعناوينها (Subject) من جديد.**
 
 قالب **Confirm signup** يعرض **رمزًا** (`{{ .Token }}`) يُدخله المستخدم في صفحة `/verify-email` بعد إنشاء الحساب. لا يحتوي القالب أي رابط: الروابط إلى نطاق Supabase داخل رسالة تحمل اسم ملعب تبدو لمرشحات البريد كرسائل تصيّد. الصفحة تقبل رموزًا من 6 إلى 10 أرقام، فيعمل أي طول تضبطه في **Authentication ← Sign In / Providers ← Email ← Email OTP Length**.
 
@@ -175,7 +177,7 @@
 
 ### الإعداد في Meta
 1. من developers.facebook.com: **My Apps ← Create App**، واختر حالة الاستخدام الخاصة بـ WhatsApp أو نوع **Business**. اربطه بحساب Meta Business، أو أنشئ واحدًا.
-2. **WhatsApp ← API Setup ← Add phone number**: أضف رقم المنصة، واكتب اسم العرض (مثل *Malaab*)، ثم أكّد الرقم بالرمز الذي يصلك.
+2. **WhatsApp ← API Setup ← Add phone number**: أضف رقم المنصة، واكتب اسم العرض (مثل *Al-Malab*)، ثم أكّد الرقم بالرمز الذي يصلك.
 3. **WhatsApp ← Configuration ← Webhook ← Edit:**
    - **Callback URL:** `https://<your-domain>/api/whatsapp/webhook`
    - **Verify token:** نص عشوائي تختاره، وهو نفس قيمة `WHATSAPP_VERIFY_TOKEN` في Vercel.
