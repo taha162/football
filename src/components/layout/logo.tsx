@@ -1,15 +1,16 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { cn } from "@/lib/cn";
-import { BRAND, MARK_PLAYER, WORDMARK } from "./brand";
+import { BRAND, MARK_PLAYER, TILE, WORDMARK } from "./brand";
 
 /** The tile: the centre circle cut through by the halfway band, and a bicycle kick inside. */
 export function BrandMark({ className }: { className?: string }) {
+  const half = TILE.rim / 2;
   return (
-    <svg viewBox="0 0 729 720" aria-hidden="true" className={className}>
-      <rect width="729" height="720" rx="152" fill={BRAND.lime} />
-      <rect x="9" y="9" width="711" height="702" rx="143" fill="none" stroke={BRAND.rim} strokeWidth="18" />
-      <rect y="309" width="729" height="113" fill={BRAND.ink} />
-      <circle cx="364.5" cy="359.5" r="254.5" fill={BRAND.ink} />
+    <svg viewBox={`0 0 ${TILE.width} ${TILE.height}`} aria-hidden="true" className={className}>
+      <rect width={TILE.width} height={TILE.height} rx={TILE.radius} fill={BRAND.lime} />
+      <rect x={half} y={half} width={TILE.width - TILE.rim} height={TILE.height - TILE.rim} rx={TILE.radius - half} fill="none" stroke={BRAND.rim} strokeWidth={TILE.rim} />
+      <rect y={TILE.band.y} width={TILE.width} height={TILE.band.height} fill={BRAND.ink} />
+      <circle cx={TILE.circle.cx} cy={TILE.circle.cy} r={TILE.circle.r} fill={BRAND.ink} />
       <path fill={BRAND.lime} fillRule="evenodd" d={MARK_PLAYER} />
     </svg>
   );
@@ -18,8 +19,8 @@ export function BrandMark({ className }: { className?: string }) {
 /** The «الملعب» lettering, in the current text colour. */
 export function Wordmark({ label, className }: { label: string; className?: string }) {
   return (
-    <svg viewBox={`0 0 ${WORDMARK.width} ${WORDMARK.height}`} role="img" aria-label={label} className={cn("fill-current", className)}>
-      <path fillRule="evenodd" d={WORDMARK.d} />
+    <svg viewBox={WORDMARK.viewBox} role="img" aria-label={label} className={cn("fill-current", className)}>
+      <path d={WORDMARK.d} />
     </svg>
   );
 }

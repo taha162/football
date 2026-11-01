@@ -110,7 +110,7 @@ Legend: ✅ implemented and verified by automated tests · 🟡 implemented, exe
 
   🟡 **Not verified on real devices, or in Safari or Firefox.** Where view transitions, `linear()` springs or `@starting-style` are missing, content appears without the animation. The guard against animating a browser swipe-back twice relies on `hasUAVisualTransition`, which not every browser reports. iPhones do not vibrate (no vibration API in Safari). Link buttons have no "open in new tab" or "copy link" in the right-click menu (Ctrl/⌘-click and middle-click still open a new tab).
 - ✅ **Brand: «الملعب» / Al-Malab.**
-  - The owner's logo was traced to SVG (`public/brand/`). It appears in the header and footer; in Arabic next to the logo's own «الملعب» lettering, in English next to "Al-Malab".
+  - The owner's original artwork is `public/brand/al-malab-logo.svg`. The tile, the «الملعب» lettering and every icon are cut from it, apart from a version of the player with thicker lines that stays readable at icon sizes. The logo appears in the header and footer: in Arabic next to the logo's own lettering, in English next to "Al-Malab".
   - It is also the browser icon, the iPhone home-screen icon, the image shown when a link is shared (WhatsApp, social) and the logo in the auth e-mails.
   - The logo's line «احنا الاسسنا الملعب واحنا النلعب بي» appears in the footer and on the home page's first screen.
   - The phone header fits 360–412 px wide screens in both languages, signed in and out. The mobile E2E test now also checks that the layout never grows wider than the screen.
