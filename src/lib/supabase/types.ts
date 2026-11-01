@@ -511,14 +511,14 @@ isOneToOne: false
                   ]
                 },"messages": {
                   Row: {
-                    "body": string,"conversation_id": string,"created_at": string,"deleted_at": string | null,"id": number,"sender_id": string | null
+                    "body": string,"conversation_id": string,"created_at": string,"deleted_at": string | null,"id": number,"image_path": string | null,"sender_id": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "body": string,"conversation_id": string,"created_at"?: string,"deleted_at"?: string | null,"id"?: never,"sender_id"?: string | null
+                    "body": string,"conversation_id": string,"created_at"?: string,"deleted_at"?: string | null,"id"?: never,"image_path"?: string | null,"sender_id"?: string | null
                   }
                   Update: {
-                    "body"?: string,"conversation_id"?: string,"created_at"?: string,"deleted_at"?: string | null,"id"?: never,"sender_id"?: string | null
+                    "body"?: string,"conversation_id"?: string,"created_at"?: string,"deleted_at"?: string | null,"id"?: never,"image_path"?: string | null,"sender_id"?: string | null
                   }
                   Relationships: [
                     {
@@ -1625,7 +1625,7 @@ isOneToOne: false
 { Args: { "p_challenger_team_id": string,"p_cost_per_team"?: number,"p_duration_minutes": number,"p_format"?: Database["public"]['Enums']["match_format"],"p_location_note"?: string,"p_message"?: string,"p_request_id"?: string,"p_start_local": string,"p_target_team_id"?: string,"p_venue_id"?: string }; Returns: string
                            },
 "send_message":
-{ Args: { "p_body": string,"p_conversation_id": string }; Returns: number
+{ Args: { "p_body": string,"p_conversation_id": string,"p_image_path"?: string }; Returns: number
                            },
 "set_field_pricing_rules":
 { Args: { "p_field_id": string,"p_rules": Json }; Returns: undefined

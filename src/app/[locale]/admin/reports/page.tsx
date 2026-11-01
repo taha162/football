@@ -1,5 +1,6 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { formatDateTime } from "@/lib/format";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { removeMessageAction, setHiddenAction, setUserStatusAction, updateReportAction } from "@/server/admin";
 import { ActionForm, Hidden, SubmitButton } from "@/components/ui/action-form";
@@ -37,6 +38,17 @@ export default async function AdminReportsPage({ searchParams }: PageProps<"/[lo
     .order("created_at", { ascending: status === "open" })
     .limit(100);
   const rows = data ?? [];
+  // Pictures in reported messages: moderators aren't members of the conversation, so the
+  // path is read with the server key; the signed link is made with the moderator's own
+  // session, which the storage policy allows for moderators only.
+  const messageIds = rows.flatMap((rep) => (rep.target_type === "message" && /^\d+$/.test(rep.target_id) ? [Number(rep.target_id)] : []));
+  const { data: pictured } = messageIds.length
+    ? ((await createAdminClient()?.from("messages").select("id, image_path").in("id", messageIds).not("image_path", "is", null)) ?? { data: [] })
+    : { data: [] };
+  const signed = pictured?.length
+    ? ((await supabase.storage.from("message-images").createSignedUrls(pictured.map((m) => m.image_path!), 3600)).data ?? [])
+    : [];
+  const pictureOf = new Map((pictured ?? []).map((m, i) => [String(m.id), signed[i]?.signedUrl ?? null]));
   return (
     <>
       <PageHeader title={t("nav.reports")} description={t("reportsDescription")} />
@@ -66,6 +78,10 @@ export default async function AdminReportsPage({ searchParams }: PageProps<"/[lo
                   </div>
                   {rep.details ? <p className="text-sm" dir="auto">{rep.details}</p> : null}
                   <pre className="max-h-40 overflow-auto whitespace-pre-wrap rounded-lg bg-surface-2 p-3 text-xs text-muted" dir="auto">{JSON.stringify(snapshot, null, 2)}</pre>
+                  {rep.target_type === "message" && pictureOf.get(rep.target_id) ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- private, signed, short-lived link
+                    <img src={pictureOf.get(rep.target_id)!} alt={t("reportedPicture")} className="max-h-60 w-fit rounded-lg border border-line" />
+                  ) : null}
                   <div className="flex flex-wrap gap-2">
                     {href ? <LinkButton href={href} className={buttonClass("outline", "sm")}>{t("viewTarget")}</LinkButton> : null}
                     {hideable ? (

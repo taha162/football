@@ -426,7 +426,8 @@
     "invalid_reference": "Write how the venue can recognise your transfer, such as the number you sent from.",
     "deposit_not_pending": "This booking isn't waiting for a deposit.",
     "deposit_window_closed": "The time to send the deposit has passed, so the booking was released. You can book again if the time is still free.",
-    "deposit_not_refundable": "There's no deposit to return on this booking."
+    "deposit_not_refundable": "There's no deposit to return on this booking.",
+    "invalid_image": "The picture couldn't be sent. Please try again."
   },
   "validation": {
     "invalid": "Invalid value.",
@@ -1398,7 +1399,8 @@
     "tgDatabase": "Database update (file …0014)",
     "tgDatabaseOk": "Applied",
     "tgDatabaseMissing": "Not applied yet: run the file in Supabase's SQL Editor (DEPLOYMENT.md, section 6).",
-    "tgExpectedUrl": "The bot should send updates to:"
+    "tgExpectedUrl": "The bot should send updates to:",
+    "reportedPicture": "Picture in the reported message"
   },
   "teams": {
     "title": "Teams",
@@ -1693,7 +1695,12 @@
     "write": "Write a message",
     "placeholder": "Write a message…",
     "send": "Send",
-    "safetyNote": "Never share passwords or payment details in chat. Use the report button on any message that breaks the rules."
+    "safetyNote": "Never share passwords or payment details in chat. Use the report button on any message that breaks the rules.",
+    "attach": "Attach a picture",
+    "removeImage": "Remove the picture",
+    "photo": "Photo",
+    "openImage": "Open the picture",
+    "imageAlt": "Sent picture"
   },
   "notificationsPage": {
     "title": "Notifications",

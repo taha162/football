@@ -20,11 +20,16 @@ export default async function ConversationPage({ params, searchParams }: PagePro
   const { data: conv } = await supabase.from("conversations").select("*").eq("id", id).maybeSingle();
   if (!conv) notFound();
   const before = Number((await searchParams).before);
-  let q = supabase.from("messages").select("id, sender_id, body, created_at, deleted_at").eq("conversation_id", id).order("id", { ascending: false }).limit(PAGE + 1);
+  let q = supabase.from("messages").select("id, sender_id, body, created_at, deleted_at, image_path").eq("conversation_id", id).order("id", { ascending: false }).limit(PAGE + 1);
   if (Number.isSafeInteger(before) && before > 0) q = q.lt("id", before);
   const { data: rows } = await q;
   const hasOlder = (rows ?? []).length > PAGE;
-  const messages = ((rows ?? []).slice(0, PAGE) as ThreadMessage[]).reverse();
+  const page = (rows ?? []).slice(0, PAGE).reverse();
+  // Pictures are private: a signed link valid for an hour, made with the member's own session.
+  const paths = page.flatMap((m) => (m.image_path && !m.deleted_at ? [m.image_path] : []));
+  const signed = paths.length ? (await supabase.storage.from("message-images").createSignedUrls(paths, 3600)).data ?? [] : [];
+  const urlOf = new Map(signed.flatMap((s) => (s.path && s.signedUrl ? [[s.path, s.signedUrl] as const] : [])));
+  const messages: ThreadMessage[] = page.map((m) => ({ ...m, image_url: m.image_path ? (urlOf.get(m.image_path) ?? null) : null }));
   const senderIds = [...new Set(messages.map((m) => m.sender_id).filter(Boolean))] as string[];
   const { data: profiles } = senderIds.length ? await supabase.from("profiles").select("id, display_name").in("id", senderIds) : { data: [] };
   const names = Object.fromEntries((profiles ?? []).map((p) => [p.id, p.display_name]));
