@@ -21,9 +21,9 @@ export async function SiteHeader({ user }: { user: CurrentUser | null }) {
     <HeaderFrame>
       <div className="mx-auto flex h-16 w-full max-w-6xl items-center gap-2 px-4 sm:gap-4 sm:px-6">
         <LinkButton href="/" className="logo-link shrink-0 rounded-lg" aria-label={t("home")}>
-          <Logo />
+          <Logo slogan />
         </LinkButton>
-        <nav aria-label={t("primary")} className="hidden flex-1 md:block">
+        <nav aria-label={t("primary")} className="hidden flex-1 lg:block">
           <NavLinks
             items={[
               { href: "/matches", label: t("matches") },
@@ -37,16 +37,16 @@ export async function SiteHeader({ user }: { user: CurrentUser | null }) {
           <LocaleSwitcher />
           {user ? (
             <>
-              <LinkButton href="/matches/new" className={buttonClass("primary", "sm", "hidden md:inline-flex")}>
+              <LinkButton href="/matches/new" className={buttonClass("primary", "sm", "hidden lg:inline-flex")}>
                 <Plus aria-hidden="true" className="size-4" />
                 {t("createMatch")}
               </LinkButton>
               {user.isModerator ? (
-                <LinkButton href="/admin" className={buttonClass("ghost", "sm", "hidden md:inline-flex")} aria-label={t("admin")}>
+                <LinkButton href="/admin" className={buttonClass("ghost", "sm", "hidden lg:inline-flex")} aria-label={t("admin")}>
                   <ShieldCheck aria-hidden="true" className="size-5" />
                 </LinkButton>
               ) : null}
-              <CountLink href="/messages" label={t("messages")} count={counts.messages} className="hidden md:inline-flex">
+              <CountLink href="/messages" label={t("messages")} count={counts.messages} className="hidden lg:inline-flex">
                 <MessageCircle aria-hidden="true" className="size-5" />
               </CountLink>
               <CountLink href="/notifications" label={t("notifications")} count={counts.notifications}>

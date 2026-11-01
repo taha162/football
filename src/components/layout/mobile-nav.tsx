@@ -22,7 +22,7 @@ export function MobileNav({ signedIn }: { signedIn: boolean }) {
     { href: signedIn ? "/messages" : "/sign-in", label: signedIn ? t("messages") : t("signIn"), icon: MessageCircle },
   ] as const;
   return (
-    <nav aria-label={t("mobile")} style={{ viewTransitionName: "mobile-nav" }} className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-bg/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
+    <nav aria-label={t("mobile")} style={{ viewTransitionName: "mobile-nav" }} className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-bg/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
       <ul className="mx-auto grid max-w-md grid-cols-5">
         {items.map((item) => {
           const active = pathname === item.href;

@@ -46,4 +46,22 @@ test.describe("Mobile (Arabic, RTL)", () => {
       expect(await page.evaluate(() => window.innerWidth), `layout wider than the screen on ${path}`).toBe(screen);
     }
   });
+
+  test("the header fits tablet screens and carries the logo's line under the name", async ({ page }) => {
+    // The fullest header: an administrator, signed in.
+    const user = await createAuthUser("Tablet", { admin: true, locale: "ar" });
+    await signIn(page, user, "ar");
+    for (const width of [768, 820, 1024]) {
+      await page.setViewportSize({ width, height: 1024 });
+      for (const lang of ["ar", "en"]) {
+        await page.goto(`/${lang}/matches`);
+        expect(await page.evaluate(() => window.innerWidth), `layout wider than ${width}px in ${lang}`).toBe(width);
+        const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+        expect(overflow, `horizontal overflow at ${width}px in ${lang}`).toBeLessThanOrEqual(0);
+      }
+    }
+    // As on the logo: «الملعب» with «احنا الاسسنا الملعب واحنا النلعب بي» under it.
+    await page.goto("/ar/matches");
+    await expect(page.locator("header").getByRole("img", { name: /احنا الاسسنا الملعب واحنا النلعب بي/ })).toBeVisible();
+  });
 });

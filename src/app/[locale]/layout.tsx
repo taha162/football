@@ -81,7 +81,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
             {t("skipToContent")}
           </a>
           <SiteHeader user={user} />
-          <main id="main" className="flex-1 pb-24 md:pb-12">
+          <main id="main" className="flex-1 pb-24 lg:pb-12">
             <PageTransition>{children}</PageTransition>
           </main>
           <SiteFooter />
