@@ -8,8 +8,8 @@ Last updated: 2026-10-29. "Verified" means covered by an automated test that pas
 | --- | --- |
 | `pnpm lint` | Clean |
 | `pnpm typecheck` | Clean (TS strict) |
-| `pnpm i18n:check` | 1798 keys, ar/en in sync, all static keys resolved |
-| `pnpm test:unit` | 57 passed (domain rules, ball physics, camera and quality logic, auth error mapping, reading Telegram updates) |
+| `pnpm i18n:check` | 1811 keys, ar/en in sync, all static keys resolved |
+| `pnpm test:unit` | 60 passed (domain rules, ball physics, camera and quality logic, auth error mapping, reading Telegram updates and bot settings) |
 | `pnpm test:db` | 84 passed (concurrency, RLS, RPC rules, jobs, phone verification with Telegram, booking deposits) |
 | `pnpm build` | Succeeds (Next.js 16.4, Turbopack) |
 | `pnpm e2e` (production build) | 37 passed: 34 desktop, 3 mobile (Pixel 7, Arabic RTL; one at tablet widths) |
@@ -29,7 +29,7 @@ Legend: ✅ implemented and verified by automated tests · 🟡 implemented, exe
   - The page notices when the bot has been opened and carries on by itself once the number is verified.
   - Guarded by: the webhook's secret token, and only the sender's own, unforwarded contact counts. A code belongs to the Telegram account that opened it first, each Telegram account may try a limited number of codes, and each connection a limited number of unfinished verifications.
   - Covered by DB tests (10), unit tests on reading Telegram updates (7) and E2E tests posting Telegram-shaped updates (3).
-  - An administrator connects the bot from Admin → Settings, which shows its state.
+  - An administrator connects the bot from Admin → Settings. A checklist there names the problem and its fix: a missing or malformed setting in Vercel, a token Telegram rejects, a webhook not pointed at the site, or the database update not applied. Settings pasted with spaces, an "@" or a t.me link are accepted (unit-tested).
   - **Not yet tried with a real bot** (needs the owner's bot token). The option stays hidden until `TELEGRAM_BOT_TOKEN` and `TELEGRAM_BOT_USERNAME` are set.
   - Replaces the WhatsApp verification, which needed Meta's Cloud API.
 - ✅ Sign-out, onboarding (city, positions, skill) — E2E A.

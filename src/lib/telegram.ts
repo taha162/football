@@ -1,6 +1,7 @@
 import "server-only";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { logger } from "./log";
+import { readBotSettings } from "./telegram-settings";
 
 /**
  * The Telegram verification bot. Create it with @BotFather and set
@@ -10,10 +11,9 @@ import { logger } from "./log";
  * the webhook from Admin → Settings.
  */
 export function telegramConfig() {
-  const token = process.env.TELEGRAM_BOT_TOKEN ?? "";
-  const username = (process.env.TELEGRAM_BOT_USERNAME ?? "").replace(/^@/, "");
-  const enabled = Boolean(/^\d+:[\w-]{20,}$/.test(token) && /^\w{5,32}$/.test(username) && process.env.SUPABASE_SERVICE_ROLE_KEY);
-  return { enabled, token, username };
+  const { token, username, problems } = readBotSettings(process.env.TELEGRAM_BOT_TOKEN, process.env.TELEGRAM_BOT_USERNAME);
+  const serviceRole = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
+  return { enabled: problems.length === 0 && serviceRole, token, username, problems, serviceRole };
 }
 
 export function isTelegramEnabled(): boolean {

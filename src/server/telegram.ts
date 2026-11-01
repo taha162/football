@@ -133,7 +133,7 @@ export async function connectTelegramAction(): Promise<ActionState> {
   const result = await registerWebhook(cfg.token, `${publicEnv.siteUrl}/api/telegram/webhook`);
   if (!result.ok) {
     logger.warn("telegram_webhook_register_failed", { reason: result.error.slice(0, 120) });
-    return fail("telegram_connect_failed");
+    return fail(result.error === "Unauthorized" ? "telegram_token_rejected" : "telegram_connect_failed");
   }
   logger.info("telegram_webhook_registered", { by: user.id });
   return ok("telegram_connected");

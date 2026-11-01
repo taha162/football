@@ -416,6 +416,7 @@
     "verification_missing": "This session has ended. Please start again.",
     "telegram_unavailable": "Telegram verification isn't available right now.",
     "telegram_connect_failed": "Telegram didn't accept the request. Check the bot token, then try again.",
+    "telegram_token_rejected": "Telegram rejected the bot token. Copy it again from @BotFather, save it in Vercel and redeploy.",
     "invalid_user": "Couldn't start verification. Please try again.",
     "resend_too_soon": "Please wait a minute before requesting a new code — the previous one may already be in your inbox.",
     "email_limit_reached": "The site has sent too many e-mails in the last hour, so this one couldn't go out. Please try again later.",
@@ -1373,7 +1374,6 @@
     "telegramBot": "Telegram verification bot",
     "tgNotConfigured": "The Telegram bot isn't set up",
     "tgNotConfiguredHint": "Add TELEGRAM_BOT_TOKEN and TELEGRAM_BOT_USERNAME to the site's environment variables (see DEPLOYMENT.md), then redeploy. Until then, people sign up with e-mail only.",
-    "tgBot": "Bot",
     "tgWebhook": "Connection to the site",
     "tgUnreachable": "Couldn't reach Telegram to check.",
     "tgConnected": "Connected",
@@ -1383,7 +1383,22 @@
     "tgLastError": "Last error reported by Telegram",
     "tgConnectHint": "Points the bot at this site so it can receive the numbers people share. Do it once after setting up the bot, and again if the site's address changes.",
     "tgConnect": "Connect the bot",
-    "tgReconnect": "Connect again"
+    "tgReconnect": "Connect again",
+    "tgSettings": "Bot settings in Vercel",
+    "tgProblem": {
+      "token_missing": "TELEGRAM_BOT_TOKEN is missing.",
+      "token_invalid": "TELEGRAM_BOT_TOKEN doesn't look like a BotFather token (numbers, a colon, then letters). Copy only the token, without other text.",
+      "username_missing": "TELEGRAM_BOT_USERNAME is missing.",
+      "username_invalid": "TELEGRAM_BOT_USERNAME isn't a bot username. Write only the name, e.g. AlMalabBot.",
+      "service_role_missing": "SUPABASE_SERVICE_ROLE_KEY is missing."
+    },
+    "tgTelegramAnswer": "Telegram's answer",
+    "tgTokenOk": "The token is valid",
+    "tgTokenRejected": "Telegram rejected the token. Copy it again from @BotFather (/mybots → your bot → API Token), save it in Vercel, then Redeploy.",
+    "tgDatabase": "Database update (file …0014)",
+    "tgDatabaseOk": "Applied",
+    "tgDatabaseMissing": "Not applied yet: run the file in Supabase's SQL Editor (DEPLOYMENT.md, section 6).",
+    "tgExpectedUrl": "The bot should send updates to:"
   },
   "teams": {
     "title": "Teams",
