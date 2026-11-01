@@ -22,14 +22,14 @@ export interface TestUser {
   name: string;
 }
 
-export async function createAuthUser(name: string, opts: { onboard?: boolean; admin?: boolean; locale?: "en" | "ar" } = {}): Promise<TestUser> {
+export async function createAuthUser(name: string, opts: { onboard?: boolean; admin?: boolean } = {}): Promise<TestUser> {
   const tag = randomUUID().slice(0, 8);
   const email = `e2e-${tag}@example.test`;
   const display = `${name} ${tag.slice(0, 4)}`;
   const res = await fetch(`${SUPABASE_URL}/auth/v1/admin/users`, {
     method: "POST",
     headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password: PASSWORD, email_confirm: true, user_metadata: { display_name: display, locale: opts.locale ?? "en" } }),
+    body: JSON.stringify({ email, password: PASSWORD, email_confirm: true, user_metadata: { display_name: display, locale: "ar" } }),
   });
   if (!res.ok) throw new Error(`createAuthUser failed: ${res.status} ${await res.text()}`);
   const { id } = (await res.json()) as { id: string };
@@ -41,18 +41,18 @@ export async function createAuthUser(name: string, opts: { onboard?: boolean; ad
       p_skill_level: "intermediate",
       p_complete_onboarding: true,
     });
-    await rpc(id, "update_my_preferences", { p_locale: opts.locale ?? "en" });
+    await rpc(id, "update_my_preferences", { p_locale: "ar" });
   }
   if (opts.admin) await admin("insert into public.user_roles (user_id, role) values ($1, 'admin')", [id]);
   return { id, email, name: display };
 }
 
-export async function signIn(page: Page, user: TestUser, locale: "en" | "ar" = "en") {
-  await page.goto(`/${locale}/sign-in`);
-  // The label also mentions WhatsApp numbers when that sign-in method is enabled.
-  await page.getByRole("textbox", { name: locale === "en" ? /^E-?mail/ : /^البريد الإلكتروني/ }).fill(user.email);
-  await page.getByRole("textbox", { name: locale === "en" ? "Password" : "كلمة المرور" }).fill(PASSWORD);
-  await page.getByRole("button", { name: locale === "en" ? "Sign in" : "تسجيل الدخول" }).click();
+export async function signIn(page: Page, user: TestUser) {
+  await page.goto("/ar/sign-in");
+  // The label also mentions phone numbers when Telegram sign-up is enabled.
+  await page.getByRole("textbox", { name: /^البريد الإلكتروني/ }).fill(user.email);
+  await page.getByRole("textbox", { name: "كلمة المرور" }).fill(PASSWORD);
+  await page.getByRole("button", { name: "تسجيل الدخول" }).click();
   await page.waitForURL(/\/dashboard/);
 }
 

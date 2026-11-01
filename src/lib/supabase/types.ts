@@ -1327,7 +1327,7 @@ isOneToOne: false
                            },
 "admin_list_users":
 { Args: { "p_limit"?: number,"p_offset"?: number,"p_search"?: string }; Returns: {
-              "city_id": string,"created_at": string,"display_name": string,"email": string,"id": string,"last_sign_in_at": string,"roles": (Database["public"]['Enums']["app_role"])[],"status": Database["public"]['Enums']["account_status"]
+              "city_id": string,"created_at": string,"display_name": string,"email": string,"id": string,"last_sign_in_at": string,"phone": string,"roles": (Database["public"]['Enums']["app_role"])[],"status": Database["public"]['Enums']["account_status"]
             }[]
                            },
 "admin_remove_message":

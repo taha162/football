@@ -32,6 +32,16 @@ export async function defaultCity(): Promise<City | undefined> {
   return (await getCities())[0];
 }
 
+/** Whether the user staffs a venue or organizes a tournament (for the account menu). */
+export const getManagedThings = cache(async (userId: string): Promise<{ venues: boolean; tournaments: boolean }> => {
+  const supabase = await createClient();
+  const [venues, tournaments] = await Promise.all([
+    supabase.from("venue_staff").select("venue_id", { count: "exact", head: true }).eq("user_id", userId),
+    supabase.from("tournaments").select("id", { count: "exact", head: true }).eq("organizer_id", userId),
+  ]);
+  return { venues: (venues.count ?? 0) > 0, tournaments: (tournaments.count ?? 0) > 0 };
+});
+
 export const getUnreadCounts = cache(async (): Promise<{ notifications: number; messages: number }> => {
   const supabase = await createClient();
   const { data } = await supabase.rpc("unread_counts");

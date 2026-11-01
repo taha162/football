@@ -14,39 +14,39 @@ test.describe("Journey I — reporting and moderation", () => {
     const repCtx = await browser.newContext();
     const rep = await repCtx.newPage();
     await signIn(rep, reporter);
-    await rep.goto(`/en/matches/${matchId}`);
-    await rep.getByRole("button", { name: "Report" }).click();
-    const dialog = rep.getByRole("dialog", { name: "Report a problem" });
-    await dialog.getByRole("combobox", { name: "What's wrong?" }).selectOption("spam");
-    await dialog.getByRole("textbox", { name: "Details (optional)" }).fill(details);
-    await dialog.getByRole("button", { name: "Send report" }).click();
-    await expect(dialog.getByText("Thanks. Our moderators will review your report.")).toBeVisible();
+    await rep.goto(`/ar/matches/${matchId}`);
+    await rep.getByRole("button", { name: "إبلاغ" }).click();
+    const dialog = rep.getByRole("dialog", { name: "الإبلاغ عن مشكلة" });
+    await dialog.getByRole("combobox", { name: "ما المشكلة؟" }).selectOption("spam");
+    await dialog.getByRole("textbox", { name: "تفاصيل (اختياري)" }).fill(details);
+    await dialog.getByRole("button", { name: "إرسال البلاغ" }).click();
+    await expect(dialog.getByText("شكراً. سيراجع المشرفون بلاغك.")).toBeVisible();
 
     const adminCtx = await browser.newContext();
     const adm = await adminCtx.newPage();
     await signIn(adm, moderator);
-    await adm.goto("/en/admin/reports");
+    await adm.goto("/ar/admin/reports");
     const card = adm.getByRole("listitem").filter({ hasText: details });
     await expect(card).toBeVisible();
     await expect(card).toContainText(reporter.name);
 
-    await card.getByRole("button", { name: "Hide content" }).click();
-    const confirm = adm.getByRole("dialog", { name: "Hide content" });
+    await card.getByRole("button", { name: "إخفاء المحتوى" }).click();
+    const confirm = adm.getByRole("dialog", { name: "إخفاء المحتوى" });
     await confirm.getByRole("textbox").fill("Spam listing confirmed");
-    await confirm.getByRole("button", { name: "Hide content" }).click();
+    await confirm.getByRole("button", { name: "إخفاء المحتوى" }).click();
 
     const card2 = adm.getByRole("listitem").filter({ hasText: details });
-    await card2.getByRole("combobox", { name: "Report status" }).selectOption("resolved");
-    await card2.getByRole("textbox", { name: "Resolution note" }).fill("Hidden for spam");
-    await card2.getByRole("button", { name: "Update" }).click();
+    await card2.getByRole("combobox", { name: "حالة البلاغ" }).selectOption("resolved");
+    await card2.getByRole("textbox", { name: "ملاحظة المعالجة" }).fill("Hidden for spam");
+    await card2.getByRole("button", { name: "تحديث" }).click();
     await expect(adm.getByRole("listitem").filter({ hasText: details })).toHaveCount(0);
-    await adm.goto("/en/admin/reports?status=resolved");
+    await adm.goto("/ar/admin/reports?status=resolved");
     await expect(adm.getByRole("listitem").filter({ hasText: details })).toBeVisible();
 
     // The match is no longer visible to other users; the action is in the audit log.
-    await rep.goto(`/en/matches/${matchId}`);
-    await expect(rep.getByRole("heading", { name: "Page not found" })).toBeVisible();
-    await adm.goto("/en/admin/audit");
+    await rep.goto(`/ar/matches/${matchId}`);
+    await expect(rep.getByRole("heading", { name: "الصفحة غير موجودة" })).toBeVisible();
+    await adm.goto("/ar/admin/audit");
     await expect(adm.getByText("Spam listing confirmed").first()).toBeVisible();
 
     await Promise.all([repCtx.close(), adminCtx.close()]);
@@ -63,27 +63,27 @@ test.describe("Journey I — reporting and moderation", () => {
     const recCtx = await browser.newContext();
     const rec = await recCtx.newPage();
     await signIn(rec, recipient);
-    await rec.goto(`/en/messages/${conversation}`);
-    await rec.getByRole("listitem").filter({ hasText: text }).getByRole("button", { name: "Report" }).click();
-    const dialog = rec.getByRole("dialog", { name: "Report a problem" });
-    await dialog.getByRole("combobox", { name: "What's wrong?" }).selectOption("harassment");
-    await dialog.getByRole("button", { name: "Send report" }).click();
-    await expect(dialog.getByText("Thanks. Our moderators will review your report.")).toBeVisible();
+    await rec.goto(`/ar/messages/${conversation}`);
+    await rec.getByRole("listitem").filter({ hasText: text }).getByRole("button", { name: "إبلاغ" }).click();
+    const dialog = rec.getByRole("dialog", { name: "الإبلاغ عن مشكلة" });
+    await dialog.getByRole("combobox", { name: "ما المشكلة؟" }).selectOption("harassment");
+    await dialog.getByRole("button", { name: "إرسال البلاغ" }).click();
+    await expect(dialog.getByText("شكراً. سيراجع المشرفون بلاغك.")).toBeVisible();
 
     const admCtx = await browser.newContext();
     const adm = await admCtx.newPage();
     await signIn(adm, moderator);
-    await adm.goto("/en/admin/reports");
+    await adm.goto("/ar/admin/reports");
     const card = adm.getByRole("listitem").filter({ hasText: text });
-    await card.getByRole("button", { name: "Remove message" }).click();
-    const confirm = adm.getByRole("dialog", { name: "Remove message" });
+    await card.getByRole("button", { name: "حذف الرسالة" }).click();
+    const confirm = adm.getByRole("dialog", { name: "حذف الرسالة" });
     await confirm.getByRole("textbox").fill("Harassment");
-    await confirm.getByRole("button", { name: "Remove message" }).click();
+    await confirm.getByRole("button", { name: "حذف الرسالة" }).click();
     await expect(confirm).toBeHidden();
 
     await expect(async () => {
       await rec.reload();
-      await expect(rec.getByText("Message deleted").first()).toBeVisible({ timeout: 1_000 });
+      await expect(rec.getByText("رسالة محذوفة").first()).toBeVisible({ timeout: 1_000 });
     }).toPass({ timeout: 15_000 });
     await expect(rec.getByText(text)).toHaveCount(0);
     await Promise.all([recCtx.close(), admCtx.close()]);
@@ -92,9 +92,9 @@ test.describe("Journey I — reporting and moderation", () => {
   test("a regular user cannot reach the admin area", async ({ page }) => {
     const user = await createAuthUser("Regular");
     await signIn(page, user);
-    for (const path of ["/en/admin", "/en/admin/users", "/en/admin/reports"]) {
+    for (const path of ["/ar/admin", "/ar/admin/users", "/ar/admin/reports"]) {
       await page.goto(path);
-      await expect(page).toHaveURL(/\/en\/dashboard/);
+      await expect(page).toHaveURL(/\/ar\/dashboard/);
     }
   });
 });

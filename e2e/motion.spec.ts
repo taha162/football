@@ -8,13 +8,13 @@ const hiddenReveals = (page: Page) =>
 
 test.describe("Motion", () => {
   test("search filters update the list in place, without reloading the page", async ({ page }) => {
-    await page.goto("/en/teams");
+    await page.goto("/ar/teams");
     await page.evaluate(() => ((window as unknown as { sameDocument: boolean }).sameDocument = true));
     const query = `nobody-${randomUUID().slice(0, 6)}`;
-    await page.getByPlaceholder("Team name").fill(query);
-    await page.getByRole("button", { name: "Apply" }).click();
+    await page.getByPlaceholder("اسم الفريق").fill(query);
+    await page.getByRole("button", { name: "تطبيق" }).click();
     await page.waitForURL(new RegExp(`q=${query}`));
-    await expect(page.getByText("No teams match your search.")).toBeVisible();
+    await expect(page.getByText("لا توجد فرق مطابقة لبحثك.")).toBeVisible();
     expect(await page.evaluate(() => (window as unknown as { sameDocument?: boolean }).sameDocument)).toBe(true);
   });
 
@@ -29,7 +29,7 @@ test.describe("Motion", () => {
       };
     });
     // The page streams in behind its loading skeleton, after the document itself has loaded.
-    await page.goto("/en/teams");
+    await page.goto("/ar/teams");
     await expect(page.locator("main h1")).toBeVisible();
     await expect
       .poll(() => page.evaluate(() => (window as unknown as { risen: Element[] }).risen.includes(document.querySelector("main h1")!)))
@@ -51,7 +51,7 @@ test.describe("Motion", () => {
     const tag = `Reveal ${randomUUID().slice(0, 6)}`;
     for (let i = 0; i < 5; i++) await createMatchFor(organizer, { p_title: `${tag} ${i}` });
     await page.setViewportSize({ width: 1280, height: 560 });
-    await page.goto(`/en/matches?q=${encodeURIComponent(tag)}`);
+    await page.goto(`/ar/matches?q=${encodeURIComponent(tag)}`);
     const cards = page.locator("article", { hasText: tag });
     await expect(cards).toHaveCount(5);
     const fadedCards = () => cards.evaluateAll((els) => els.filter((el) => getComputedStyle(el).opacity === "0").length);
@@ -65,7 +65,7 @@ test.describe("Motion", () => {
   test("with reduced motion nothing is held back", async ({ browser }) => {
     const context = await browser.newContext({ reducedMotion: "reduce", viewport: { width: 1280, height: 560 } });
     const page = await context.newPage();
-    await page.goto("/en/matches");
+    await page.goto("/ar/matches");
     await expect(page.locator("main h1")).toBeVisible();
     await page.waitForTimeout(500);
     expect(await hiddenReveals(page)).toBe(0);

@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarSearch, Home, MessageCircle, Plus, Users } from "lucide-react";
+import { CalendarSearch, Home, MapPinned, MessageCircle, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { usePathname } from "@/i18n/navigation";
 import { cn } from "@/lib/cn";
@@ -18,7 +18,7 @@ export function MobileNav({ signedIn }: { signedIn: boolean }) {
     { href: signedIn ? "/dashboard" : "/", label: t("home"), icon: Home },
     { href: "/matches", label: t("matches"), icon: CalendarSearch },
     { href: "/matches/new", label: t("create"), icon: Plus, primary: true },
-    { href: "/teams", label: t("teams"), icon: Users },
+    { href: "/venues", label: t("venues"), icon: MapPinned },
     { href: signedIn ? "/messages" : "/sign-in", label: signedIn ? t("messages") : t("signIn"), icon: MessageCircle },
   ] as const;
   return (

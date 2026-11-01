@@ -6,30 +6,24 @@ import { readUpdate } from "@/lib/telegram-update";
 
 export const dynamic = "force-dynamic";
 
-const SHARE_BUTTON = "📱 مشاركة رقمي · Share my number";
+const SHARE_BUTTON = "📱 مشاركة رقمي";
 const SHARE_KEYBOARD = { keyboard: [[{ text: SHARE_BUTTON, request_contact: true }]], resize_keyboard: true, one_time_keyboard: true };
 const NO_KEYBOARD = { remove_keyboard: true };
 
-// Arabic first, then English: the bot doesn't know which language the site was used in.
+// The site is Arabic only, and so is the bot.
 const TEXT = {
-  share:
-    "أهلاً في «الملعب» 👋\nاضغط الزر بالأسفل «مشاركة رقمي» لتأكيد رقمك.\n\nWelcome to Al-Malab 👋\nTap “Share my number” below to confirm your number.",
-  shareOwn:
-    "⚠️ شارك رقمك أنت عبر زر «مشاركة رقمي» بالأسفل.\n⚠️ Please share your own number with the “Share my number” button below.",
-  noCode:
-    "⚠️ هذا الرمز غير صالح أو انتهت صلاحيته. ارجع إلى الموقع وابدأ من جديد.\n⚠️ This code is invalid or has expired. Go back to the site and start again.",
-  claimed:
-    "⚠️ هذا الرمز يستخدمه حساب تيليغرام آخر. ارجع إلى الموقع وابدأ من جديد.\n⚠️ Another Telegram account is using this code. Go back to the site and start again.",
-  tooMany: "⚠️ محاولات كثيرة. حاول مرة أخرى بعد ساعة.\n⚠️ Too many attempts. Please try again in an hour.",
-  openLinkFirst:
-    "⚠️ افتح رابط تيليغرام من صفحة التأكيد في الموقع أولاً، أو أرسل هنا الرمز الظاهر فيها.\n⚠️ Open the Telegram link from the site's confirmation page first, or send the code shown there.",
-  badPhone: "⚠️ تعذّرت قراءة الرقم. حاول مرة أخرى.\n⚠️ We couldn't read that number. Please try again.",
-  help:
-    "هذا بوت التحقق لموقع «الملعب». ابدأ من الموقع: أنشئ حساباً أو استرجع كلمة المرور بتيليغرام.\n\nThis is Al-Malab's verification bot. Start from the website: sign up, or recover your password, with Telegram.",
-  "signup:verified": "✅ تم تأكيد رقمك في «الملعب». ارجع إلى الموقع لإكمال حسابك.\n✅ Your number is verified on Al-Malab. Go back to the site to continue.",
-  "signup:phone_taken": "⚠️ هذا الرقم مرتبط بحساب آخر في «الملعب». سجّل الدخول به بدل إنشاء حساب جديد.\n⚠️ This number already has an Al-Malab account. Sign in instead.",
-  "reset:verified": "✅ تم التحقق. ارجع إلى «الملعب» لاختيار كلمة مرور جديدة.\n✅ Verified. Go back to Al-Malab to choose a new password.",
-  "reset:no_account": "⚠️ لا يوجد حساب في «الملعب» مرتبط بهذا الرقم.\n⚠️ No Al-Malab account is linked to this number.",
+  share: "أهلاً في «الملعب» 👋\nاضغط الزر بالأسفل «مشاركة رقمي» لتأكيد رقمك.",
+  shareOwn: "⚠️ شارك رقمك أنت عبر زر «مشاركة رقمي» بالأسفل.",
+  noCode: "⚠️ هذا الرمز غير صالح أو انتهت صلاحيته. ارجع إلى الموقع وابدأ من جديد.",
+  claimed: "⚠️ هذا الرمز يستخدمه حساب تيليغرام آخر. ارجع إلى الموقع وابدأ من جديد.",
+  tooMany: "⚠️ محاولات كثيرة. حاول مرة أخرى بعد ساعة.",
+  openLinkFirst: "⚠️ افتح رابط تيليغرام من صفحة التأكيد في الموقع أولاً، أو أرسل هنا الرمز الظاهر فيها.",
+  badPhone: "⚠️ تعذّرت قراءة الرقم. حاول مرة أخرى.",
+  help: "هذا بوت التحقق لموقع «الملعب». ابدأ من الموقع: أنشئ حساباً أو استرجع كلمة المرور عبر تيليغرام.",
+  "signup:verified": "✅ تم تأكيد رقمك. ارجع إلى الموقع لإكمال حسابك.",
+  "signup:phone_taken": "⚠️ هذا الرقم مرتبط بحساب آخر في «الملعب». سجّل الدخول به بدل إنشاء حساب جديد.",
+  "reset:verified": "✅ تم التحقق. ارجع إلى «الملعب» لاختيار كلمة مرور جديدة.",
+  "reset:no_account": "⚠️ لا يوجد حساب في «الملعب» مرتبط بهذا الرقم.",
 } as const;
 
 /** Answers the update in the webhook response itself (no outgoing call to Telegram). */

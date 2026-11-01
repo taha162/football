@@ -12,10 +12,8 @@ const intl = createMiddleware(routing);
  * server-side, and the database enforces RLS.
  */
 export async function proxy(request: NextRequest) {
-  // The site opens in Arabic whatever the browser's language: next-intl does
-  // not see Accept-Language, so a first visit falls through to the default
-  // locale. A language chosen with the switcher is kept in next-intl's cookie
-  // and still wins on later visits.
+  // The site is Arabic only (old /en links are redirected in next.config.ts).
+  // next-intl doesn't see Accept-Language, so nothing tries another language.
   const headers = new Headers(request.headers);
   headers.delete("accept-language");
   const response = intl(new NextRequest(request, { headers }));

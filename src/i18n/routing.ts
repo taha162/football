@@ -1,6 +1,8 @@
 import { defineRouting } from "next-intl/routing";
 
-export const locales = ["ar", "en"] as const;
+// The site is Arabic only. The English texts stay in messages/en.json: adding
+// "en" back here (and the switcher in the header) brings English back.
+export const locales = ["ar"] as const;
 export type Locale = (typeof locales)[number];
 
 export const routing = defineRouting({

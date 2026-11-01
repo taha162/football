@@ -7,42 +7,42 @@ test.describe("Journey A — register, onboard, discover and join", () => {
     const matchId = await createMatchFor(organizer, { p_title: title });
 
     const email = `e2e-a-${Date.now()}@example.test`;
-    await page.goto("/en/sign-up");
-    await page.getByLabel("Display name").fill("Journey Player");
-    await page.getByRole("textbox", { name: "Email" }).fill(email);
-    await page.getByRole("textbox", { name: "Password" }).fill("Str0ng-pass-123");
+    await page.goto("/ar/sign-up");
+    await page.getByLabel("الاسم الظاهر").fill("Journey Player");
+    await page.getByRole("textbox", { name: "البريد الإلكتروني" }).fill(email);
+    await page.getByRole("textbox", { name: "كلمة المرور" }).fill("Str0ng-pass-123");
     await page.getByRole("checkbox").check();
-    await page.getByRole("button", { name: "Create account" }).click();
+    await page.getByRole("button", { name: "إنشاء حساب" }).click();
 
     // E-mail confirmation is on: enter the code that was e-mailed.
-    await page.waitForURL(/\/en\/verify-email/);
+    await page.waitForURL(/\/ar\/verify-email/);
     await expect(page.getByText(email)).toBeVisible();
-    await page.getByRole("textbox", { name: "Verification code" }).fill("000000");
-    await page.getByRole("button", { name: "Verify" }).click();
-    await expect(page.getByText("The code is wrong or has expired.")).toBeVisible();
-    await page.getByRole("textbox", { name: "Verification code" }).fill(await emailedCode(email));
-    await page.getByRole("button", { name: "Verify" }).click();
-    await page.waitForURL(/\/en\/onboarding/);
-    await expect(page.getByRole("heading", { name: "Set up your player profile" })).toBeVisible();
-    await page.getByText("Goalkeeper", { exact: true }).click();
-    await page.getByText("Intermediate", { exact: true }).click();
-    await page.getByRole("button", { name: "Start playing" }).click();
-    await page.waitForURL(/\/en\/dashboard/);
+    await page.getByRole("textbox", { name: "رمز التحقق" }).fill("000000");
+    await page.getByRole("button", { name: "تأكيد" }).click();
+    await expect(page.getByText("الرمز غير صحيح أو انتهت صلاحيته.")).toBeVisible();
+    await page.getByRole("textbox", { name: "رمز التحقق" }).fill(await emailedCode(email));
+    await page.getByRole("button", { name: "تأكيد" }).click();
+    await page.waitForURL(/\/ar\/onboarding/);
+    await expect(page.getByRole("heading", { name: "جهّز ملفك كلاعب" })).toBeVisible();
+    await page.getByText("حارس مرمى", { exact: true }).click();
+    await page.getByText("متوسط", { exact: true }).click();
+    await page.getByRole("button", { name: "ابدأ اللعب" }).click();
+    await page.waitForURL(/\/ar\/dashboard/);
 
     // Discover via server-side filtered search.
-    await page.goto(`/en/matches?open=1&format=5v5&q=${encodeURIComponent(title)}`);
+    await page.goto(`/ar/matches?open=1&format=5v5&q=${encodeURIComponent(title)}`);
     // The whole card opens the match (its title link sits under the card's click layer).
     await page.locator("article", { hasText: title }).click();
-    await page.waitForURL(new RegExp(`/en/matches/${matchId}`));
-    await page.getByRole("button", { name: "Join match" }).click();
-    await expect(page.getByText("You're in", { exact: true })).toBeVisible();
+    await page.waitForURL(new RegExp(`/ar/matches/${matchId}`));
+    await page.getByRole("button", { name: "انضم للمباراة" }).click();
+    await expect(page.getByText("أنت مسجل", { exact: true })).toBeVisible();
     await page.reload();
-    await expect(page.getByText("You're in", { exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Leave match" })).toBeVisible();
+    await expect(page.getByText("أنت مسجل", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "مغادرة المباراة" })).toBeVisible();
 
     // Confirmation also appears as a notification.
-    await page.goto("/en/notifications");
-    await expect(page.getByText(new RegExp(`You're registered for ${title}`))).toBeVisible();
+    await page.goto("/ar/notifications");
+    await expect(page.getByText(new RegExp(`تم تسجيلك في ${title}`))).toBeVisible();
   });
 });
 
@@ -56,34 +56,34 @@ test.describe("Journey C — waiting list promotion", () => {
     const leaverCtx = await browser.newContext();
     const leaverPage = await leaverCtx.newPage();
     await signIn(leaverPage, leaver);
-    await leaverPage.goto(`/en/matches/${matchId}`);
-    await leaverPage.getByRole("button", { name: "Join match" }).click();
-    await expect(leaverPage.getByText("You're in", { exact: true })).toBeVisible();
+    await leaverPage.goto(`/ar/matches/${matchId}`);
+    await leaverPage.getByRole("button", { name: "انضم للمباراة" }).click();
+    await expect(leaverPage.getByText("أنت مسجل", { exact: true })).toBeVisible();
 
     const waiterCtx = await browser.newContext();
     const waiterPage = await waiterCtx.newPage();
     await signIn(waiterPage, waiter);
-    await waiterPage.goto(`/en/matches/${matchId}`);
-    await waiterPage.getByRole("button", { name: "Join waiting list" }).click();
-    await expect(waiterPage.getByText("You're #1 on the waiting list")).toBeVisible();
+    await waiterPage.goto(`/ar/matches/${matchId}`);
+    await waiterPage.getByRole("button", { name: "انضم لقائمة الانتظار" }).click();
+    await expect(waiterPage.getByText("ترتيبك 1 في قائمة الانتظار")).toBeVisible();
 
     await leaverPage.reload();
-    await leaverPage.getByRole("button", { name: "Leave match" }).click();
-    const dialog = leaverPage.getByRole("dialog", { name: "Leave this match?" });
-    await dialog.getByRole("button", { name: "Leave" }).click();
+    await leaverPage.getByRole("button", { name: "مغادرة المباراة" }).click();
+    const dialog = leaverPage.getByRole("dialog", { name: "مغادرة هذه المباراة؟" });
+    await dialog.getByRole("button", { name: "مغادرة" }).click();
     // The freed spot went straight to the waiting player, so the match is full again.
-    await expect(leaverPage.getByRole("button", { name: "Join waiting list" })).toBeVisible();
+    await expect(leaverPage.getByRole("button", { name: "انضم لقائمة الانتظار" })).toBeVisible();
 
     await waiterPage.reload();
-    await expect(waiterPage.getByText("You're in", { exact: true })).toBeVisible();
-    await waiterPage.goto("/en/notifications");
-    await expect(waiterPage.getByText(/A spot opened up/)).toBeVisible();
+    await expect(waiterPage.getByText("أنت مسجل", { exact: true })).toBeVisible();
+    await waiterPage.goto("/ar/notifications");
+    await expect(waiterPage.getByText(/توفر مكان/)).toBeVisible();
     await leaverCtx.close();
     await waiterCtx.close();
   });
 });
 
-test.describe("Journey J — Arabic and English", () => {
+test.describe("Journey J — Arabic only", () => {
   test("a first visit opens in Arabic even when the browser prefers English", async ({ page }) => {
     // The test browser sends Accept-Language: en-GB (playwright.config.ts).
     await page.goto("/");
@@ -91,20 +91,14 @@ test.describe("Journey J — Arabic and English", () => {
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
   });
 
-  test("switching language flips direction and translates the interface", async ({ page }) => {
-    await page.goto("/ar");
+  test("old English links open the same page in Arabic, and there is no language switch", async ({ page }) => {
+    await page.goto("/en/matches");
+    await expect(page).toHaveURL(/\/ar\/matches$/);
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
     await expect(page.locator("html")).toHaveAttribute("lang", "ar");
-    await expect(page.getByRole("link", { name: "ابحث عن مباراة" }).first()).toBeVisible();
-
-    await page.getByRole("link", { name: "تغيير اللغة" }).click();
-    await page.waitForURL(/\/en$/);
-    await expect(page.locator("html")).toHaveAttribute("dir", "ltr");
-    await expect(page.getByRole("link", { name: "Find a match" }).first()).toBeVisible();
-
-    // The choice persists (cookie) when visiting the root.
-    await page.goto("/");
-    await expect(page).toHaveURL(/\/en$/);
+    await expect(page.getByRole("link", { name: "تغيير اللغة" })).toHaveCount(0);
+    await page.goto("/en");
+    await expect(page).toHaveURL(/\/ar$/);
 
     await page.goto("/ar/matches");
     await expect(page.getByRole("heading", { name: "ابحث عن مباراة" })).toBeVisible();
@@ -117,9 +111,9 @@ test.describe("Journey J — Arabic and English", () => {
 
 test.describe("Journey K — unauthorized access", () => {
   test("signed-out visitors are redirected away from private pages", async ({ page }) => {
-    for (const path of ["/en/dashboard", "/en/admin", "/en/manage/venues", "/en/messages", "/en/matches/new"]) {
+    for (const path of ["/ar/dashboard", "/ar/admin", "/ar/manage/venues", "/ar/messages", "/ar/matches/new"]) {
       await page.goto(path);
-      await expect(page).toHaveURL(/\/en\/sign-in\?next=/);
+      await expect(page).toHaveURL(/\/ar\/sign-in\?next=/);
     }
   });
 
@@ -128,11 +122,11 @@ test.describe("Journey K — unauthorized access", () => {
     const player = await createAuthUser("Player");
     const matchId = await createMatchFor(organizer);
     await signIn(page, player);
-    await page.goto("/en/admin");
-    await expect(page).toHaveURL(/\/en\/dashboard/);
-    await page.goto(`/en/matches/${matchId}/edit`);
-    await expect(page).toHaveURL(new RegExp(`/en/matches/${matchId}$`));
-    await expect(page.getByRole("heading", { name: "Organizer tools" })).toHaveCount(0);
+    await page.goto("/ar/admin");
+    await expect(page).toHaveURL(/\/ar\/dashboard/);
+    await page.goto(`/ar/matches/${matchId}/edit`);
+    await expect(page).toHaveURL(new RegExp(`/ar/matches/${matchId}$`));
+    await expect(page.getByRole("heading", { name: "أدوات المنظم" })).toHaveCount(0);
   });
 
   test("the public API rejects direct writes and private reads with the anon key", async ({ request }) => {
