@@ -1,6 +1,6 @@
 import { createHash, randomBytes, randomInt, randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { admin, asUser, createUser, errorOf, rpc } from "./helpers";
+import { admin, asUser, createUser, errorOf, rpc, rpcRows } from "./helpers";
 
 const ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 const code = () => {
@@ -83,8 +83,14 @@ describe("Phone verification with Telegram", () => {
     expect(await contact(me, from)).toMatchObject({ matched: true, repeat: true, status: "verified" });
 
     expect(await status(hash)).toMatchObject({ status: "verified", phone: from });
-    const [u] = await admin<{ email_confirmed_at: string | null }>("select email_confirmed_at from auth.users where id = $1", [user.id]);
+    const [u] = await admin<{ email_confirmed_at: string | null; phone: string | null; phone_confirmed_at: string | null }>(
+      "select email_confirmed_at, phone, phone_confirmed_at from auth.users where id = $1",
+      [user.id],
+    );
     expect(u.email_confirmed_at).not.toBeNull();
+    // The number also shows in Supabase's own user list.
+    expect(u).toMatchObject({ phone: from });
+    expect(u.phone_confirmed_at).not.toBeNull();
     expect(await rpc(user.id, "my_phone")).toBe(from);
     expect((await admin<{ e: string }>("select public.auth_email_for_phone($1) as e", [from]))[0].e).toBe(user.email);
 
@@ -185,6 +191,22 @@ describe("Phone verification with Telegram", () => {
     } finally {
       await admin("update public.platform_settings set value = '20' where key = 'telegram.max_codes_per_hour'");
     }
+  });
+
+  it("the admin user list shows phone numbers and finds them by the local 07… form", async () => {
+    const boss = await createUser("Boss", { admin: true });
+    const player = await createUser();
+    const user = await pendingUser();
+    await admin("insert into public.profiles (id, display_name) values ($1, 'رقم') on conflict (id) do nothing", [user.id]);
+    const from = phone();
+    await verifyWithTelegram((await start("signup", user.id)).code, from);
+
+    const local = `0${from.slice(3, 6)} ${from.slice(6, 9)} ${from.slice(9)}`;
+    const rows = await rpcRows<{ id: string; phone: string | null }>(boss, "admin_list_users", { p_search: local });
+    expect(rows.find((r) => r.id === user.id)).toMatchObject({ phone: from });
+    // Short or digit-less searches don't match every number.
+    expect((await rpcRows<{ id: string }>(boss, "admin_list_users", { p_search: "zzzz-no-such-user" })).length).toBe(0);
+    expect(await errorOf(rpcRows(player, "admin_list_users", { p_search: local }))).toMatch(/forbidden|permission|admin/);
   });
 
   it("cleanup removes never-verified sign-ups but keeps verified accounts", async () => {

@@ -37,7 +37,7 @@ export default async function AdminUsersPage({ searchParams }: PageProps<"/[loca
           <thead className="bg-surface-2 text-xs text-muted">
             <tr>
               <th className="p-2 text-start">{t("user")}</th>
-              <th className="p-2 text-start">{t("email")}</th>
+              <th className="p-2 text-start">{t("contact")}</th>
               <th className="p-2 text-start">{t("joined")}</th>
               <th className="p-2 text-start">{t("roles")}</th>
               <th className="p-2 text-start">{t("actions")}</th>
@@ -50,7 +50,12 @@ export default async function AdminUsersPage({ searchParams }: PageProps<"/[loca
                   <Link href={`/players/${u.id}`} className="font-medium hover:underline">{u.display_name}</Link>
                   {u.status === "suspended" ? <Badge tone="danger" className="ms-2">{t("suspended")}</Badge> : null}
                 </td>
-                <td className="p-2 text-muted" dir="ltr">{isPhoneAccountEmail(u.email) ? <Badge tone="info">{t("phoneAccount")}</Badge> : u.email}</td>
+                <td className="p-2 text-muted" dir="ltr">
+                  {/* Phone accounts have only an internal e-mail; their number is what identifies them. */}
+                  {u.phone ? <span className="num">+{u.phone}</span> : null}
+                  {u.phone && !isPhoneAccountEmail(u.email) ? <br /> : null}
+                  {isPhoneAccountEmail(u.email) ? null : u.email}
+                </td>
                 <td className="p-2 text-muted">{formatDate(u.created_at, locale, "Asia/Baghdad")}</td>
                 <td className="p-2">
                   <div className="flex flex-wrap gap-1">{u.roles.map((r) => <Badge key={r} tone="accent">{t(`role.${r}`)}</Badge>)}</div>
