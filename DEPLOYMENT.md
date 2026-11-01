@@ -205,7 +205,12 @@
 
 يضبط الزر لدى تيليغرام عنوان الاستقبال `https://<your-domain>/api/telegram/webhook`، ومعه رمز سري مشتق من رمز البوت. يرفض الموقع أي طلب لا يحمل هذا الرمز.
 
-> قاعدة البيانات تحتاج ملف `…0014_telegram_verification.sql`. شغّل **Deploy database migrations** مرة أخرى بعد دمج التحديث.
+> **تحديث قاعدة البيانات:** يحتاج هذا القسم الملف `supabase/migrations/20261102000014_telegram_verification.sql`. الطريقة الأسهل:
+> 1. افتح الملف على GitHub واضغط زر النسخ (Copy raw file).
+> 2. في Supabase افتح **SQL Editor ← New query**، والصق المحتوى كله، ثم **Run**.
+> 3. النتيجة الصحيحة: `Success. No rows returned`.
+>
+> يعمل الملف سواء طُبّق ملف واتساب القديم (`…0012`) من قبل أم لا، ولا يضر تشغيله مرتين. ويمكن بدلًا من ذلك تشغيل **Deploy database migrations** من GitHub Actions.
 >
 > إذا كنت أضفت سابقًا متغيرات `WHATSAPP_*` في Vercel فلم تعد مستخدمة، ويمكنك حذفها.
 

@@ -20,32 +20,87 @@
 -- The verification table keeps its rows under a channel-neutral name; the
 -- WhatsApp-only column and functions go. Every function here is for the
 -- server (service_role) only.
+--
+-- The file also works on a database where the WhatsApp file (…0012) was never
+-- applied: it then creates the tables itself. It is safe to run twice, so it
+-- can be pasted into Supabase's SQL Editor as well as applied with
+-- `supabase db push`.
 -- =============================================================================
 
-drop function public.wa_create_verification(public.wa_purpose, text, text, uuid, text);
-drop function public.wa_receive(text, text, text);
-drop function public.wa_get_verification(text);
-drop function public.wa_consume_verification(text);
-drop function public.wa_auth_email_for_phone(text);
-drop function public.wa_cleanup();
+drop function if exists public.wa_create_verification(public.wa_purpose, text, text, uuid, text);
+drop function if exists public.wa_receive(text, text, text);
+drop function if exists public.wa_get_verification(text);
+drop function if exists public.wa_consume_verification(text);
+drop function if exists public.wa_auth_email_for_phone(text);
+drop function if exists public.wa_cleanup();
 
-alter table public.whatsapp_verifications rename to phone_verifications;
-alter index public.whatsapp_verifications_pending_code rename to phone_verifications_pending_code;
-alter type public.wa_purpose rename to phone_verify_purpose;
-alter type public.wa_status rename to phone_verify_status;
-alter table public.phone_verifications drop column wa_message_id;
+-- Types and table: renamed from the WhatsApp file when it was applied, created otherwise.
+do $$
+begin
+  if to_regtype('public.wa_purpose') is not null then
+    alter type public.wa_purpose rename to phone_verify_purpose;
+  elsif to_regtype('public.phone_verify_purpose') is null then
+    create type public.phone_verify_purpose as enum ('signup', 'reset');
+  end if;
+  if to_regtype('public.wa_status') is not null then
+    alter type public.wa_status rename to phone_verify_status;
+  elsif to_regtype('public.phone_verify_status') is null then
+    create type public.phone_verify_status as enum ('pending', 'verified', 'phone_taken', 'no_account', 'consumed');
+  end if;
+  if to_regclass('public.whatsapp_verifications') is not null and to_regclass('public.phone_verifications') is null then
+    alter table public.whatsapp_verifications rename to phone_verifications;
+    alter index public.whatsapp_verifications_pending_code rename to phone_verifications_pending_code;
+  end if;
+end $$;
+
+create table if not exists public.phone_verifications (
+  id uuid primary key default gen_random_uuid(),
+  purpose public.phone_verify_purpose not null,
+  code text not null check (code ~ '^[A-Z0-9]{4}-[A-Z0-9]{4}$'),
+  -- SHA-256 of the random ticket kept in the browser's httpOnly cookie.
+  ticket_hash text not null unique check (ticket_hash ~ '^[0-9a-f]{64}$'),
+  -- signup: the pending (unconfirmed) auth user; reset: filled in on match.
+  user_id uuid references auth.users(id) on delete cascade,
+  status public.phone_verify_status not null default 'pending',
+  phone text,
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null default now() + interval '15 minutes',
+  verified_at timestamptz,
+  consumed_at timestamptz,
+  check (purpose = 'reset' or user_id is not null)
+);
+create unique index if not exists phone_verifications_pending_code on public.phone_verifications(code) where status = 'pending';
+alter table public.phone_verifications enable row level security;
+revoke all on public.phone_verifications from anon, authenticated;
+alter table public.phone_verifications drop column if exists wa_message_id;
 alter table public.phone_verifications
   -- The Telegram account that claimed the code (set by tg_link_code).
-  add column tg_user_id bigint check (tg_user_id > 0),
+  add column if not exists tg_user_id bigint check (tg_user_id > 0),
   -- Hash of the client (IP) that started it, for the per-client limit.
-  add column client_ref uuid;
-create index phone_verifications_tg_user on public.phone_verifications (tg_user_id, created_at desc) where tg_user_id is not null;
-create index phone_verifications_client on public.phone_verifications (client_ref, created_at desc) where client_ref is not null;
+  add column if not exists client_ref uuid;
+create index if not exists phone_verifications_tg_user on public.phone_verifications (tg_user_id, created_at desc) where tg_user_id is not null;
+create index if not exists phone_verifications_client on public.phone_verifications (client_ref, created_at desc) where client_ref is not null;
+
+-- Verified phone numbers (E.164 digits, no "+"). Private: never exposed to clients.
+create table if not exists private.user_phones (
+  user_id uuid primary key references public.profiles(id) on delete cascade,
+  phone text not null unique check (phone ~ '^[1-9][0-9]{7,14}$'),
+  verified_at timestamptz not null default now()
+);
+
+-- The signed-in user's verified phone, if any.
+create or replace function public.my_phone()
+returns text language sql stable security definer set search_path = '' as $$
+  select phone from private.user_phones where user_id = (select auth.uid());
+$$;
+revoke execute on function public.my_phone() from public, anon;
+grant execute on function public.my_phone() to authenticated;
 
 delete from public.platform_settings where key = 'whatsapp.max_starts_per_hour';
 insert into public.platform_settings (key, value, description) values
   ('verify.max_open_per_hour', '20', 'Unfinished phone verifications one client (IP) may start per hour; finished ones do not count'),
-  ('telegram.max_codes_per_hour', '20', 'Codes one Telegram account may send to the bot per hour');
+  ('telegram.max_codes_per_hour', '20', 'Codes one Telegram account may send to the bot per hour')
+on conflict (key) do nothing;
 
 -- ---------------------------------------------------------------------------
 -- Start a verification. p_client_key identifies the client (its IP); it is
@@ -54,7 +109,7 @@ insert into public.platform_settings (key, value, description) values
 -- connection (mobile networks, cafés) never block each other, while a script
 -- that starts sign-ups and never completes them is stopped.
 -- ---------------------------------------------------------------------------
-create function public.phone_verify_start(
+create or replace function public.phone_verify_start(
   p_purpose public.phone_verify_purpose, p_code text, p_ticket_hash text, p_user_id uuid, p_client_key text)
 returns timestamptz language plpgsql security definer set search_path = '' as $$
 declare
@@ -87,7 +142,7 @@ end $$;
 -- account cannot take it over. Each account may try a limited number of codes
 -- per hour, which bounds guessing.
 -- ---------------------------------------------------------------------------
-create function public.tg_link_code(p_code text, p_tg_user_id bigint)
+create or replace function public.tg_link_code(p_code text, p_tg_user_id bigint)
 returns jsonb language plpgsql security definer set search_path = '' as $$
 declare
   v_key uuid := md5('tg_code:' || coalesce(p_tg_user_id, 0))::uuid;
@@ -122,7 +177,7 @@ end $$;
 -- contact.user_id is the sender). Completes the verification this Telegram
 -- account claimed. A repeated delivery of the same contact answers the same.
 -- ---------------------------------------------------------------------------
-create function public.tg_receive_contact(p_tg_user_id bigint, p_phone text)
+create or replace function public.tg_receive_contact(p_tg_user_id bigint, p_phone text)
 returns jsonb language plpgsql security definer set search_path = '' as $$
 declare
   v_phone text := regexp_replace(coalesce(p_phone, ''), '[^0-9]', '', 'g');
@@ -178,7 +233,7 @@ end $$;
 
 -- Current state of a verification, looked up by the browser's ticket.
 -- `linked` turns true once the user has opened the bot with the code.
-create function public.phone_verify_lookup(p_ticket_hash text)
+create or replace function public.phone_verify_lookup(p_ticket_hash text)
 returns table (purpose public.phone_verify_purpose, status public.phone_verify_status, code text,
                expires_at timestamptz, phone text, linked boolean)
 language sql stable security definer set search_path = '' as $$
@@ -189,7 +244,7 @@ $$;
 
 -- One-time hand-off after a successful verification: returns the auth e-mail
 -- the server uses to open a session, and marks the ticket consumed.
-create function public.phone_verify_consume(p_ticket_hash text)
+create or replace function public.phone_verify_consume(p_ticket_hash text)
 returns table (purpose public.phone_verify_purpose, user_id uuid, email text)
 language plpgsql security definer set search_path = '' as $$
 declare v_row public.phone_verifications%rowtype;
@@ -205,14 +260,14 @@ begin
 end $$;
 
 -- Sign-in by phone: the auth e-mail behind a verified phone (null if none).
-create function public.auth_email_for_phone(p_phone text)
+create or replace function public.auth_email_for_phone(p_phone text)
 returns text language sql stable security definer set search_path = '' as $$
   select u.email::text from private.user_phones p join auth.users u on u.id = p.user_id where p.phone = p_phone;
 $$;
 
 -- Removes old verification rows and the phone accounts that were never
 -- verified (they cannot sign in: verifying is what confirms them).
-create function public.phone_verify_cleanup()
+create or replace function public.phone_verify_cleanup()
 returns jsonb language plpgsql security definer set search_path = '' as $$
 declare v_users int; v_rows int;
 begin
