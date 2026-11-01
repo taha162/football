@@ -2,6 +2,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { redirect } from "@/i18n/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { publicEnv } from "@/lib/env";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { readWebhookState, telegramConfig } from "@/lib/telegram";
 import { updateSettingAction, upsertAreaAction, upsertCityAction } from "@/server/admin";
@@ -10,43 +11,78 @@ import { ActionForm, Hidden, SubmitButton } from "@/components/ui/action-form";
 import { Input, Select } from "@/components/ui/field";
 import { Alert, Card, CardBody, DefinitionList, PageHeader, Section } from "@/components/ui/primitives";
 
-/** The Telegram verification bot: is it configured, and is its webhook pointed at this site? */
+/**
+ * The Telegram verification bot, as a checklist: are its settings there, does
+ * Telegram accept the token, is the webhook pointed at this site, and is the
+ * database ready. Each line says what to fix.
+ */
 async function TelegramPanel() {
   const t = await getTranslations("admin");
   const cfg = telegramConfig();
-  if (!cfg.enabled) return <Alert tone="warning" title={t("tgNotConfigured")}>{t("tgNotConfiguredHint")}</Alert>;
   const expected = `${publicEnv.siteUrl}/api/telegram/webhook`;
-  const state = await readWebhookState(cfg.token);
-  const connected = state.ok && state.result.url === expected;
-  const items = [
-    { label: t("tgBot"), value: <span dir="ltr">@{cfg.username}</span> },
-    {
-      label: t("tgWebhook"),
-      value: !state.ok
-        ? t("tgUnreachable")
-        : connected
-          ? t("tgConnected")
+  const admin = createAdminClient();
+  const dbReady = admin ? !(await admin.rpc("phone_verify_lookup", { p_ticket_hash: "0".repeat(64) })).error : false;
+  const state = cfg.enabled ? await readWebhookState(cfg.token) : null;
+  const connected = Boolean(state?.ok && state.result.url === expected);
+
+  const bad = (text: React.ReactNode) => <span className="text-danger">{text}</span>;
+  const good = (text: React.ReactNode) => <span className="text-success">{text}</span>;
+  const items: { label: string; value: React.ReactNode }[] = [];
+
+  items.push({
+    label: t("tgSettings"),
+    value:
+      cfg.problems.length || !cfg.serviceRole ? (
+        <ul className="flex flex-col gap-0.5">
+          {cfg.problems.map((p) => <li key={p}>{bad(t(`tgProblem.${p}`))}</li>)}
+          {!cfg.serviceRole ? <li>{bad(t("tgProblem.service_role_missing"))}</li> : null}
+        </ul>
+      ) : (
+        good(<span dir="ltr">@{cfg.username}</span>)
+      ),
+  });
+  if (state) {
+    items.push({
+      label: t("tgTelegramAnswer"),
+      value: state.ok
+        ? state.result.botUsername && state.result.botUsername.toLowerCase() !== cfg.username.toLowerCase()
+          ? bad(<>{t("tgUsernameMismatch")} <span dir="ltr">@{state.result.botUsername}</span></>)
+          : good(t("tgTokenOk"))
+        : bad(state.error === "Unauthorized" ? t("tgTokenRejected") : state.error === "unreachable" || state.error === "timeout" ? t("tgUnreachable") : <span dir="ltr">{state.error}</span>),
+    });
+    if (state.ok) {
+      items.push({
+        label: t("tgWebhook"),
+        value: connected
+          ? good(t("tgConnected"))
           : state.result.url
-            ? <span>{t("tgOtherUrl")} <span dir="ltr" className="break-all">{state.result.url}</span></span>
-            : t("tgNotConnected"),
-    },
-  ];
-  if (state.ok && state.result.botUsername && state.result.botUsername.toLowerCase() !== cfg.username.toLowerCase()) {
-    items.push({ label: t("tgUsernameMismatch"), value: <span dir="ltr">@{state.result.botUsername}</span> });
+            ? bad(<>{t("tgOtherUrl")} <span dir="ltr" className="break-all">{state.result.url}</span></>)
+            : bad(t("tgNotConnected")),
+      });
+      if (state.result.lastError) {
+        items.push({ label: t("tgLastError"), value: <span dir="ltr" className="break-all">{state.result.lastError}</span> });
+      }
+    }
   }
-  if (state.ok && state.result.lastError) {
-    items.push({ label: t("tgLastError"), value: <span dir="ltr" className="break-all">{state.result.lastError}</span> });
-  }
+  items.push({ label: t("tgDatabase"), value: dbReady ? good(t("tgDatabaseOk")) : bad(t("tgDatabaseMissing")) });
+
   return (
     <Card>
       <CardBody className="flex flex-col gap-4">
         <DefinitionList items={items} />
-        <ActionForm action={connectTelegramAction}>
-          <p className="text-xs text-muted">{t("tgConnectHint")}</p>
-          <SubmitButton variant={connected ? "secondary" : "primary"} className="self-start">
-            {connected ? t("tgReconnect") : t("tgConnect")}
-          </SubmitButton>
-        </ActionForm>
+        <p className="text-xs text-muted">
+          {t("tgExpectedUrl")} <span dir="ltr" className="break-all font-mono">{expected}</span>
+        </p>
+        {cfg.enabled ? (
+          <ActionForm action={connectTelegramAction}>
+            <p className="text-xs text-muted">{t("tgConnectHint")}</p>
+            <SubmitButton variant={connected ? "secondary" : "primary"} className="self-start">
+              {connected ? t("tgReconnect") : t("tgConnect")}
+            </SubmitButton>
+          </ActionForm>
+        ) : (
+          <Alert tone="warning" title={t("tgNotConfigured")}>{t("tgNotConfiguredHint")}</Alert>
+        )}
       </CardBody>
     </Card>
   );

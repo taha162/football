@@ -416,6 +416,7 @@
     "verification_missing": "انتهت الجلسة. ابدأ من جديد.",
     "telegram_unavailable": "التحقق عبر تيليغرام غير متاح حاليًا.",
     "telegram_connect_failed": "لم يقبل تيليغرام الطلب. تأكد من رمز البوت ثم حاول مرة أخرى.",
+    "telegram_token_rejected": "رفض تيليغرام رمز البوت. انسخه من جديد من ‎@BotFather، واحفظه في Vercel، ثم أعد النشر.",
     "invalid_user": "تعذّر بدء التحقق. حاول مرة أخرى.",
     "resend_too_soon": "انتظر دقيقة قبل طلب رمز جديد، وتفقد بريدك فقد يكون الرمز السابق وصل.",
     "email_limit_reached": "أرسل الموقع رسائل كثيرة خلال الساعة الأخيرة، فلم تُرسل هذه الرسالة. حاول مرة أخرى لاحقاً.",
@@ -1373,7 +1374,6 @@
     "telegramBot": "بوت التحقق في تيليغرام",
     "tgNotConfigured": "بوت تيليغرام غير مُعدّ",
     "tgNotConfiguredHint": "أضف TELEGRAM_BOT_TOKEN وTELEGRAM_BOT_USERNAME إلى متغيرات البيئة في الموقع (راجع DEPLOYMENT.md) ثم أعد النشر. حتى ذلك الحين يكون التسجيل بالبريد الإلكتروني فقط.",
-    "tgBot": "البوت",
     "tgWebhook": "الربط بالموقع",
     "tgUnreachable": "تعذّر الوصول إلى تيليغرام للتحقق.",
     "tgConnected": "مربوط",
@@ -1383,7 +1383,22 @@
     "tgLastError": "آخر خطأ أبلغ عنه تيليغرام",
     "tgConnectHint": "يوجّه البوت إلى هذا الموقع ليستقبل الأرقام التي يشاركها الناس. افعل ذلك مرة بعد إعداد البوت، ومرة أخرى إذا تغيّر عنوان الموقع.",
     "tgConnect": "اربط البوت",
-    "tgReconnect": "اربط من جديد"
+    "tgReconnect": "اربط من جديد",
+    "tgSettings": "إعدادات البوت في Vercel",
+    "tgProblem": {
+      "token_missing": "المتغير TELEGRAM_BOT_TOKEN غير موجود.",
+      "token_invalid": "قيمة TELEGRAM_BOT_TOKEN لا تشبه رمز BotFather (أرقام ثم نقطتان ثم حروف). انسخ الرمز وحده بلا أي نص آخر.",
+      "username_missing": "المتغير TELEGRAM_BOT_USERNAME غير موجود.",
+      "username_invalid": "قيمة TELEGRAM_BOT_USERNAME ليست اسم بوت. اكتب الاسم وحده، مثل AlMalabBot.",
+      "service_role_missing": "المتغير SUPABASE_SERVICE_ROLE_KEY غير موجود."
+    },
+    "tgTelegramAnswer": "رد تيليغرام",
+    "tgTokenOk": "الرمز صحيح",
+    "tgTokenRejected": "رفض تيليغرام الرمز. انسخه من جديد من ‎@BotFather (‎/mybots ← البوت ← API Token)، واحفظه في Vercel، ثم اضغط Redeploy.",
+    "tgDatabase": "تحديث قاعدة البيانات (الملف …0014)",
+    "tgDatabaseOk": "مطبّق",
+    "tgDatabaseMissing": "غير مطبّق بعد: شغّل الملف في SQL Editor في Supabase (DEPLOYMENT.md، القسم 6).",
+    "tgExpectedUrl": "يجب أن يرسل البوت التحديثات إلى:"
   },
   "teams": {
     "title": "الفرق",
