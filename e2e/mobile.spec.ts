@@ -35,10 +35,15 @@ test.describe("Mobile (Arabic, RTL)", () => {
   });
 
   test("public pages fit the phone viewport in both languages", async ({ page }) => {
-    for (const path of ["/ar", "/en", "/ar/matches", "/ar/venues", "/ar/teams", "/ar/tournaments", "/ar/sign-up"]) {
+    const screen = page.viewportSize()!.width;
+    for (const path of ["/ar", "/en", "/ar/matches", "/en/matches", "/ar/venues", "/ar/teams", "/ar/tournaments", "/ar/sign-up"]) {
       await page.goto(path);
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
       expect(overflow, `horizontal overflow on ${path}`).toBeLessThanOrEqual(0);
+      // A phone widens its layout viewport to fit content that is too wide (on
+      // right-to-left pages, content sticking out on the left too), which the
+      // check above cannot see. The page must stay exactly as wide as the screen.
+      expect(await page.evaluate(() => window.innerWidth), `layout wider than the screen on ${path}`).toBe(screen);
     }
   });
 });

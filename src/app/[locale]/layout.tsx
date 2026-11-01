@@ -37,6 +37,9 @@ export async function generateMetadata({ params }: LayoutProps<"/[locale]">): Pr
     metadataBase: new URL(publicEnv.siteUrl),
     title: { default: t("title"), template: `%s · ${t("appName")}` },
     description: t("description"),
+    // The share image (opengraph-image.png beside the root layout) shows the full logo.
+    openGraph: { type: "website", siteName: t("appName"), title: t("title"), description: t("description"), locale: locale === "ar" ? "ar_IQ" : "en_GB" },
+    twitter: { card: "summary_large_image", title: t("title"), description: t("description") },
     alternates: { languages: { ar: "/ar", en: "/en" } },
   };
 }

@@ -8,7 +8,7 @@ Last updated: 2026-10-29. "Verified" means covered by an automated test that pas
 | --- | --- |
 | `pnpm lint` | Clean |
 | `pnpm typecheck` | Clean (TS strict) |
-| `pnpm i18n:check` | 1782 keys, ar/en in sync, all static keys resolved |
+| `pnpm i18n:check` | 1783 keys, ar/en in sync, all static keys resolved |
 | `pnpm test:unit` | 50 passed (domain rules, ball physics, camera and quality logic, auth error mapping) |
 | `pnpm test:db` | 81 passed (concurrency, RLS, RPC rules, jobs, WhatsApp verification, booking deposits) |
 | `pnpm build` | Succeeds (Next.js 16.4, Turbopack) |
@@ -109,6 +109,11 @@ Legend: ✅ implemented and verified by automated tests · 🟡 implemented, exe
   A scripted QA pass loaded 28 pages (dashboard, lists, detail pages, forms, account, management and admin) on a laptop and a phone viewport in both languages, against the development and the production build. On every page the on-screen content rose in, nothing stayed hidden, nothing overflowed sideways and the console was clean. On the laptop, cards tilted, buttons lifted and the football reacted; on the phone, taps rippled. With reduced motion nothing was hidden or animated, and neither the football nor ripples appeared. On a list page, each of the first 14 keyboard focus stops (header, navigation, filters) showed a ring, and Enter on a link button navigated.
 
   🟡 **Not verified on real devices, or in Safari or Firefox.** Where view transitions, `linear()` springs or `@starting-style` are missing, content appears without the animation. The guard against animating a browser swipe-back twice relies on `hasUAVisualTransition`, which not every browser reports. iPhones do not vibrate (no vibration API in Safari). Link buttons have no "open in new tab" or "copy link" in the right-click menu (Ctrl/⌘-click and middle-click still open a new tab).
+- ✅ **Brand: «الملعب» / Al-Malab.**
+  - The owner's logo was traced to SVG (`public/brand/`). It appears in the header and footer; in Arabic next to the logo's own «الملعب» lettering, in English next to "Al-Malab".
+  - It is also the browser icon, the iPhone home-screen icon, the image shown when a link is shared (WhatsApp, social) and the logo in the auth e-mails.
+  - The logo's line «احنا الاسسنا الملعب واحنا النلعب بي» appears in the footer and on the home page's first screen.
+  - The phone header fits 360–412 px wide screens in both languages, signed in and out. The mobile E2E test now also checks that the layout never grows wider than the screen.
 - ✅ Arabic (RTL, default) and English (LTR), with the locale persisted per user and cookie. A first visit opens in Arabic whatever the browser's language — E2E J and mobile.
 - ✅ Mobile layout with bottom navigation and no horizontal overflow on phone widths — E2E mobile.
 - ✅ Scheduled jobs (`/api/cron` → `run_scheduled_jobs`) are idempotent — DB.

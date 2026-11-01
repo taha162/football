@@ -1,11 +1,11 @@
 {
   "meta": {
-    "appName": "Malaab",
-    "title": "Malaab — Find your team. Join the game.",
+    "appName": "Al-Malab",
+    "title": "Al-Malab — Find your team. Join the game.",
     "description": "Find pickup football matches, missing players, opponents, venues and tournaments in your city."
   },
   "common": {
-    "appName": "Malaab",
+    "appName": "Al-Malab",
     "skipToContent": "Skip to content",
     "switchLanguage": "Switch language",
     "close": "Close",
@@ -31,7 +31,8 @@
     "notAvailable": "Not available",
     "unknown": "Unknown",
     "sampleData": "Sample",
-    "page": "Page {page}"
+    "page": "Page {page}",
+    "slogan": "احنا الاسسنا الملعب واحنا النلعب بي"
   },
   "nav": {
     "home": "Home",
@@ -68,7 +69,7 @@
     "terms": "Terms of use",
     "privacy": "Privacy",
     "safety": "Trust & safety",
-    "copyright": "© {year} Malaab"
+    "copyright": "© {year} Al-Malab"
   },
   "auth": {
     "email": "Email",
@@ -104,7 +105,7 @@
     "verifyMethod": "Verification method",
     "methodEmail": "With e-mail",
     "methodWhatsapp": "With WhatsApp",
-    "whatsappSignupNote": "We won't ask for your number or message you. Next, you send a short code from WhatsApp to Malaab's number; your account is activated automatically and linked to your number.",
+    "whatsappSignupNote": "We won't ask for your number or message you. Next, you send a short code from WhatsApp to Al-Malab's number; your account is activated automatically and linked to your number.",
     "continueWhatsapp": "Continue with WhatsApp",
     "verifyEmailTitle": "Enter your code",
     "verifyEmailSubtitle": "We sent a verification code to <email></email>. Enter it here to activate your account.",
@@ -128,10 +129,10 @@
     "waExpires": "expires in {minutes} min",
     "waExpired": "This code has expired.",
     "waRestart": "Start again",
-    "waPhoneTaken": "This number already has a Malaab account.",
+    "waPhoneTaken": "This number already has an Al-Malab account.",
     "waNoAccount": "No account is linked to this number.",
     "waVerified": "Verified! Taking you there…",
-    "waMessage": "Malaab verification code: {code}",
+    "waMessage": "Al-Malab verification code: {code}",
     "forgotWhatsapp": "Recover with WhatsApp",
     "forgotWhatsappNote": "Signed up with WhatsApp? Send a code from the same number and choose a new password.",
     "or": "or"
@@ -652,7 +653,7 @@
       "sections": [
         {
           "heading": "What the platform does",
-          "body": "Malaab helps people find and organize recreational football: matches, teams, opponents, venues and tournaments. Organizers, teams and venues are responsible for the games and facilities they list. We provide tools; we don't run the matches or the venues."
+          "body": "Al-Malab helps people find and organize recreational football: matches, teams, opponents, venues and tournaments. Organizers, teams and venues are responsible for the games and facilities they list. We provide tools; we don't run the matches or the venues."
         },
         {
           "heading": "Your account",

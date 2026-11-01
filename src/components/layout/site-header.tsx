@@ -61,7 +61,8 @@ export async function SiteHeader({ user }: { user: CurrentUser | null }) {
             </>
           ) : (
             <>
-              <LinkButton href="/sign-in" className={buttonClass("ghost", "sm")}>
+              {/* Phones have it in the bottom bar; the top bar keeps room for the logo. */}
+              <LinkButton href="/sign-in" className={buttonClass("ghost", "sm", "hidden sm:inline-flex")}>
                 {t("signIn")}
               </LinkButton>
               <LinkButton href="/sign-up" className={buttonClass("primary", "sm")}>

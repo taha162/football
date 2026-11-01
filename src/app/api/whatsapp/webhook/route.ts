@@ -16,10 +16,10 @@ export async function GET(request: NextRequest) {
 }
 
 const REPLIES: Record<string, string> = {
-  "signup:verified": "✅ تم تأكيد رقمك في ملعب. ارجع إلى الموقع لإكمال حسابك.\n✅ Your number is verified on Malaab. Go back to the site to continue.",
-  "signup:phone_taken": "⚠️ هذا الرقم مرتبط بحساب آخر في ملعب. سجّل الدخول به بدل إنشاء حساب جديد.\n⚠️ This number already has a Malaab account. Sign in instead.",
-  "reset:verified": "✅ تم التحقق. ارجع إلى ملعب لاختيار كلمة مرور جديدة.\n✅ Verified. Go back to Malaab to choose a new password.",
-  "reset:no_account": "⚠️ لا يوجد حساب في ملعب مرتبط بهذا الرقم.\n⚠️ No Malaab account is linked to this number.",
+  "signup:verified": "✅ تم تأكيد رقمك في «الملعب». ارجع إلى الموقع لإكمال حسابك.\n✅ Your number is verified on Al-Malab. Go back to the site to continue.",
+  "signup:phone_taken": "⚠️ هذا الرقم مرتبط بحساب آخر في «الملعب». سجّل الدخول به بدل إنشاء حساب جديد.\n⚠️ This number already has an Al-Malab account. Sign in instead.",
+  "reset:verified": "✅ تم التحقق. ارجع إلى «الملعب» لاختيار كلمة مرور جديدة.\n✅ Verified. Go back to Al-Malab to choose a new password.",
+  "reset:no_account": "⚠️ لا يوجد حساب في «الملعب» مرتبط بهذا الرقم.\n⚠️ No Al-Malab account is linked to this number.",
 };
 
 /** Inbound messages. Only signed requests from Meta are processed. */

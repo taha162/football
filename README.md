@@ -1,4 +1,4 @@
-# Malaab · ملعب
+# Al-Malab · الملعب
 
 A community platform for recreational football: find and organize matches, build teams, find opponents, book pitches, run tournaments, and keep the community safe. The first market is **Mosul** (Asia/Baghdad, Iraqi dinar). Other cities can be added in the admin area. The interface is fully bilingual: **Arabic (RTL, default)** and **English (LTR)**.
 

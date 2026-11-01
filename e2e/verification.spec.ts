@@ -72,7 +72,7 @@ test.describe("Account verification", () => {
     // Unsigned or wrongly signed requests are rejected.
     expect((await whatsappInbound(baseURL!, from, code, "wrong-secret")).status).toBe(401);
     // The user sends the pre-filled message; Meta delivers it to the webhook.
-    expect((await whatsappInbound(baseURL!, from, `Malaab verification code: ${code}`)).status).toBe(200);
+    expect((await whatsappInbound(baseURL!, from, `Al-Malab verification code: ${code}`)).status).toBe(200);
     await page.waitForURL(/\/en\/onboarding/, { timeout: 15_000 });
 
     await page.getByText("Goalkeeper", { exact: true }).click();
@@ -127,7 +127,7 @@ test.describe("Account verification", () => {
 
     const other = await (await browser.newContext()).newPage();
     await whatsappInbound(baseURL!, from, await signUp(other));
-    await expect(other.getByText("This number already has a Malaab account.")).toBeVisible({ timeout: 15_000 });
+    await expect(other.getByText("This number already has an Al-Malab account.")).toBeVisible({ timeout: 15_000 });
   });
 
   test("WhatsApp webhook answers Meta's verification handshake only with the right token", async ({ request }) => {
