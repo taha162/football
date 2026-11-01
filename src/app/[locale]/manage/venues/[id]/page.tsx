@@ -12,7 +12,7 @@ import { formatTime, todayIn } from "@/lib/format";
 import { publicStorageUrl } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 import { getAreas, getCities } from "@/server/reference";
-import { getVenue, myVenueRole } from "@/server/venues/queries";
+import { getDepositSettings, getVenue, myVenueRole } from "@/server/venues/queries";
 import {
   addStaffAction,
   manualBookingAction,
@@ -20,6 +20,7 @@ import {
   removeVenueImageAction,
   requestVerificationAction,
   setOpeningHoursAction,
+  setDepositInstructionsAction,
   setPricingRulesAction,
   upsertFieldAction,
   uploadVenueImageAction,
@@ -30,7 +31,7 @@ import { ActionForm, FormField, Hidden, InlineAction, SubmitButton } from "@/com
 import { Avatar, StorageImage } from "@/components/ui/avatar";
 import { buttonClass } from "@/components/ui/button";
 import { ConfirmAction } from "@/components/ui/confirm-action";
-import { Checkbox, ChoiceChips, Input, Select, controlProps } from "@/components/ui/field";
+import { Checkbox, ChoiceChips, Input, Select, Textarea, controlProps } from "@/components/ui/field";
 import { Alert, Badge, Card, CardBody, Container, PageHeader, Section, Stat } from "@/components/ui/primitives";
 import { cn } from "@/lib/cn";
 import { LinkButton } from "@/components/ui/link-button";
@@ -57,6 +58,10 @@ export default async function ManageVenuePage({ params, searchParams }: PageProp
   const fields = venue.fields ?? [];
   const supabase = await createClient();
   const visibleTabs = TABS.filter((x) => canManage || x === "bookings");
+  const deposits = await getDepositSettings();
+  const depositAmount = formatMoney(deposits.amount, currency, locale);
+  // Bookings need a deposit, and customers would not know where to send it.
+  const depositDetailsMissing = venue.booking_mode === "platform" && deposits.on && !venue.deposit_instructions?.trim();
 
   return (
     <Container className="flex flex-col gap-6 py-10">
@@ -71,6 +76,19 @@ export default async function ManageVenuePage({ params, searchParams }: PageProp
           {canManage && ["unverified", "rejected"].includes(venue.verification_status) ? (
             <div className="mt-2">
               <InlineAction action={requestVerificationAction} values={{ venue_id: id }} label={t("requestVerification")} variant="primary" />
+            </div>
+          ) : null}
+        </Alert>
+      ) : null}
+
+      {depositDetailsMissing ? (
+        <Alert tone="warning" title={t("depositMissingTitle")}>
+          {t("depositMissingBody", { amount: depositAmount })}
+          {canManage ? (
+            <div className="mt-2">
+              <LinkButton href={`/manage/venues/${id}?tab=profile#deposit`} className={buttonClass("primary", "sm")}>
+                {t("depositMissingAction")}
+              </LinkButton>
             </div>
           ) : null}
         </Alert>
@@ -139,6 +157,19 @@ export default async function ManageVenuePage({ params, searchParams }: PageProp
 
       {tab === "profile" && canManage ? (
         <div className="flex flex-col gap-8">
+          <Section title={t("depositTitle")} id="deposit">
+            <Card>
+              <CardBody>
+                <ActionForm action={setDepositInstructionsAction}>
+                  <Hidden values={{ venue_id: id }} />
+                  <FormField name="deposit_instructions" label={t("depositTitle")} hint={t("depositHint", { amount: depositAmount })}>
+                    <Textarea {...controlProps("deposit_instructions")} defaultValue={venue.deposit_instructions ?? ""} maxLength={500} rows={3} dir="auto" />
+                  </FormField>
+                  <SubmitButton className="self-start">{t("depositSave")}</SubmitButton>
+                </ActionForm>
+              </CardBody>
+            </Card>
+          </Section>
           <Section title={t("photos")} id="photos">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {venue.cover_image_path ? (
@@ -203,27 +234,45 @@ export default async function ManageVenuePage({ params, searchParams }: PageProp
   );
 
   async function BookingsTab({ venueId, fields: fs, tz: zone, date }: { venueId: string; fields: typeof fields; tz: string; date: string }) {
+    const nowIso = new Date(getNow()).toISOString();
     const { data: pending } = await supabase
       .from("bookings")
       .select("*, field:venue_fields(name), requester:profiles!bookings_requested_by_fkey(display_name)")
       .eq("venue_id", venueId)
       .eq("status", "requested")
+      .gt("expires_at", nowIso)
+      .order("starts_at");
+    const { data: refunds } = await supabase
+      .from("bookings")
+      .select("*, field:venue_fields(name), requester:profiles!bookings_requested_by_fkey(display_name)")
+      .eq("venue_id", venueId)
+      .eq("deposit_status", "refund_due")
       .order("starts_at");
     const from = new Date(`${date}T00:00:00Z`);
     const { data: dayRows } = await supabase
       .from("bookings")
       .select("*, field:venue_fields(name), requester:profiles!bookings_requested_by_fkey(display_name)")
       .eq("venue_id", venueId)
-      .in("status", ["confirmed", "completed", "no_show"])
+      // Held requests occupy their time too, until the deposit arrives or the hold runs out.
+      .or(`status.in.(confirmed,completed,no_show),and(status.eq.requested,deposit_status.not.is.null,expires_at.gt."${nowIso}")`)
       .gte("starts_at", new Date(from.getTime() - 86_400_000).toISOString())
       .lt("starts_at", new Date(from.getTime() + 2 * 86_400_000).toISOString())
       .order("starts_at");
     const sameDay = (dayRows ?? []).filter((b) => new Intl.DateTimeFormat("en-CA", { timeZone: zone }).format(new Date(b.starts_at)) === date);
-    const ids = [...(pending ?? []), ...sameDay].map((b) => b.id);
+    const ids = [...(pending ?? []), ...sameDay, ...(refunds ?? [])].map((b) => b.id);
     const { data: convs } = ids.length ? await supabase.from("conversations").select("id, booking_id").in("booking_id", ids) : { data: [] };
     const conv = new Map((convs ?? []).map((c) => [c.booking_id, c.id]));
     return (
       <div className="flex flex-col gap-8">
+        {(refunds ?? []).length > 0 ? (
+          <Section title={t("refundsDue", { count: (refunds ?? []).length })} id="refunds">
+            <ul className="flex flex-col gap-3">
+              {(refunds ?? []).map((b) => (
+                <BookingRow key={b.id} b={b as unknown as BookingRowData} mode="staff" tz={zone} conversationId={conv.get(b.id)} />
+              ))}
+            </ul>
+          </Section>
+        ) : null}
         <Section title={t("pendingRequests", { count: (pending ?? []).length })} id="pending">
           {(pending ?? []).length === 0 ? <p className="text-sm text-muted">{t("noPending")}</p> : null}
           <ul className="flex flex-col gap-3">
@@ -251,9 +300,12 @@ export default async function ManageVenuePage({ params, searchParams }: PageProp
                     {sameDay
                       .filter((b) => b.field_id === f.id)
                       .map((b) => (
-                        <li key={b.id} className="num flex justify-between gap-2 rounded-lg bg-surface-2 px-2 py-1">
+                        <li key={b.id} className={cn("num flex justify-between gap-2 rounded-lg px-2 py-1", b.status === "requested" ? "border border-dashed border-warning/50 bg-warning/5" : "bg-surface-2")}>
                           <span dir="ltr">{formatTime(b.starts_at, locale, zone)}–{formatTime(b.ends_at, locale, zone)}</span>
-                          <span className="truncate text-muted">{b.kind === "block" ? t("blocked") : (b.requester?.display_name ?? b.customer_name ?? t("walkIn"))}</span>
+                          <span className="truncate text-muted">
+                            {b.kind === "block" ? t("blocked") : (b.requester?.display_name ?? b.customer_name ?? t("walkIn"))}
+                            {b.status === "requested" ? ` · ${t("held")}` : null}
+                          </span>
                         </li>
                       ))}
                   </ul>
@@ -262,7 +314,7 @@ export default async function ManageVenuePage({ params, searchParams }: PageProp
             ))}
           </div>
           <ul className="flex flex-col gap-3">
-            {sameDay.map((b) => (
+            {sameDay.filter((b) => b.status !== "requested").map((b) => (
               <BookingRow key={b.id} b={b as unknown as BookingRowData} mode="staff" tz={zone} conversationId={conv.get(b.id)} />
             ))}
           </ul>

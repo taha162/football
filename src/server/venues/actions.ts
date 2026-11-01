@@ -306,15 +306,40 @@ export async function requestBookingAction(_: ActionState, fd: FormData): Promis
   if (error) return fail(dbErrorCode(error, "request_booking"));
   revalidatePath("/[locale]/my/bookings", "page");
   if (v.match_id) revalidatePath(`/[locale]/matches/${v.match_id}`, "page");
-  const status = (data as { status: string }).status;
-  return ok(status === "confirmed" ? "booking_confirmed" : "booking_requested", data);
+  const booked = data as { status: string; deposit_amount: number | null };
+  // The time is now held: next is sending the deposit, which My bookings explains.
+  if (booked.deposit_amount) redirect({ href: "/my/bookings", locale: await locale() });
+  return ok(booked.status === "confirmed" ? "booking_confirmed" : "booking_requested", data);
+}
+
+export async function reportDepositAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  const id = uuid.safeParse(fd.get("booking_id"));
+  const reference = z.string().trim().min(1, "required").max(120, "too_long").safeParse(fd.get("reference") ?? "");
+  if (!id.success) return fail("invalid");
+  if (!reference.success) return fail("validation", { reference: reference.error.issues[0]?.message ?? "invalid" });
+  return run("report_booking_deposit", { p_booking_id: id.data, p_reference: reference.data }, str(fd, "venue_id"), "deposit_reported");
+}
+
+export async function markDepositRefundedAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  const id = uuid.safeParse(fd.get("booking_id"));
+  if (!id.success) return fail("invalid");
+  return run("mark_deposit_refunded", { p_booking_id: id.data }, str(fd, "venue_id"), "deposit_refunded");
+}
+
+export async function setDepositInstructionsAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  const id = uuid.safeParse(fd.get("venue_id"));
+  const text = z.string().max(500, "too_long").safeParse(str(fd, "deposit_instructions") ?? "");
+  if (!id.success) return fail("invalid");
+  if (!text.success) return fail("validation", { deposit_instructions: "too_long" });
+  return run("set_venue_deposit_instructions", { p_venue_id: id.data, p_instructions: text.data }, id.data, "deposit_instructions_saved");
 }
 
 export async function decideBookingAction(_: ActionState, fd: FormData): Promise<ActionState> {
   const id = uuid.safeParse(fd.get("booking_id"));
   if (!id.success) return fail("invalid");
   const approve = bool(fd, "approve");
-  return run("decide_booking", { p_booking_id: id.data, p_approve: approve, p_note: str(fd, "note") }, str(fd, "venue_id"), approve ? "booking_approved" : "booking_rejected");
+  const success = approve ? (bool(fd, "deposit") ? "deposit_recorded" : "booking_approved") : "booking_rejected";
+  return run("decide_booking", { p_booking_id: id.data, p_approve: approve, p_note: str(fd, "note") }, str(fd, "venue_id"), success);
 }
 
 export async function cancelBookingAction(_: ActionState, fd: FormData): Promise<ActionState> {

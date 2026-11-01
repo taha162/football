@@ -39,6 +39,10 @@
 - Per-user rate limits (advisory-locked) for messages, invitations, reports, team creation and organizer limits. Values are in `platform_settings`.
 - Reports snapshot the reported content. Moderators can hide (and restore) matches, teams, venues, tournaments and reviews. They can remove a reported chat message: the text is erased and the report keeps a copy. They can also suspend users and resolve reports. Every action is audited and the affected owner is notified. Moderators cannot read conversations; they only see the snapshot attached to a report.
 - Contact details (phone and WhatsApp) are shown only for venues, as business contacts. Player e-mails are never exposed (DB test).
+- **Booking deposits** move between the customer and the venue directly; the platform only records them.
+  - A venue's payment details are a fraud target, because a changed wallet number would divert deposits. Only owners and managers can change them, and every change is audited (DB test).
+  - Only venue staff can record a deposit as received or returned, and only the customer can report sending it (DB test).
+  - Holding a time without paying is limited. A hold lasts an hour unless the customer reports a transfer. Holds count toward the per-user pending limit (`booking.max_pending_per_user`) and the daily booking rate limit. Staff can say a reported deposit never arrived, which frees the time.
 
 ## HTTP hardening
 

@@ -16,6 +16,7 @@ All schema objects are created by the committed migrations in `supabase/migratio
 | `…0010_storage_reference_grants` | Storage buckets and policies, seed reference data (IQD/USD, Mosul + areas), privileges |
 | `…0011_message_moderation` | `admin_remove_message`: moderators erase a reported message (audited, sender notified) |
 | `…0012_whatsapp_verification` | `whatsapp_verifications` (codes, ticket hashes, status), `private.user_phones` (verified numbers, unique), service-role-only functions `wa_create_verification`, `wa_receive`, `wa_get_verification`, `wa_consume_verification`, `wa_auth_email_for_phone`, `wa_cleanup`; `my_phone()` for the signed-in user |
+| `…0013_booking_deposits` | Booking deposits: `deposit_status` enum, deposit columns on `bookings`, `venues.deposit_instructions`, held requests in `bookings_no_overlap`, settings `booking.deposit_amount` (5,000) and `booking.deposit_hold_minutes` (60), `report_booking_deposit`, `mark_deposit_refunded`, `set_venue_deposit_instructions`; `request_booking`, `decide_booking`, `cancel_booking`, `create_manual_booking`, `quote_booking` and `field_busy_intervals` updated |
 
 ## Schemas
 
@@ -46,10 +47,11 @@ All schema objects are created by the committed migrations in `supabase/migratio
 - `team_invitations`, `team_recruitment`, `team_join_requests`.
 
 **Venues and bookings**
-- `venues` (verification status, booking mode, buffer, notice, advance window, cancellation deadline, auto-confirm), `venue_staff` (owner/manager/staff), `venue_images`, `venue_fields`.
+- `venues` (verification status, booking mode, buffer, notice, advance window, cancellation deadline, auto-confirm, deposit payment instructions), `venue_staff` (owner/manager/staff), `venue_images`, `venue_fields`.
 - `venue_opening_hours`: per weekday. A closing time earlier than the opening time means the venue is open past midnight.
 - `venue_pricing_rules`: weekday and time-window overrides of a field's hourly price.
 - `bookings`: kind `customer` / `manual` / `block`, status, integer price, `occupied_until` (end plus buffer).
+- Deposits on `bookings`: `deposit_amount` (the platform amount, never more than the price) and `deposit_status`. The status runs `pending` → `reported` (customer's reference) → `received`, or ends `forfeited` (customer cancelled), `refund_due` (venue cancelled, or a reported deposit was never checked) or `refunded`. The money goes from the customer to the venue directly; the database records what each side reports, with who and when (`deposit_received_by`, `deposit_refunded_by`, audit log).
 
 **Matches**
 - `match_series` (weekly recurrence), `matches`, `match_participants`, `match_waitlist`, `match_invitations`.
@@ -75,7 +77,8 @@ All schema objects are created by the committed migrations in `supabase/migratio
 | Match over-capacity | `join_match` / `do_join` lock the match row (`FOR UPDATE`) and recount before inserting. A CHECK keeps `confirmed_count + reserved_spots <= total_players`. 20 simultaneous joins for 5 slots produce exactly 5 confirmed (DB test). |
 | Duplicate registration | Partial unique index on `(match_id, user_id)` for active participant statuses, plus the same for the waiting list. |
 | Waiting-list order | `seq` identity assigned while holding the match lock. Promotion takes the lowest `seq` (DB test asserts order 1..n). |
-| Double booking | `bookings_no_overlap`: GiST `EXCLUDE (field_id WITH =, tstzrange(starts_at, occupied_until) WITH &&)` for confirmed/completed/no_show bookings. Confirming paths take `private.lock_field(field_id)` (advisory xact lock) first, so concurrent confirmations serialize instead of deadlocking. Overlapping pending requests are declined automatically (`slot_taken`) in the same transaction. Two simultaneous confirmations produce exactly 1 (DB test). |
+| Double booking | `bookings_no_overlap`: GiST `EXCLUDE (field_id WITH =, tstzrange(starts_at, occupied_until) WITH &&)` for confirmed/completed/no_show bookings and for requests holding their slot for a deposit. Confirming paths take `private.lock_field(field_id)` (advisory xact lock) first, so concurrent confirmations serialize instead of deadlocking. Overlapping pending requests are declined automatically (`slot_taken`) in the same transaction. Two simultaneous confirmations produce exactly 1 (DB test). |
+| Paying twice for one slot | A request that needs a deposit holds its slot inside the exclusion constraint until `expires_at` (one hour; kickoff once the customer reports the transfer), so two customers can never pay for the same time. Every booking write first takes the field lock and runs `private.release_expired_holds`, so an overdue hold is released at once rather than when the scheduled job runs. A trigger on expiry tells the customer, and turns a reported deposit nobody checked into `refund_due`. Ten simultaneous requests plus a staff booking for one slot produce exactly one (DB test). |
 | Booking outside rules | `validate_booking_slot` checks opening hours (including overnight), minimum notice, maximum advance and duration. The price is computed server-side from pricing rules (`price_for_duration`). The client never sends a price. |
 | Invalid status changes | BEFORE UPDATE triggers call `match_transition_allowed` / `tournament_transition_allowed`, so every code path is covered. |
 | Rate abuse | `private.rate_limit(bucket, max, window)` serialized per user and bucket with `pg_advisory_xact_lock`. |
@@ -103,7 +106,7 @@ Public-read buckets `avatars`, `team-logos` and `venue-images` each have a 5 MB 
 
 ## Scheduled jobs (`run_scheduled_jobs`)
 
-1. Expire undecided booking requests and notify the requester.
+1. Expire undecided booking requests and notify the requester. For held requests, the expiry trigger sends the deposit-specific notice instead, and marks a reported deposit `refund_due`.
 2. Mark confirmed bookings completed one day after they end if the venue did not record an outcome.
 3. Close expired recruitment listings and opponent requests.
 4. Send match reminders for the next 24 hours, once per match (dedupe key).
