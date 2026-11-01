@@ -118,7 +118,7 @@
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Production (+ Preview) | مفتاح anon. عام بطبيعته، والحماية عبر RLS |
 | `SUPABASE_SERVICE_ROLE_KEY` | Production فقط | **سري.** يُستخدم في `/api/cron` فقط |
 | `CRON_SECRET` | Production فقط | نص عشوائي من 32 حرفاً أو أكثر، مثل ناتج `openssl rand -hex 32`. يرسله Vercel Cron تلقائياً في ترويسة `Authorization: Bearer …` |
-| `NEXT_PUBLIC_SITE_URL` | **Production فقط** | النطاق النهائي، مثل `https://malaab.example`. لا تضعه في Preview حتى تبقى روابط المعاينة صحيحة |
+| `NEXT_PUBLIC_SITE_URL` | **Production فقط** | النطاق النهائي فقط، مثل `https://malaab.example`، بدون `/ar` في آخره (إن نُسخ مع `/ar` يتجاهلها الموقع). لا تضعه في Preview حتى تبقى روابط المعاينة صحيحة |
 | `NEXT_PUBLIC_MAP_PROVIDER` | اختياري | `none` (الافتراضي) أو `mapbox` |
 | `NEXT_PUBLIC_MAPBOX_TOKEN` | اختياري | مع `mapbox` فقط. استخدم مفتاحاً عاماً مقيّداً بنطاقك |
 
@@ -284,6 +284,7 @@
 | `/api/health` يعطي `database: error` | الرابط أو المفتاح خطأ، أو أن الـ migrations لم تُطبّق |
 | رابط تأكيد البريد يفتح localhost | `NEXT_PUBLIC_SITE_URL` خطأ، أو أن Site URL في Supabase غير محدث |
 | `/api/cron` يعطي 401 | `CRON_SECRET` غير مطابق أو أقصر من 16 حرفاً |
+| البوت لا يرد على Start أو على الرمز | في **الإدارة ← الإعدادات** انظر سطر «يجب أن يرسل البوت التحديثات إلى»: يجب أن يكون `https://<your-domain>/api/telegram/webhook` بلا `/ar`. ثم اضغط **اربط من جديد** |
 | مشاركة الرقم في بوت تيليغرام لا تفعّل الحساب | من **الإدارة ← الإعدادات** تأكد أن البوت **مربوط**، واضغط **اربط البوت** بعد أي تغيير في الرمز أو العنوان (القسم 6) |
 | رمز التفعيل لا يصل، أو تظهر «لا نستطيع الإرسال إلى هذا البريد بعد» | خدمة البريد المدمجة في Supabase ترسل لأعضاء فريق المشروع فقط ونحو رسالتين في الساعة: اضبط SMTP (قسم «البريد» أعلاه) |
 | الرمز يصل إلى Spam | أرسل من نطاق خاص موثّق (SPF وDKIM وDMARC) عبر مزوّد بريد، والصق القالب الجديد الخالي من الروابط |

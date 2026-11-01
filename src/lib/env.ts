@@ -5,13 +5,31 @@
  */
 
 /**
+ * The origin (scheme + host) of a site address as someone typed it. Copying
+ * the address from the browser brings the language path along
+ * ("https://al-malab.vercel.app/ar"), which must not end up in webhook or
+ * e-mail links, so any path, query or fragment is dropped. Null if unusable.
+ */
+export function siteOrigin(value: string): string | null {
+  const v = value.trim();
+  if (!v) return null;
+  try {
+    const url = new URL(/^https?:\/\//i.test(v) ? v : `https://${v}`);
+    return url.hostname ? url.origin : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Absolute site origin. An explicit NEXT_PUBLIC_SITE_URL wins (set it for the
  * production environment, e.g. a custom domain). On Vercel it otherwise falls
  * back to the system variables, so preview deployments send auth e-mail links
  * to their own URL.
  */
 function resolveSiteUrl(): string {
-  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "");
+  const explicit = siteOrigin(process.env.NEXT_PUBLIC_SITE_URL ?? "");
+  if (explicit) return explicit;
   const host =
     process.env.NEXT_PUBLIC_VERCEL_ENV === "production"
       ? process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL
