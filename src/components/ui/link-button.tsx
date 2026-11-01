@@ -104,7 +104,7 @@ export function LinkButton({
   );
 }
 
-/** LinkButton for another site (WhatsApp, maps): opens it in a new tab, again without an address preview. */
+/** LinkButton for another site (Telegram, maps): opens it in a new tab, again without an address preview. */
 export function ExternalLinkButton({ href, className, ...rest }: Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "href" | "target" | "rel"> & { href: string }) {
   const open = () => window.open(href, "_blank", "noopener,noreferrer");
   return (

@@ -8,11 +8,11 @@ Last updated: 2026-10-29. "Verified" means covered by an automated test that pas
 | --- | --- |
 | `pnpm lint` | Clean |
 | `pnpm typecheck` | Clean (TS strict) |
-| `pnpm i18n:check` | 1783 keys, ar/en in sync, all static keys resolved |
-| `pnpm test:unit` | 50 passed (domain rules, ball physics, camera and quality logic, auth error mapping) |
-| `pnpm test:db` | 81 passed (concurrency, RLS, RPC rules, jobs, WhatsApp verification, booking deposits) |
+| `pnpm i18n:check` | 1798 keys, ar/en in sync, all static keys resolved |
+| `pnpm test:unit` | 57 passed (domain rules, ball physics, camera and quality logic, auth error mapping, reading Telegram updates) |
+| `pnpm test:db` | 84 passed (concurrency, RLS, RPC rules, jobs, phone verification with Telegram, booking deposits) |
 | `pnpm build` | Succeeds (Next.js 16.4, Turbopack) |
-| `pnpm e2e` (production build) | 36 passed: 34 desktop, 2 mobile (Pixel 7, Arabic RTL) |
+| `pnpm e2e` (production build) | 37 passed: 34 desktop, 3 mobile (Pixel 7, Arabic RTL; one at tablet widths) |
 
 ## Features
 
@@ -23,7 +23,15 @@ Legend: ✅ implemented and verified by automated tests · 🟡 implemented, exe
   - The code e-mail contains no links, which keeps it from looking like phishing to spam filters — E2E.
   - Signing up with an address that already has an account says so, instead of waiting for a code — E2E.
   - If an e-mail cannot be sent, the site says why and logs it; it never claims a code or reset link was sent. The causes are a failing mail server, Supabase's built-in mail service refusing addresses outside the project team, and the hourly e-mail allowance running out. Covered by unit tests on Supabase's recorded responses, and checked by hand in the browser with the local mail server stopped. The hosted built-in service's refusal could not be reproduced locally.
-- ✅ **WhatsApp verification without paid messages:** the user sends a one-time code from their own WhatsApp to the platform number; the signed Cloud API webhook activates the account and links the sender's number. Sign-in with phone + password, password recovery by sending a code from the same number, one account per number — DB (7 tests) and E2E with signed webhook payloads. **Not yet tested against Meta's real service** (needs the owner's Meta app and number); hidden until its env vars are set.
+- ✅ **Phone sign-up confirmed by a Telegram bot (free, no Meta account):**
+  - The user opens the bot from the site and taps "Share my number". Telegram delivers their own contact card to the webhook, which activates the account and links that number.
+  - Sign-in works with phone + password. Password recovery shares the same number again. One account per number.
+  - The page notices when the bot has been opened and carries on by itself once the number is verified.
+  - Guarded by: the webhook's secret token, and only the sender's own, unforwarded contact counts. A code belongs to the Telegram account that opened it first, each Telegram account may try a limited number of codes, and each connection a limited number of unfinished verifications.
+  - Covered by DB tests (10), unit tests on reading Telegram updates (7) and E2E tests posting Telegram-shaped updates (3).
+  - An administrator connects the bot from Admin → Settings, which shows its state.
+  - **Not yet tried with a real bot** (needs the owner's bot token). The option stays hidden until `TELEGRAM_BOT_TOKEN` and `TELEGRAM_BOT_USERNAME` are set.
+  - Replaces the WhatsApp verification, which needed Meta's Cloud API.
 - ✅ Sign-out, onboarding (city, positions, skill) — E2E A.
 - 🟡 Forgot and reset password. Wired to Supabase Auth; requires SMTP in production. Locally, mail goes to the mail catcher.
 - ✅ Profile photo upload (magic-byte checked). After the upload, the server checks that storage really serves the picture; if the bucket is private, the upload is undone with a clear message. A picture that fails to load falls back to the original file, then to initials, never a broken-image mark — E2E profile spec (3 tests). Team logos and venue images use the same check and fallback (not E2E-tested).

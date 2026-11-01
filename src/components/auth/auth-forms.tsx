@@ -13,7 +13,7 @@ import {
   signUpAction,
   verifyEmailCodeAction,
 } from "@/server/auth";
-import { startWhatsappResetAction, startWhatsappSignupAction } from "@/server/whatsapp";
+import { startTelegramResetAction, startTelegramSignupAction } from "@/server/telegram";
 import { useActionMessage } from "@/components/ui/use-action-message";
 
 export function SignInForm({ next, allowPhone = false }: { next?: string; allowPhone?: boolean }) {
@@ -74,12 +74,12 @@ export function SignUpForm() {
   );
 }
 
-/** Name + password + terms; the phone number comes from the WhatsApp message itself. */
-export function WhatsappSignUpForm() {
+/** Name + password + terms; the phone number comes from Telegram itself. */
+export function TelegramSignUpForm() {
   const t = useTranslations("auth");
   return (
-    <ActionForm action={startWhatsappSignupAction}>
-      <Alert tone="info">{t("whatsappSignupNote")}</Alert>
+    <ActionForm action={startTelegramSignupAction}>
+      <Alert tone="info">{t("telegramSignupNote")}</Alert>
       <FormField name="display_name" label={t("displayName")} hint={t("displayNameHint")} required>
         {(a) => <Input {...a} autoComplete="nickname" required minLength={2} maxLength={40} />}
       </FormField>
@@ -98,7 +98,7 @@ export function WhatsappSignUpForm() {
           />
         )}
       </FormField>
-      <SubmitButton size="lg">{t("continueWhatsapp")}</SubmitButton>
+      <SubmitButton size="lg">{t("continueTelegram")}</SubmitButton>
     </ActionForm>
   );
 }
@@ -133,12 +133,12 @@ export function VerifyEmailForm() {
   );
 }
 
-export function WhatsappResetForm() {
+export function TelegramResetForm() {
   const t = useTranslations("auth");
   return (
-    <ActionForm action={startWhatsappResetAction}>
-      <p className="text-sm text-muted">{t("forgotWhatsappNote")}</p>
-      <SubmitButton size="lg" variant="secondary">{t("forgotWhatsapp")}</SubmitButton>
+    <ActionForm action={startTelegramResetAction}>
+      <p className="text-sm text-muted">{t("forgotTelegramNote")}</p>
+      <SubmitButton size="lg" variant="secondary">{t("forgotTelegram")}</SubmitButton>
     </ActionForm>
   );
 }

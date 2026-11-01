@@ -41,11 +41,11 @@ export async function signInAction(_: ActionState, fd: FormData): Promise<Action
 
   let address: string;
   if (looksLikePhone(login)) {
-    // Phone sign-in (WhatsApp-verified accounts): map the number to its auth address.
+    // Phone sign-in (accounts verified with Telegram): map the number to its auth address.
     const phone = normalizePhone(login);
     const admin = createAdminClient();
     if (!phone) return fail("validation", { email: "invalid_phone" });
-    const { data } = admin ? await admin.rpc("wa_auth_email_for_phone", { p_phone: phone }) : { data: null };
+    const { data } = admin ? await admin.rpc("auth_email_for_phone", { p_phone: phone }) : { data: null };
     if (!data) return fail("invalid_credentials");
     address = data as string;
   } else {
