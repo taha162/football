@@ -973,7 +973,8 @@ html[data-intro="headline"] .stage-fallback {
 .scene-final {
   min-height: 125svh;
 }
-@media (min-width: 768px) {
+/* From 1024px the bottom navigation bar gives way to the header's (site-header, mobile-nav). */
+@media (min-width: 1024px) {
   .scene-hero {
     padding-bottom: 7.5rem;
   }
@@ -1210,7 +1211,7 @@ html[data-intro="headline"] .stage-fallback {
   inset-inline: 0;
   bottom: 5rem;
 }
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   .hero-strip {
     bottom: 1.75rem;
   }
@@ -1321,8 +1322,8 @@ html[data-intro="headline"] .stage-fallback {
 }
 
 /* ---- Scene controls and the ball -------------------------------------- */
-/* Phones: under the header (the bottom belongs to the navigation bar). Larger
-   screens: bottom corner, where media controls usually live. */
+/* Phones and tablets: under the header (the bottom belongs to the navigation
+   bar). From 1024px: bottom corner, where media controls usually live. */
 .stage-controls {
   position: fixed;
   z-index: 30;
@@ -1332,7 +1333,7 @@ html[data-intro="headline"] .stage-fallback {
   align-items: center;
   gap: 0.5rem;
 }
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   .stage-controls {
     top: auto;
     bottom: 1.5rem;

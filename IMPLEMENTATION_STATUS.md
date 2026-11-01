@@ -110,12 +110,17 @@ Legend: ✅ implemented and verified by automated tests · 🟡 implemented, exe
 
   🟡 **Not verified on real devices, or in Safari or Firefox.** Where view transitions, `linear()` springs or `@starting-style` are missing, content appears without the animation. The guard against animating a browser swipe-back twice relies on `hasUAVisualTransition`, which not every browser reports. iPhones do not vibrate (no vibration API in Safari). Link buttons have no "open in new tab" or "copy link" in the right-click menu (Ctrl/⌘-click and middle-click still open a new tab).
 - ✅ **Brand: «الملعب» / Al-Malab.**
-  - The owner's logo was traced to SVG (`public/brand/`). It appears in the header and footer; in Arabic next to the logo's own «الملعب» lettering, in English next to "Al-Malab".
+  - The owner's original artwork is `public/brand/al-malab-logo.svg`. The tile, the «الملعب» lettering and every icon are cut from it, apart from a version of the player with thicker lines that stays readable at icon sizes. The logo appears in the header and footer: in Arabic next to the logo's own lettering, in English next to "Al-Malab".
   - It is also the browser icon, the iPhone home-screen icon, the image shown when a link is shared (WhatsApp, social) and the logo in the auth e-mails.
-  - The logo's line «احنا الاسسنا الملعب واحنا النلعب بي» appears in the footer and on the home page's first screen.
-  - The phone header fits 360–412 px wide screens in both languages, signed in and out. The mobile E2E test now also checks that the layout never grows wider than the screen.
+  - The logo's line «احنا الاسسنا الملعب واحنا النلعب بي» appears in the header, in the footer and on the home page's first screen.
+    - In the header it sits under the name, in the logo's own lettering and colour, placed exactly as on the artwork.
+    - In English it sits under "Al-Malab".
+  - The header fits 360–412 px phones and 768–1024 px tablets in both languages, signed in and out (the tablet check uses an administrator, whose header is the fullest).
+    - The mobile E2E tests check that the layout never grows wider than the screen.
 - ✅ Arabic (RTL, default) and English (LTR), with the locale persisted per user and cookie. A first visit opens in Arabic whatever the browser's language — E2E J and mobile.
-- ✅ Mobile layout with bottom navigation and no horizontal overflow on phone widths — E2E mobile.
+- ✅ Mobile layout with bottom navigation and no horizontal overflow on phone and tablet widths — E2E mobile.
+  - Phones and tablets up to 1023 px use the bottom navigation bar. The full navigation joins the header from 1024 px.
+  - Below 1024 px the header ran out of room, and had already overflowed on 768–820 px tablets.
 - ✅ Scheduled jobs (`/api/cron` → `run_scheduled_jobs`) are idempotent — DB.
 - 🟡 Health endpoint, structured redacting logs, security headers.
 - 🟡 Maps. With `NEXT_PUBLIC_MAP_PROVIDER=none` (the default), the address and an "open in maps" link are shown. With `mapbox` plus a token, static map images appear on venue pages and match discovery. The Mapbox path has **not** been tested, because no token is available. There are no interactive maps.
