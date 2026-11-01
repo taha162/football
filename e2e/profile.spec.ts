@@ -6,9 +6,9 @@ const PHOTO = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAIAAABLbSncAAAAFUlEQ
 
 async function uploadPhoto(page: Page, user: TestUser) {
   await signIn(page, user);
-  await page.goto("/en/profile");
-  await page.getByLabel("Profile photo").setInputFiles({ name: "me.png", mimeType: "image/png", buffer: PHOTO });
-  await page.getByRole("button", { name: "Upload photo" }).click();
+  await page.goto("/ar/profile");
+  await page.getByLabel("الصورة الشخصية").setInputFiles({ name: "me.png", mimeType: "image/png", buffer: PHOTO });
+  await page.getByRole("button", { name: "رفع صورة" }).click();
 }
 
 const headerAvatar = (page: Page) => page.locator("summary.menu-trigger > span");
@@ -19,7 +19,7 @@ test.describe.configure({ mode: "serial" });
 test.describe("Profile photo", () => {
   test("an uploaded photo shows as the avatar", async ({ page }) => {
     await uploadPhoto(page, await createAuthUser("Photo"));
-    await expect(page.getByText("Photo updated.")).toBeVisible();
+    await expect(page.getByText("تم تحديث الصورة.")).toBeVisible();
     const img = headerAvatar(page).locator("img");
     await expect(img).toBeVisible();
     await expect.poll(() => img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)).toBe(true);
@@ -27,7 +27,7 @@ test.describe("Profile photo", () => {
 
   test("a photo that cannot load falls back to initials, never a broken image", async ({ page }) => {
     await uploadPhoto(page, await createAuthUser("Broken"));
-    await expect(page.getByText("Photo updated.")).toBeVisible();
+    await expect(page.getByText("تم تحديث الصورة.")).toBeVisible();
     // From here on, neither the optimized copy nor the original file can be fetched.
     await page.route("**/storage/v1/object/public/avatars/**", (route) => route.abort());
     await page.route("**/_next/image?**", (route) => route.abort());
@@ -41,7 +41,7 @@ test.describe("Profile photo", () => {
     await admin("update storage.buckets set public = false where id = 'avatars'");
     try {
       await uploadPhoto(page, user);
-      await expect(page.getByText("The picture couldn't be published: picture storage isn't open to the public yet.", { exact: false })).toBeVisible();
+      await expect(page.getByText("تعذّر نشر الصورة: مخزن الصور غير مفتوح للعرض العام بعد.", { exact: false })).toBeVisible();
       await expect(headerAvatar(page).locator("img")).toHaveCount(0);
     } finally {
       await admin("update storage.buckets set public = true where id = 'avatars'");

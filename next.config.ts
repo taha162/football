@@ -68,6 +68,14 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
+  // The site is Arabic only: old English links open the same page in Arabic.
+  // Temporary (307), so English can come back without browsers holding on to it.
+  async redirects() {
+    return [
+      { source: "/en", destination: "/ar", permanent: false },
+      { source: "/en/:path*", destination: "/ar/:path*", permanent: false },
+    ];
+  },
 };
 
 export default withNextIntl(nextConfig);

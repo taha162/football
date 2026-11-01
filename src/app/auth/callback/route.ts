@@ -21,6 +21,5 @@ export async function GET(request: NextRequest) {
   } else if (tokenHash && type) {
     ok = !(await supabase.auth.verifyOtp({ type, token_hash: tokenHash })).error;
   }
-  const locale = next.startsWith("/en") ? "en" : "ar";
-  return NextResponse.redirect(new URL(ok ? next : `/${locale}/sign-in?error=link_invalid`, origin));
+  return NextResponse.redirect(new URL(ok ? next : "/ar/sign-in?error=link_invalid", origin));
 }

@@ -7,16 +7,16 @@ test.describe("Journey B — organizer creates and manages a match", () => {
     const title = `Journey B ${Date.now()}`;
 
     await signIn(page, organizer);
-    await page.goto("/en/matches/new");
-    await page.getByRole("textbox", { name: "Title" }).fill(title);
-    await page.getByRole("textbox", { name: "Total cost" }).fill("50001");
-    await expect(page.getByText(/Each of 10 players pays about/)).toContainText("5,001");
-    await page.getByRole("button", { name: "Publish match" }).click();
-    await page.waitForURL(/\/en\/matches\/[0-9a-f-]{36}$/);
+    await page.goto("/ar/matches/new");
+    await page.getByRole("textbox", { name: "العنوان" }).fill(title);
+    await page.getByRole("textbox", { name: "التكلفة الإجمالية" }).fill("50001");
+    await expect(page.getByText(/يدفع كل لاعب من/)).toContainText("٥٬٠٠١");
+    await page.getByRole("button", { name: "نشر المباراة" }).click();
+    await page.waitForURL(/\/ar\/matches\/[0-9a-f-]{36}$/);
     const matchId = page.url().split("/").pop()!;
     await expect(page.getByRole("heading", { name: title })).toBeVisible();
-    await expect(page.getByText("IQD 5,001").or(page.getByText("5,001")).first()).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Organizer tools" })).toBeVisible();
+    await expect(page.getByText(/٥٬٠٠١/).first()).toBeVisible();
+    await expect(page.getByRole("heading", { name: "أدوات المنظم" })).toBeVisible();
 
     // A player joins (fixture through the same RPC the UI uses).
     await rpc(player.id, "join_match", { p_match_id: matchId });
@@ -25,17 +25,17 @@ test.describe("Journey B — organizer creates and manages a match", () => {
     await expect(row).toBeVisible();
 
     // Manual payment tracking (never a "payment success").
-    await row.getByLabel("Payment (manual)").selectOption("paid");
-    await row.getByRole("button", { name: "Update" }).click();
-    await expect(page.getByRole("listitem").filter({ hasText: player.name }).locator("span", { hasText: "Paid (marked)" })).toBeVisible();
+    await row.getByLabel("الدفع (يدوي)").selectOption("paid");
+    await row.getByRole("button", { name: "تحديث" }).click();
+    await expect(page.getByRole("listitem").filter({ hasText: player.name }).locator("span", { hasText: "دفع (يدوياً)" })).toBeVisible();
 
     // Organizer confirms the match, then removes the player.
-    await page.getByRole("button", { name: "Confirm match" }).click();
-    await expect(page.getByText("Confirmed", { exact: true }).first()).toBeVisible();
-    await page.getByRole("listitem").filter({ hasText: player.name }).getByRole("button", { name: "Remove" }).click();
-    const dialog = page.getByRole("dialog", { name: `Remove ${player.name}?` });
+    await page.getByRole("button", { name: "تأكيد المباراة" }).click();
+    await expect(page.getByText("مؤكدة", { exact: true }).first()).toBeVisible();
+    await page.getByRole("listitem").filter({ hasText: player.name }).getByRole("button", { name: "إزالة" }).click();
+    const dialog = page.getByRole("dialog", { name: `إزالة ${player.name}؟` });
     await dialog.getByRole("textbox").fill("Changed plans");
-    await dialog.getByRole("button", { name: "Remove" }).click();
+    await dialog.getByRole("button", { name: "إزالة" }).click();
     await expect(page.getByRole("listitem").filter({ hasText: player.name })).toHaveCount(0);
   });
 });

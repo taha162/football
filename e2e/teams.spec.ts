@@ -9,32 +9,32 @@ test.describe("Journey D — team creation, invitation and recruitment", () => {
     const capCtx = await browser.newContext();
     const page = await capCtx.newPage();
     await signIn(page, captain);
-    await page.goto("/en/teams/new");
-    await page.getByRole("textbox", { name: "Team name" }).fill(teamName);
-    await page.getByRole("button", { name: "Create team" }).click();
-    await page.waitForURL(/\/en\/teams\/[0-9a-f-]{36}\/manage/);
+    await page.goto("/ar/teams/new");
+    await page.getByRole("textbox", { name: "اسم الفريق" }).fill(teamName);
+    await page.getByRole("button", { name: "إنشاء الفريق" }).click();
+    await page.waitForURL(/\/ar\/teams\/[0-9a-f-]{36}\/manage/);
     const teamId = page.url().split("/").at(-2)!;
 
-    await page.getByPlaceholder("Search players by name").fill(member.name);
-    await page.getByRole("button", { name: "Search", exact: true }).click();
-    await page.getByRole("listitem").filter({ hasText: member.name }).getByRole("button", { name: "Invite" }).click();
-    await expect(page.getByText(`${member.name} — invited`)).toBeVisible();
+    await page.getByPlaceholder("ابحث عن لاعبين بالاسم").fill(member.name);
+    await page.getByRole("button", { name: "بحث", exact: true }).click();
+    await page.getByRole("listitem").filter({ hasText: member.name }).getByRole("button", { name: "دعوة" }).click();
+    await expect(page.getByText(`${member.name} — مدعو`)).toBeVisible();
 
-    await page.getByRole("textbox", { name: "Listing title" }).fill("Goalkeeper wanted");
-    await page.getByText("Goalkeeper", { exact: true }).first().click();
-    await page.getByRole("button", { name: "Publish listing" }).click();
+    await page.getByRole("textbox", { name: "عنوان الإعلان" }).fill("Goalkeeper wanted");
+    await page.getByText("حارس مرمى", { exact: true }).first().click();
+    await page.getByRole("button", { name: "نشر الإعلان" }).click();
     await expect(page.getByText("Goalkeeper wanted")).toBeVisible();
 
     const memCtx = await browser.newContext();
     const memberPage = await memCtx.newPage();
     await signIn(memberPage, member);
-    await expect(memberPage.getByText("You're invited to join")).toBeVisible();
-    await memberPage.getByRole("button", { name: "Accept" }).click();
-    await memberPage.goto(`/en/teams/${teamId}`);
+    await expect(memberPage.getByText("أنت مدعو للانضمام إلى")).toBeVisible();
+    await memberPage.getByRole("button", { name: "قبول" }).click();
+    await memberPage.goto(`/ar/teams/${teamId}`);
     await expect(memberPage.getByRole("link", { name: member.name })).toBeVisible();
-    await expect(memberPage.getByRole("button", { name: "Leave team" })).toBeVisible();
+    await expect(memberPage.getByRole("button", { name: "مغادرة الفريق" })).toBeVisible();
 
-    await memberPage.goto("/en/recruitment?position=goalkeeper");
+    await memberPage.goto("/ar/recruitment?position=goalkeeper");
     await expect(memberPage.getByRole("heading", { name: "Goalkeeper wanted" }).first()).toBeVisible();
     await capCtx.close();
     await memCtx.close();
@@ -52,33 +52,33 @@ test.describe("Journey E — two teams arrange a match", () => {
     const ctxA = await browser.newContext();
     const pageA = await ctxA.newPage();
     await signIn(pageA, capA);
-    await pageA.goto(`/en/opponents?team=${teamA}`);
-    const publishForm = pageA.locator("form").filter({ has: pageA.getByRole("button", { name: "Publish request" }) });
-    await publishForm.getByRole("textbox", { name: "Rules / notes" }).fill(`E2E request ${teamA.slice(0, 6)}`);
-    await publishForm.getByRole("button", { name: "Publish request" }).click();
-    await expect(pageA.getByText("Opponent request published.")).toBeVisible();
+    await pageA.goto(`/ar/opponents?team=${teamA}`);
+    const publishForm = pageA.locator("form").filter({ has: pageA.getByRole("button", { name: "نشر الطلب" }) });
+    await publishForm.getByRole("textbox", { name: "القواعد / ملاحظات" }).fill(`E2E request ${teamA.slice(0, 6)}`);
+    await publishForm.getByRole("button", { name: "نشر الطلب" }).click();
+    await expect(pageA.getByText("تم نشر طلب المنافس.")).toBeVisible();
 
     const ctxB = await browser.newContext();
     const pageB = await ctxB.newPage();
     await signIn(pageB, capB);
-    await pageB.goto(`/en/opponents?team=${teamB}`);
-    const card = pageB.locator("div").filter({ hasText: `E2E request ${teamA.slice(0, 6)}` }).filter({ has: pageB.getByText("Send a challenge") }).last();
-    await card.getByText("Send a challenge").click();
-    await card.getByRole("textbox", { name: "Message" }).fill("Thursday works for us");
-    await card.getByRole("button", { name: "Send challenge" }).click();
-    await expect(pageB.getByText("Challenge sent.")).toBeVisible();
+    await pageB.goto(`/ar/opponents?team=${teamB}`);
+    const card = pageB.locator("div").filter({ hasText: `E2E request ${teamA.slice(0, 6)}` }).filter({ has: pageB.getByText("أرسل تحدياً") }).last();
+    await card.getByText("أرسل تحدياً").click();
+    await card.getByRole("textbox", { name: "رسالة" }).fill("Thursday works for us");
+    await card.getByRole("button", { name: "إرسال التحدي" }).click();
+    await expect(pageB.getByText("تم إرسال التحدي.")).toBeVisible();
 
     await pageA.reload();
     const incoming = pageA.getByRole("listitem").filter({ hasText: "Thursday works for us" });
     await expect(incoming).toBeVisible();
-    await incoming.getByRole("button", { name: "Accept & schedule" }).click();
-    await pageA.waitForURL(/\/en\/matches\/[0-9a-f-]{36}$/);
-    await expect(pageA.getByText("Team vs team").first()).toBeVisible();
+    await incoming.getByRole("button", { name: "قبول وجدولة" }).click();
+    await pageA.waitForURL(/\/ar\/matches\/[0-9a-f-]{36}$/);
+    await expect(pageA.getByText("فريق ضد فريق").first()).toBeVisible();
 
     // The other captain sees the fixture and can join on their side.
     await pageB.goto(pageA.url().replace(/^https?:\/\/[^/]+/, ""));
-    await pageB.getByRole("button", { name: "Join match" }).click();
-    await expect(pageB.getByText("You're in", { exact: true })).toBeVisible();
+    await pageB.getByRole("button", { name: "انضم للمباراة" }).click();
+    await expect(pageB.getByText("أنت مسجل", { exact: true })).toBeVisible();
     await ctxA.close();
     await ctxB.close();
       });

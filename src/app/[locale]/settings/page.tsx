@@ -8,7 +8,6 @@ import { blockUserAction, savePreferencesAction } from "@/server/profile";
 import { signOutAction } from "@/server/auth";
 import { ActionForm, InlineAction, SubmitButton } from "@/components/ui/action-form";
 import { buttonClass } from "@/components/ui/button";
-import { Select } from "@/components/ui/field";
 import { Card, CardBody, Container, DefinitionList, PageHeader, Section } from "@/components/ui/primitives";
 import { LinkButton } from "@/components/ui/link-button";
 
@@ -61,13 +60,6 @@ export default async function SettingsPage({ params }: PageProps<"/[locale]/sett
         <Card>
           <CardBody>
             <ActionForm action={savePreferencesAction}>
-              <label className="flex flex-col gap-1 text-sm">
-                {t("language")}
-                <Select name="locale" defaultValue={prefs?.locale ?? locale}>
-                  <option value="ar">العربية</option>
-                  <option value="en">English</option>
-                </Select>
-              </label>
               <fieldset className="flex flex-col gap-2">
                 <legend className="mb-1 text-sm font-medium">{t("notifications")}</legend>
                 <p className="text-xs text-muted">{t("notificationsHint")}</p>

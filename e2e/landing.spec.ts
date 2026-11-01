@@ -22,30 +22,30 @@ const stageState = (page: Page) => page.evaluate(() => document.documentElement.
 test.describe("Landing stage", () => {
   test("tells its story in six scenes, each with working actions", async ({ page }) => {
     await withoutWebGL(page);
-    await page.goto("/en");
+    await page.goto("/ar");
     await expect(page.locator("[data-scene]")).toHaveCount(6);
-    await expect(page.getByRole("heading", { level: 1, name: "Your next game starts here." })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "مباراتك القادمة تبدأ من هنا." })).toBeVisible();
     // Button-like controls navigate without an href (no address preview); data-href names the destination.
-    await expect(page.getByRole("link", { name: "Find a match" }).first()).toHaveAttribute("data-href", "/en/matches");
-    await expect(page.getByRole("link", { name: "Book a pitch" })).toHaveAttribute("data-href", "/en/venues?bookable=1");
+    await expect(page.getByRole("link", { name: "ابحث عن مباراة" }).first()).toHaveAttribute("data-href", "/ar/matches");
+    await expect(page.getByRole("link", { name: "احجز ملعبًا" })).toHaveAttribute("data-href", "/ar/venues?bookable=1");
     for (const title of [
-      "Matches looking for players.",
-      "Build your squad, position by position.",
-      "Find your pitch.",
-      "When the lights stay on longer.",
-      "The pitch is waiting.",
+      "مباريات تبحث عن لاعبين.",
+      "ابنِ تشكيلتك، مركزًا بعد مركز.",
+      "اعثر على ملعبك.",
+      "حين تبقى الأضواء مشتعلة أطول.",
+      "الملعب بانتظارك.",
     ]) {
       await expect(page.getByRole("heading", { level: 2, name: title })).toBeAttached();
     }
     for (const position of ["goalkeeper", "defender", "midfielder", "forward"]) {
-      await expect(page.locator(`a[data-position="${position}"]`)).toHaveAttribute("data-href", `/en/recruitment?position=${position}`);
+      await expect(page.locator(`a[data-position="${position}"]`)).toHaveAttribute("data-href", `/ar/recruitment?position=${position}`);
     }
     // Every match on the board links to its own page, where the real join flow lives.
     for (const href of await page.locator('[data-scene="matches"] a.board-stretch').evaluateAll((els) => els.map((e) => e.getAttribute("href")))) {
-      expect(href).toMatch(/^\/en\/matches\/[0-9a-f-]{36}$/);
+      expect(href).toMatch(/^\/ar\/matches\/[0-9a-f-]{36}$/);
     }
-    await page.getByRole("link", { name: "Find your next match" }).click();
-    await page.waitForURL(/\/en\/matches$/);
+    await page.getByRole("link", { name: "ابحث عن مباراتك القادمة" }).click();
+    await page.waitForURL(/\/ar\/matches$/);
   });
 
   test("recruitment figures on the pitch come from the database", async ({ page }) => {
@@ -53,10 +53,13 @@ test.describe("Landing stage", () => {
     const row = () => page.locator('a[data-position="defender"]');
     const count = async () => {
       const text = (await row().innerText()).replace(/\s+/g, " ");
-      const m = text.match(/(\d+) teams? looking/);
+      // «فريق واحد يبحث», «فريقان يبحثان», «3 فرق تبحث», «11 فريقًا يبحث»…
+      if (text.includes("فريق واحد يبحث")) return 1;
+      if (text.includes("فريقان يبحثان")) return 2;
+      const m = text.match(/(\d+) (?:فرق|فريقًا|فريق) (?:تبحث|يبحث)/);
       return m ? Number(m[1]) : 0;
     };
-    await page.goto("/en");
+    await page.goto("/ar");
     const before = await count();
 
     const captain = await createAuthUser("Captain");
@@ -67,62 +70,62 @@ test.describe("Landing stage", () => {
     await page.reload();
     await expect.poll(count).toBe(before + 1);
     await row().click();
-    await page.waitForURL(/\/en\/recruitment\?position=defender/);
+    await page.waitForURL(/\/ar\/recruitment\?position=defender/);
     await expect(page.getByRole("heading", { name: title })).toBeVisible();
   });
 
   test("without WebGL it shows a still image and stays fully usable", async ({ page }) => {
     await withoutWebGL(page);
-    await page.goto("/en");
+    await page.goto("/ar");
     await expect(page.locator("html")).toHaveAttribute("data-stage", "fallback");
     await expect(page.locator("html")).toHaveAttribute("data-intro", "done");
     await expect(page.locator(".stage-fallback")).toBeVisible();
-    await expect(page.getByRole("group", { name: "Scene controls" }).getByRole("button")).toHaveCount(0);
-    await page.getByRole("link", { name: "Find a match" }).first().click();
-    await page.waitForURL(/\/en\/matches/);
+    await expect(page.getByRole("group", { name: "التحكم بالمشهد" }).getByRole("button")).toHaveCount(0);
+    await page.getByRole("link", { name: "ابحث عن مباراة" }).first().click();
+    await page.waitForURL(/\/ar\/matches/);
   });
 
   test("with reduced motion there is no opening and ambient motion starts paused", async ({ browser }) => {
     const context = await browser.newContext({ reducedMotion: "reduce" });
     const page = await context.newPage();
-    await page.goto("/en");
+    await page.goto("/ar");
     await expect(page.locator("html")).toHaveAttribute("data-intro", "done");
-    await expect(page.getByRole("heading", { level: 1, name: "Your next game starts here." })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "مباراتك القادمة تبدأ من هنا." })).toBeVisible();
     await expect.poll(() => stageState(page), { timeout: 60_000 }).toMatch(/^(live|fallback)$/);
     if ((await stageState(page)) === "live") {
-      await expect(page.getByRole("button", { name: "Play animation" })).toHaveAttribute("aria-pressed", "true");
+      await expect(page.getByRole("button", { name: "تشغيل الحركة" })).toHaveAttribute("aria-pressed", "true");
     }
-    await expect(page.getByRole("button", { name: "Skip intro" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "تخطَّ المقدمة" })).toHaveCount(0);
     await context.close();
   });
 
   test("the opening never holds the page, and can be skipped", async ({ page }) => {
-    await page.goto("/en");
+    await page.goto("/ar");
     const intro = () => page.evaluate(() => document.documentElement.dataset.intro ?? "");
     // The failsafe (3.5 s) releases the page whatever the engine is doing; allow for a busy test machine.
     await expect.poll(intro, { timeout: 15_000 }).not.toBe("wait");
-    const skip = page.getByRole("button", { name: "Skip intro" });
+    const skip = page.getByRole("button", { name: "تخطَّ المقدمة" });
     if ((await intro()) !== "done") {
       // On a slow (software-rendered) browser the opening may also end by itself meanwhile.
       await skip.click({ timeout: 3_000 }).catch(() => undefined);
     }
     await expect(page.locator("html")).toHaveAttribute("data-intro", "done", { timeout: 15_000 });
     await expect(skip).toHaveCount(0);
-    await expect(page.getByRole("link", { name: "Find a match" }).first()).toBeVisible();
+    await expect(page.getByRole("link", { name: "ابحث عن مباراة" }).first()).toBeVisible();
     await expect(page.locator(".scene-hero .stage-panel.intro-reveal")).toHaveCSS("opacity", "1");
   });
 
   test("the ball can be kicked from the keyboard and brought back", async ({ page }) => {
     await skipOpening(page);
-    await page.goto("/en");
+    await page.goto("/ar");
     await expect.poll(() => stageState(page), { timeout: 60_000 }).toMatch(/^(live|fallback)$/);
     test.skip((await stageState(page)) !== "live", "WebGL is not available in this browser");
 
-    const ball = page.getByRole("button", { name: "Kick the ball" });
+    const ball = page.getByRole("button", { name: "اركل الكرة" });
     await expect(ball).toHaveAttribute("data-on", "true", { timeout: 30_000 });
     await ball.focus();
     await page.keyboard.press("Enter");
-    const back = page.getByRole("button", { name: "Bring the ball back to the centre spot" });
+    const back = page.getByRole("button", { name: "أعد الكرة إلى نقطة المنتصف" });
     await expect(back).toBeVisible({ timeout: 30_000 });
     // The ball is rolled back with the pace to stop on the spot (it also comes back by itself after a while).
     if (await back.isVisible()) await back.click();

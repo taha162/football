@@ -7,7 +7,6 @@ import { Avatar } from "@/components/ui/avatar";
 import { buttonClass } from "@/components/ui/button";
 import { HeaderFrame } from "./header-frame";
 import { Logo } from "./logo";
-import { LocaleSwitcher } from "./locale-switcher";
 import { NavLinks } from "./nav-links";
 import { UserMenu } from "./user-menu";
 import { LinkButton } from "@/components/ui/link-button";
@@ -34,7 +33,6 @@ export async function SiteHeader({ user }: { user: CurrentUser | null }) {
           />
         </nav>
         <div className="ms-auto flex min-w-0 items-center gap-1 sm:gap-1.5">
-          <LocaleSwitcher />
           {user ? (
             <>
               <LinkButton href="/matches/new" className={buttonClass("primary", "sm", "hidden lg:inline-flex")}>
