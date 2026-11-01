@@ -50,7 +50,7 @@ export default async function AdminUsersPage({ searchParams }: PageProps<"/[loca
                   <Link href={`/players/${u.id}`} className="font-medium hover:underline">{u.display_name}</Link>
                   {u.status === "suspended" ? <Badge tone="danger" className="ms-2">{t("suspended")}</Badge> : null}
                 </td>
-                <td className="p-2 text-muted" dir="ltr">{isPhoneAccountEmail(u.email) ? <Badge tone="info">{t("whatsappAccount")}</Badge> : u.email}</td>
+                <td className="p-2 text-muted" dir="ltr">{isPhoneAccountEmail(u.email) ? <Badge tone="info">{t("phoneAccount")}</Badge> : u.email}</td>
                 <td className="p-2 text-muted">{formatDate(u.created_at, locale, "Asia/Baghdad")}</td>
                 <td className="p-2">
                   <div className="flex flex-wrap gap-1">{u.roles.map((r) => <Badge key={r} tone="accent">{t(`role.${r}`)}</Badge>)}</div>

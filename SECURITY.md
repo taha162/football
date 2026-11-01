@@ -60,14 +60,17 @@ Server Action body size is capped at 6 MB.
 
 - **E-mail code:** Supabase Auth issues and checks the code (`verifyOtp`, type `email`). It expires (1 h by default) and resends are throttled. The pending address is kept in an httpOnly cookie, not in the URL.
 - **Password reset replies** are the same whether or not an account exists, because Supabase answers unknown addresses without sending anything. The one exception is an e-mail that fails to send. That can only happen for an existing account, and the site reports it rather than claiming the link is on its way.
-- **WhatsApp (user sends the code):**
-  - The webhook accepts only requests whose `X-Hub-Signature-256` HMAC matches `WHATSAPP_APP_SECRET`, compared in constant time.
-  - The verified number is the sender id Meta delivers. The user never types it, so nobody can claim someone else's number.
+- **Phone number, confirmed by a Telegram bot (no Meta account):**
+  - The webhook accepts only updates whose `X-Telegram-Bot-Api-Secret-Token` header matches the secret registered with Telegram. That secret is derived from `TELEGRAM_BOT_TOKEN` and compared in constant time; the token never leaves the server.
+  - The verified number is the contact card Telegram delivers. It counts only when the card's `user_id` is the sender's own and the message isn't forwarded. The user never types the number, so nobody can claim someone else's.
+  - A code belongs to the Telegram account that opens it first. Another account sending the same code is refused, and its contact completes nothing.
+  - Each Telegram account may try a limited number of codes per hour (setting `telegram.max_codes_per_hour`).
   - Codes are 8 characters from a 31-symbol alphabet (~40 bits), valid for 15 minutes and usable once.
   - The browser holds only a random ticket in an httpOnly cookie, and the database stores its SHA-256.
-  - Starts are rate-limited per client (setting `whatsapp.max_starts_per_hour`).
+  - Each client (IP) may hold a limited number of *unfinished* verifications per hour (setting `verify.max_open_per_hour`). Finished ones don't count, so people who share a connection don't block each other.
   - A number can belong to one account only.
-  - All `wa_*` functions are executable by `service_role` only, and `private.user_phones` is never exposed.
+  - Registering the webhook (Admin → Settings) is limited to administrators, checked on the server.
+  - All verification functions are executable by `service_role` only, and `private.user_phones` is never exposed.
   - Phone accounts use an internal address on the reserved `.invalid` TLD, so no e-mail is ever sent to them.
   - Never-verified sign-ups are deleted by the scheduled job after a day.
 

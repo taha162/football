@@ -30,9 +30,9 @@ export async function GET(request: NextRequest) {
     logger.error("cron_failed", { code: error.code });
     return NextResponse.json({ error: "job_failed" }, { status: 500 });
   }
-  // Abandoned WhatsApp sign-ups (never verified) and old verification rows.
-  const { data: cleanup, error: cleanupError } = await admin.rpc("wa_cleanup");
-  if (cleanupError) logger.error("cron_wa_cleanup_failed", { code: cleanupError.code });
+  // Abandoned phone sign-ups (never verified) and old verification rows.
+  const { data: cleanup, error: cleanupError } = await admin.rpc("phone_verify_cleanup");
+  if (cleanupError) logger.error("cron_phone_verify_cleanup_failed", { code: cleanupError.code });
   const result = { ...(data as Record<string, unknown>), ...((cleanup as Record<string, unknown>) ?? {}) };
   logger.info("cron_completed", { ms: Date.now() - started, ...result });
   return NextResponse.json({ ok: true, result });

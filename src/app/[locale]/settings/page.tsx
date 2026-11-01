@@ -24,7 +24,7 @@ export default async function SettingsPage({ params }: PageProps<"/[locale]/sett
     supabase.from("user_blocks").select("blocked_id, profile:profiles!user_blocks_blocked_id_fkey(display_name)").eq("blocker_id", user.id),
     supabase.rpc("my_phone"),
   ]);
-  // WhatsApp accounts have only an internal auth address; show their verified number instead.
+  // Phone accounts have only an internal auth address; show their verified number instead.
   const phoneAccount = isPhoneAccountEmail(user.email);
   const muted = new Set(Object.entries((prefs?.notification_prefs ?? {}) as Record<string, boolean>).filter(([, v]) => v === false).map(([k]) => k));
 

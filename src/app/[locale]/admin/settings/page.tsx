@@ -1,11 +1,56 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { redirect } from "@/i18n/navigation";
 import { getCurrentUser } from "@/lib/auth";
+import { publicEnv } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
+import { readWebhookState, telegramConfig } from "@/lib/telegram";
 import { updateSettingAction, upsertAreaAction, upsertCityAction } from "@/server/admin";
+import { connectTelegramAction } from "@/server/telegram";
 import { ActionForm, Hidden, SubmitButton } from "@/components/ui/action-form";
 import { Input, Select } from "@/components/ui/field";
-import { Card, CardBody, PageHeader, Section } from "@/components/ui/primitives";
+import { Alert, Card, CardBody, DefinitionList, PageHeader, Section } from "@/components/ui/primitives";
+
+/** The Telegram verification bot: is it configured, and is its webhook pointed at this site? */
+async function TelegramPanel() {
+  const t = await getTranslations("admin");
+  const cfg = telegramConfig();
+  if (!cfg.enabled) return <Alert tone="warning" title={t("tgNotConfigured")}>{t("tgNotConfiguredHint")}</Alert>;
+  const expected = `${publicEnv.siteUrl}/api/telegram/webhook`;
+  const state = await readWebhookState(cfg.token);
+  const connected = state.ok && state.result.url === expected;
+  const items = [
+    { label: t("tgBot"), value: <span dir="ltr">@{cfg.username}</span> },
+    {
+      label: t("tgWebhook"),
+      value: !state.ok
+        ? t("tgUnreachable")
+        : connected
+          ? t("tgConnected")
+          : state.result.url
+            ? <span>{t("tgOtherUrl")} <span dir="ltr" className="break-all">{state.result.url}</span></span>
+            : t("tgNotConnected"),
+    },
+  ];
+  if (state.ok && state.result.botUsername && state.result.botUsername.toLowerCase() !== cfg.username.toLowerCase()) {
+    items.push({ label: t("tgUsernameMismatch"), value: <span dir="ltr">@{state.result.botUsername}</span> });
+  }
+  if (state.ok && state.result.lastError) {
+    items.push({ label: t("tgLastError"), value: <span dir="ltr" className="break-all">{state.result.lastError}</span> });
+  }
+  return (
+    <Card>
+      <CardBody className="flex flex-col gap-4">
+        <DefinitionList items={items} />
+        <ActionForm action={connectTelegramAction}>
+          <p className="text-xs text-muted">{t("tgConnectHint")}</p>
+          <SubmitButton variant={connected ? "secondary" : "primary"} className="self-start">
+            {connected ? t("tgReconnect") : t("tgConnect")}
+          </SubmitButton>
+        </ActionForm>
+      </CardBody>
+    </Card>
+  );
+}
 
 export default async function AdminSettingsPage() {
   const locale = await getLocale();
@@ -20,6 +65,9 @@ export default async function AdminSettingsPage() {
   return (
     <>
       <PageHeader title={t("nav.settings")} />
+      <Section title={t("telegramBot")} id="telegram">
+        <TelegramPanel />
+      </Section>
       <Section title={t("policies")} id="policies">
         <ul className="flex flex-col gap-2">
           {(settings ?? []).map((s) => (

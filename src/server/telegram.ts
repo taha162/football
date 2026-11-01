@@ -6,12 +6,14 @@ import { z } from "zod";
 import { redirect } from "@/i18n/navigation";
 import { isLocale, type Locale } from "@/i18n/routing";
 import { dbErrorCode, fail, ok, zodFieldErrors, type ActionState } from "@/lib/actions";
+import { getCurrentUser } from "@/lib/auth";
+import { publicEnv } from "@/lib/env";
 import { logger } from "@/lib/log";
 import { PHONE_ACCOUNT_DOMAIN } from "@/lib/phone";
+import { clearVerifyTicket, clientKey, getVerifyTicket, hashTicket, newTicket, newVerificationCode, setVerifyTicket } from "@/lib/phone-verification";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { clearWaTicket, clientKey, getWaTicket, setWaTicket } from "@/lib/wa-ticket";
-import { hashTicket, newTicket, newVerificationCode, whatsappConfig } from "@/lib/whatsapp";
+import { registerWebhook, telegramConfig } from "@/lib/telegram";
 
 async function currentLocale(): Promise<Locale> {
   const l = await getLocale();
@@ -24,7 +26,7 @@ async function createVerification(purpose: "signup" | "reset", userId: string | 
   const key = await clientKey();
   for (let attempt = 0; attempt < 3; attempt++) {
     const { ticket, hash } = newTicket();
-    const { error } = await admin.rpc("wa_create_verification", {
+    const { error } = await admin.rpc("phone_verify_start", {
       p_purpose: purpose,
       p_code: newVerificationCode(),
       p_ticket_hash: hash,
@@ -32,17 +34,17 @@ async function createVerification(purpose: "signup" | "reset", userId: string | 
       p_client_key: key,
     });
     if (!error) {
-      await setWaTicket(ticket);
+      await setVerifyTicket(ticket);
       return null;
     }
-    if (error.code !== "23505") return dbErrorCode(error, "wa_create_verification");
+    if (error.code !== "23505") return dbErrorCode(error, "phone_verify_start");
   }
   return "generic";
 }
 
-/** Sign-up without e-mail: the account is activated once the user sends the code from WhatsApp. */
-export async function startWhatsappSignupAction(_: ActionState, fd: FormData): Promise<ActionState> {
-  if (!whatsappConfig().enabled) return fail("whatsapp_unavailable");
+/** Sign-up without e-mail: the account is activated once the user shares their number with the bot. */
+export async function startTelegramSignupAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  if (!telegramConfig().enabled) return fail("telegram_unavailable");
   const parsed = z
     .object({
       display_name: z.string().trim().min(2, "too_short").max(40, "too_long"),
@@ -54,13 +56,13 @@ export async function startWhatsappSignupAction(_: ActionState, fd: FormData): P
   const locale = await currentLocale();
   const admin = createAdminClient()!;
   const { data, error } = await admin.auth.admin.createUser({
-    email: `wa_${randomUUID().replace(/-/g, "")}@${PHONE_ACCOUNT_DOMAIN}`,
+    email: `tg_${randomUUID().replace(/-/g, "")}@${PHONE_ACCOUNT_DOMAIN}`,
     password: parsed.data.password,
     email_confirm: false,
-    user_metadata: { display_name: parsed.data.display_name, locale, signup_method: "whatsapp" },
+    user_metadata: { display_name: parsed.data.display_name, locale, signup_method: "telegram" },
   });
   if (error || !data.user) {
-    logger.warn("whatsapp_signup_create_failed", { status: error?.status });
+    logger.warn("telegram_signup_create_failed", { status: error?.status });
     return fail(error?.message?.toLowerCase().includes("password") ? "weak_password" : "auth_failed");
   }
   const failure = await createVerification("signup", data.user.id);
@@ -68,55 +70,71 @@ export async function startWhatsappSignupAction(_: ActionState, fd: FormData): P
     await admin.auth.admin.deleteUser(data.user.id);
     return fail(failure);
   }
-  redirect({ href: "/verify-whatsapp", locale });
+  redirect({ href: "/verify-telegram", locale });
   return ok();
 }
 
-/** Password recovery for WhatsApp accounts: the sender's number identifies the account. */
-export async function startWhatsappResetAction(): Promise<ActionState> {
-  if (!whatsappConfig().enabled) return fail("whatsapp_unavailable");
+/** Password recovery for phone accounts: the number shared with the bot identifies the account. */
+export async function startTelegramResetAction(): Promise<ActionState> {
+  if (!telegramConfig().enabled) return fail("telegram_unavailable");
   const failure = await createVerification("reset", null);
   if (failure) return fail(failure);
-  redirect({ href: "/verify-whatsapp", locale: await currentLocale() });
+  redirect({ href: "/verify-telegram", locale: await currentLocale() });
   return ok();
 }
 
-export type WhatsappPoll =
-  | { state: "pending" | "expired" | "phone_taken" | "no_account" | "missing" }
+export type TelegramPoll =
+  | { state: "pending"; linked: boolean }
+  | { state: "expired" | "phone_taken" | "no_account" | "missing" }
   | { state: "done"; href: string };
 
 /**
- * Polled by the waiting page. Once the webhook has verified the code, opens a
+ * Polled by the waiting page. Once the bot has verified the number, opens a
  * session for the account (one-time) and returns where to continue.
  */
-export async function pollWhatsappAction(): Promise<WhatsappPoll> {
-  const ticket = await getWaTicket();
+export async function pollTelegramAction(): Promise<TelegramPoll> {
+  const ticket = await getVerifyTicket();
   const admin = createAdminClient();
   if (!ticket || !admin) return { state: "missing" };
   const hash = hashTicket(ticket);
-  const { data } = await admin.rpc("wa_get_verification", { p_ticket_hash: hash });
+  const { data } = await admin.rpc("phone_verify_lookup", { p_ticket_hash: hash });
   const row = data?.[0];
   if (!row) return { state: "missing" };
-  if (row.status === "pending") return { state: new Date(row.expires_at) <= new Date() ? "expired" : "pending" };
+  if (row.status === "pending") return new Date(row.expires_at) <= new Date() ? { state: "expired" } : { state: "pending", linked: row.linked };
   if (row.status === "phone_taken" || row.status === "no_account") return { state: row.status };
   if (row.status !== "verified") return { state: "missing" };
 
-  const { data: consumed, error } = await admin.rpc("wa_consume_verification", { p_ticket_hash: hash });
+  const { data: consumed, error } = await admin.rpc("phone_verify_consume", { p_ticket_hash: hash });
   const account = consumed?.[0];
   if (error || !account?.email) return { state: "missing" };
   const link = await admin.auth.admin.generateLink({ type: "magiclink", email: account.email });
   const tokenHash = link.data?.properties?.hashed_token;
   if (link.error || !tokenHash) {
-    logger.error("whatsapp_session_failed", { status: link.error?.status });
+    logger.error("phone_verify_session_failed", { status: link.error?.status });
     return { state: "missing" };
   }
   const supabase = await createClient();
   const { error: verifyError } = await supabase.auth.verifyOtp({ type: "email", token_hash: tokenHash });
   if (verifyError) {
-    logger.error("whatsapp_session_failed", { status: verifyError.status });
+    logger.error("phone_verify_session_failed", { status: verifyError.status });
     return { state: "missing" };
   }
-  await clearWaTicket();
+  await clearVerifyTicket();
   const locale = await currentLocale();
   return { state: "done", href: account.purpose === "signup" ? `/${locale}/onboarding` : `/${locale}/reset-password` };
+}
+
+/** Admin only: points the bot's webhook at this site. */
+export async function connectTelegramAction(): Promise<ActionState> {
+  const user = await getCurrentUser();
+  if (!user?.isAdmin) return fail("forbidden");
+  const cfg = telegramConfig();
+  if (!cfg.enabled) return fail("telegram_unavailable");
+  const result = await registerWebhook(cfg.token, `${publicEnv.siteUrl}/api/telegram/webhook`);
+  if (!result.ok) {
+    logger.warn("telegram_webhook_register_failed", { reason: result.error.slice(0, 120) });
+    return fail("telegram_connect_failed");
+  }
+  logger.info("telegram_webhook_registered", { by: user.id });
+  return ok("telegram_connected");
 }

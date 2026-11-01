@@ -1,13 +1,8 @@
 import { randomUUID } from "node:crypto";
-import { admin, createAuthUser, emailedCode, emailedHtml, expect, PASSWORD, test, whatsappInbound } from "./fixtures";
+import { createAuthUser, emailedCode, emailedHtml, expect, PASSWORD, telegramMessage, telegramUser, test, verifyWithTelegram } from "./fixtures";
 
 const phone = () => `9647${String(Math.floor(Math.random() * 1e9)).padStart(9, "0")}`;
 const localFormat = (e164: string) => `0${e164.slice(3)}`;
-
-// All local runs share one client IP, so lift the per-client WhatsApp start
-// limit (10/hour by default, DB-tested separately) while this file runs.
-test.beforeAll(() => admin("update public.platform_settings set value = '1000' where key = 'whatsapp.max_starts_per_hour'"));
-test.afterAll(() => admin("update public.platform_settings set value = '10' where key = 'whatsapp.max_starts_per_hour'"));
 
 test.describe("Account verification", () => {
   test("e-mail: signing up with an address that already has an account says so, instead of waiting for a code", async ({ page }) => {
@@ -52,27 +47,39 @@ test.describe("Account verification", () => {
     await page.waitForURL(/\/ar\/onboarding/);
   });
 
-  test("WhatsApp: sign up by sending a code, then sign in and recover the password with the same number", async ({ page, baseURL }) => {
+  test("Telegram: sign up by sharing the number with the bot, then sign in and recover the password with it", async ({ page, baseURL }) => {
     const from = phone();
+    const me = telegramUser();
     await page.goto("/en/sign-up");
-    await page.getByRole("link", { name: "With WhatsApp" }).click();
-    await page.waitForURL(/method=whatsapp/);
-    await expect(page.getByRole("button", { name: "Continue with WhatsApp" })).toBeVisible();
-    await page.getByRole("textbox", { name: "Display name" }).fill("WhatsApp Player");
+    await page.getByRole("link", { name: "With Telegram" }).click();
+    await page.waitForURL(/method=telegram/);
+    await page.getByRole("textbox", { name: "Display name" }).fill("Telegram Player");
     await page.getByRole("textbox", { name: "Password" }).fill(PASSWORD);
     await page.getByRole("checkbox").check();
-    await page.getByRole("button", { name: "Continue with WhatsApp" }).click();
-    await page.waitForURL(/\/en\/verify-whatsapp/);
+    await page.getByRole("button", { name: "Continue with Telegram" }).click();
+    await page.waitForURL(/\/en\/verify-telegram/);
 
-    const code = (await page.getByTestId("wa-code").textContent())!.trim();
+    const code = (await page.getByTestId("verify-code").textContent())!.trim();
     expect(code).toMatch(/^[A-Z0-9]{4}-[A-Z0-9]{4}$/);
-    const open = page.getByRole("link", { name: "Open WhatsApp and send the code" });
-    await expect(open).toHaveAttribute("data-href", new RegExp(`^https://wa\\.me/9647700000000\\?text=.*${code}`));
+    await expect(page.getByRole("link", { name: "Open Telegram" })).toHaveAttribute("data-href", `https://t.me/AlMalabTestBot?start=${code}`);
 
-    // Unsigned or wrongly signed requests are rejected.
-    expect((await whatsappInbound(baseURL!, from, code, "wrong-secret")).status).toBe(401);
-    // The user sends the pre-filled message; Meta delivers it to the webhook.
-    expect((await whatsappInbound(baseURL!, from, `Al-Malab verification code: ${code}`)).status).toBe(200);
+    // Requests without the webhook's secret token are refused.
+    expect((await telegramMessage(baseURL!, me, { text: `/start ${code}` }, "wrong-secret")).status).toBe(401);
+
+    // The start link opens the bot, which asks for the number with a button, and the page notices.
+    const started = await telegramMessage(baseURL!, me, { text: `/start ${code}` });
+    expect(started).toMatchObject({ status: 200, method: "sendMessage", chat_id: me });
+    expect(started.reply_markup?.keyboard?.[0]?.[0]).toMatchObject({ request_contact: true });
+    await expect(page.getByText("The bot is open.", { exact: false })).toBeVisible({ timeout: 10_000 });
+
+    // Someone else's contact card proves nothing.
+    const foreign = await telegramMessage(baseURL!, me, { contact: { phone_number: phone(), first_name: "Friend", user_id: telegramUser() } });
+    expect(foreign.text).toContain("share your own number");
+
+    // Their own contact: the number is verified and the page carries on by itself.
+    const shared = await telegramMessage(baseURL!, me, { contact: { phone_number: `+${from}`, first_name: "E2E", user_id: me } });
+    expect(shared.text).toContain("Your number is verified");
+    expect(shared.reply_markup).toMatchObject({ remove_keyboard: true });
     await page.waitForURL(/\/en\/onboarding/, { timeout: 15_000 });
 
     await page.getByText("Goalkeeper", { exact: true }).click();
@@ -85,18 +92,18 @@ test.describe("Account verification", () => {
     // Sign out, then sign in with the local number format and the password.
     await page.context().clearCookies();
     await page.goto("/en/sign-in");
-    await page.getByRole("textbox", { name: "E-mail or WhatsApp number" }).fill(localFormat(from));
+    await page.getByRole("textbox", { name: "E-mail or phone number" }).fill(localFormat(from));
     await page.getByRole("textbox", { name: "Password" }).fill(PASSWORD);
     await page.getByRole("button", { name: "Sign in" }).click();
     await page.waitForURL(/\/en\/dashboard/);
 
-    // Forgot password → recover with WhatsApp from the same number.
+    // Forgot password → recover with Telegram, sharing the same number.
     await page.context().clearCookies();
     await page.goto("/en/forgot-password");
-    await page.getByRole("button", { name: "Recover with WhatsApp" }).click();
-    await page.waitForURL(/\/en\/verify-whatsapp/);
-    const resetCode = (await page.getByTestId("wa-code").textContent())!.trim();
-    expect((await whatsappInbound(baseURL!, from, resetCode)).status).toBe(200);
+    await page.getByRole("button", { name: "Recover with Telegram" }).click();
+    await page.waitForURL(/\/en\/verify-telegram/);
+    const resetCode = (await page.getByTestId("verify-code").textContent())!.trim();
+    expect((await verifyWithTelegram(baseURL!, me, resetCode, from)).text).toContain("choose a new password");
     await page.waitForURL(/\/en\/reset-password/, { timeout: 15_000 });
     await page.getByRole("textbox", { name: "New password" }).fill("N3w-pass-4567");
     await page.getByRole("textbox", { name: "Confirm password" }).fill("N3w-pass-4567");
@@ -105,36 +112,41 @@ test.describe("Account verification", () => {
 
     await page.context().clearCookies();
     await page.goto("/en/sign-in");
-    await page.getByRole("textbox", { name: "E-mail or WhatsApp number" }).fill(`+${from}`);
+    await page.getByRole("textbox", { name: "E-mail or phone number" }).fill(`+${from}`);
     await page.getByRole("textbox", { name: "Password" }).fill("N3w-pass-4567");
     await page.getByRole("button", { name: "Sign in" }).click();
     await page.waitForURL(/\/en\/dashboard/);
   });
 
-  test("WhatsApp: a number that already has an account cannot be used to create another", async ({ page, baseURL, browser }) => {
+  test("Telegram: a number that already has an account cannot be used to create another", async ({ page, baseURL, browser }) => {
     const from = phone();
     const signUp = async (p: typeof page) => {
-      await p.goto("/en/sign-up?method=whatsapp");
-      await p.getByRole("textbox", { name: "Display name" }).fill("Twice");
-      await p.getByRole("textbox", { name: "Password" }).fill(PASSWORD);
+      await p.goto("/ar/sign-up?method=telegram");
+      await p.getByRole("textbox", { name: "الاسم الظاهر" }).fill("مرتين");
+      await p.getByRole("textbox", { name: "كلمة المرور" }).fill(PASSWORD);
       await p.getByRole("checkbox").check();
-      await p.getByRole("button", { name: "Continue with WhatsApp" }).click();
-      await p.waitForURL(/\/en\/verify-whatsapp/);
-      return (await p.getByTestId("wa-code").textContent())!.trim();
+      await p.getByRole("button", { name: "متابعة عبر تيليغرام" }).click();
+      await p.waitForURL(/\/ar\/verify-telegram/);
+      return (await p.getByTestId("verify-code").textContent())!.trim();
     };
-    await whatsappInbound(baseURL!, from, await signUp(page));
-    await page.waitForURL(/\/en\/onboarding/, { timeout: 15_000 });
+    await verifyWithTelegram(baseURL!, telegramUser(), await signUp(page), from);
+    await page.waitForURL(/\/ar\/onboarding/, { timeout: 15_000 });
 
     const other = await (await browser.newContext()).newPage();
-    await whatsappInbound(baseURL!, from, await signUp(other));
-    await expect(other.getByText("This number already has an Al-Malab account.")).toBeVisible({ timeout: 15_000 });
+    const reply = await verifyWithTelegram(baseURL!, telegramUser(), await signUp(other), from);
+    expect(reply.text).toContain("هذا الرقم مرتبط بحساب آخر");
+    await expect(other.getByText("هذا الرقم مرتبط بحساب آخر في «الملعب».")).toBeVisible({ timeout: 15_000 });
   });
 
-  test("WhatsApp webhook answers Meta's verification handshake only with the right token", async ({ request }) => {
-    const ok = await request.get("/api/whatsapp/webhook?hub.mode=subscribe&hub.verify_token=local-verify-token&hub.challenge=12345");
-    expect(ok.status()).toBe(200);
-    expect(await ok.text()).toBe("12345");
-    const bad = await request.get("/api/whatsapp/webhook?hub.mode=subscribe&hub.verify_token=nope&hub.challenge=12345");
-    expect(bad.status()).toBe(403);
+  test("Telegram bot: refuses unsigned updates and guides people who arrive without a valid code", async ({ baseURL }) => {
+    const me = telegramUser();
+    expect((await telegramMessage(baseURL!, me, { text: "/start" }, "")).status).toBe(401);
+    const help = await telegramMessage(baseURL!, me, { text: "/start" });
+    expect(help).toMatchObject({ status: 200, method: "sendMessage", chat_id: me });
+    expect(help.text).toContain("verification bot");
+    expect((await telegramMessage(baseURL!, me, { text: "/start ZZZZ-ZZZZ" })).text).toContain("invalid or has expired");
+    // A contact with no code opened first completes nothing.
+    const stray = await telegramMessage(baseURL!, me, { contact: { phone_number: phone(), first_name: "E2E", user_id: me } });
+    expect(stray.text).toContain("Open the Telegram link");
   });
 });

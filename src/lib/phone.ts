@@ -1,9 +1,9 @@
 /**
- * Phone helpers. Numbers are stored as E.164 digits without "+" (the format
- * WhatsApp uses for senders, e.g. 9647701234567).
+ * Phone helpers. Numbers are stored as E.164 digits without "+"
+ * (e.g. 9647701234567).
  */
 
-/** Internal auth e-mail domain for WhatsApp-verified accounts (reserved TLD, never delivered). */
+/** Internal auth e-mail domain for phone accounts, verified with Telegram (reserved TLD, never delivered). */
 export const PHONE_ACCOUNT_DOMAIN = "phone.malaab.invalid";
 
 export function isPhoneAccountEmail(email: string | null | undefined): boolean {
