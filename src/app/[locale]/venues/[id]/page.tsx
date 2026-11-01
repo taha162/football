@@ -11,7 +11,7 @@ import { publicStorageUrl } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 import { localizedName } from "@/server/reference";
 import { MATCH_CARD_SELECT, type MatchCardData } from "@/server/matches/queries";
-import { getVenue } from "@/server/venues/queries";
+import { getDepositSettings, getVenue } from "@/server/venues/queries";
 import { MatchCard } from "@/components/match/match-card";
 import { ReportButton } from "@/components/report-button";
 import { OpeningHours } from "@/components/venue/opening-hours";
@@ -41,7 +41,8 @@ export default async function VenuePage({ params }: PageProps<"/[locale]/venues/
     user ? supabase.from("venue_staff").select("role").eq("venue_id", id).eq("user_id", user.id).maybeSingle() : Promise.resolve({ data: null }),
   ]);
   const tz = venue.city?.timezone ?? "Asia/Baghdad";
-  const bookable = acceptsPlatformBookings(venue);
+  const deposits = await getDepositSettings();
+  const bookable = acceptsPlatformBookings(venue, deposits.on);
   const point = venue.latitude != null && venue.longitude != null ? { lat: Number(venue.latitude), lng: Number(venue.longitude) } : null;
   const provider = getMapProvider();
   const mapUrl = point ? provider.staticMapUrl([point], { width: 640, height: 320 }) : null;
@@ -212,9 +213,12 @@ export default async function VenuePage({ params }: PageProps<"/[locale]/venues/
             <Card>
               <CardBody className="flex flex-col gap-2 text-sm text-muted">
                 <h2 className="font-display text-lg font-semibold text-ink">{t("policies")}</h2>
-                <p>{t("cancellationDeadline", { hours: venue.cancellation_deadline_hours })}</p>
+                {deposits.on ? (
+                  <p>{t("depositPolicy", { amount: formatMoney(deposits.amount, venue.city?.currency ?? "IQD", locale), minutes: deposits.holdMinutes })}</p>
+                ) : null}
+                <p>{t(deposits.on ? "cancellationDeadlineDeposit" : "cancellationDeadline", { hours: venue.cancellation_deadline_hours })}</p>
                 {venue.cancellation_policy ? <p className="whitespace-pre-line">{venue.cancellation_policy}</p> : null}
-                <p>{venue.auto_confirm_bookings ? t("autoConfirm") : t("manualConfirm")}</p>
+                {deposits.on ? null : <p>{venue.auto_confirm_bookings ? t("autoConfirm") : t("manualConfirm")}</p>}
               </CardBody>
             </Card>
           ) : null}

@@ -8,9 +8,9 @@ Last updated: 2026-10-29. "Verified" means covered by an automated test that pas
 | --- | --- |
 | `pnpm lint` | Clean |
 | `pnpm typecheck` | Clean (TS strict) |
-| `pnpm i18n:check` | 1725 keys, ar/en in sync, all static keys resolved |
+| `pnpm i18n:check` | 1782 keys, ar/en in sync, all static keys resolved |
 | `pnpm test:unit` | 50 passed (domain rules, ball physics, camera and quality logic, auth error mapping) |
-| `pnpm test:db` | 71 passed (concurrency, RLS, RPC rules, jobs, WhatsApp verification) |
+| `pnpm test:db` | 81 passed (concurrency, RLS, RPC rules, jobs, WhatsApp verification, booking deposits) |
 | `pnpm build` | Succeeds (Next.js 16.4, Turbopack) |
 | `pnpm e2e` (production build) | 36 passed: 34 desktop, 2 mobile (Pixel 7, Arabic RTL) |
 
@@ -51,9 +51,15 @@ Legend: ✅ implemented and verified by automated tests · 🟡 implemented, exe
 - ✅ Venue listing, fields, opening hours (including past midnight), pricing rules, staff roles — E2E F, DB.
 - ✅ Verification workflow: owner requests, moderator verifies. In-app bookings only for verified venues in platform mode — E2E F, DB.
 - ✅ Availability and price quote computed server-side. Booking requests, owner confirm/decline, auto-confirm option, cancellation deadline, manual bookings and blocked time, completed/no-show — E2E F, DB.
-- ✅ Double-booking prevention (exclusion constraint plus per-field lock). Overlapping requests are auto-declined. Parallel confirmations produce exactly 1 — E2E G, DB.
+- ✅ **Booking deposits.** A booking is confirmed by a deposit of 5,000 IQD by default (`booking.deposit_amount`, never more than the booking). The customer pays it to the venue directly, by wallet transfer or in cash, following the venue's own payment details. Covered by DB (10 tests, including concurrency) and E2E F and G.
+  - A new booking holds its time for one hour (`booking.deposit_hold_minutes`).
+  - The customer reports the transfer with a reference, which keeps the hold until the venue checks.
+  - Venue staff record the deposit as received, which confirms the booking, or as not received, which declines it and frees the time.
+  - A customer who cancels loses the deposit. When the venue cancels, the deposit is marked to be returned until staff record the refund. A reported deposit the venue never checked before kickoff is also marked to be returned.
+  - A venue takes no bookings until its owner adds payment details. Only owners and managers can change them, and changes are audited.
+- ✅ Double-booking prevention (exclusion constraint plus per-field lock). Requests waiting for a deposit hold their slot, so a held time can't be booked twice. With no deposit due (a free field, or deposits switched off), overlapping requests are declined automatically when one is confirmed. Ten simultaneous requests for one slot leave exactly one hold, and parallel confirmations produce exactly one booking — E2E G, DB.
 - 🟡 Venue images (upload/cover/remove) and linking a booking to a match.
-- ⛔ Online payment or deposit. Not implemented by design; the UI says to pay the venue directly.
+- ⛔ Online payment. No payment gateway is connected. Deposits are paid to the venue directly and confirmed by its staff, and the platform never holds money.
 
 ### Tournaments
 - ✅ Create, open and close registration, approve or decline (with waitlist), generate fixtures, record results, standings with tie-breakers — E2E H (league), unit (generators, standings), DB (knockout advancement and byes).

@@ -9,7 +9,7 @@ import { formatMoney } from "@/lib/domain/money";
 import { acceptsPlatformBookings } from "@/lib/domain/venue";
 import { formatTime, todayIn } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
-import { busyIntervals, getVenue } from "@/server/venues/queries";
+import { busyIntervals, getDepositSettings, getVenue } from "@/server/venues/queries";
 import { requestBookingAction } from "@/server/venues/actions";
 import { OpeningHours } from "@/components/venue/opening-hours";
 import { ActionForm, Hidden, SubmitButton } from "@/components/ui/action-form";
@@ -35,7 +35,8 @@ export default async function BookVenuePage({ params, searchParams }: PageProps<
   const duration = [60, 90, 120, 150, 180].includes(Number(sp.duration)) ? Number(sp.duration) : 60;
   const matchId = typeof sp.match === "string" && /^[0-9a-f-]{36}$/.test(sp.match) ? sp.match : undefined;
 
-  if (!acceptsPlatformBookings(venue)) {
+  const deposits = await getDepositSettings();
+  if (!acceptsPlatformBookings(venue, deposits.on)) {
     return (
       <Container className="max-w-2xl py-10">
         <PageHeader title={t("title", { name: venue.name })} />
@@ -46,7 +47,7 @@ export default async function BookVenuePage({ params, searchParams }: PageProps<
   }
 
   const busy = fieldId ? (await busyIntervals([fieldId], date))[fieldId] : [];
-  type Quote = { price_total: number; currency: string; available: boolean; starts_at: string; ends_at: string };
+  type Quote = { price_total: number; currency: string; available: boolean; starts_at: string; ends_at: string; deposit_amount: number | null; deposit_hold_minutes: number };
   let quote: Quote | null = null;
   let quoteError: string | null = null;
   if (fieldId && time) {
@@ -118,15 +119,38 @@ export default async function BookVenuePage({ params, searchParams }: PageProps<
                         <span className="text-sm text-muted">{t("price")}</span>
                         <span className="num font-display text-2xl font-bold">{formatMoney(quote.price_total, quote.currency, locale)}</span>
                       </div>
-                      <p className="text-xs text-muted">{venue.auto_confirm_bookings ? t("autoConfirmNote") : t("requestNote")}</p>
-                      <p className="text-xs text-muted">{t("paymentNote")}</p>
+                      {quote.deposit_amount ? (
+                        <>
+                          <div className="flex items-baseline justify-between">
+                            <span className="text-sm text-muted">{t("depositTitle")}</span>
+                            <span className="num font-display text-xl font-bold text-accent">{formatMoney(quote.deposit_amount, quote.currency, locale)}</span>
+                          </div>
+                          <div className="flex items-baseline justify-between text-sm text-muted">
+                            <span>{t("remaining")}</span>
+                            <span className="num">{formatMoney(quote.price_total - quote.deposit_amount, quote.currency, locale)}</span>
+                          </div>
+                          <p className="text-xs text-muted">{t("depositNote", { minutes: quote.deposit_hold_minutes })}</p>
+                          {venue.deposit_instructions ? (
+                            <div className="rounded-lg border border-line bg-surface-2 p-3">
+                              <p className="text-xs font-semibold text-muted">{t("howToPay")}</p>
+                              <p className="mt-1 whitespace-pre-line text-sm" dir="auto">{venue.deposit_instructions}</p>
+                            </div>
+                          ) : null}
+                          <p className="text-xs text-muted">{t("depositPolicy")}</p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-xs text-muted">{venue.auto_confirm_bookings ? t("autoConfirmNote") : t("requestNote")}</p>
+                          <p className="text-xs text-muted">{t("paymentNote")}</p>
+                        </>
+                      )}
                       <ActionForm action={requestBookingAction}>
                         <Hidden values={{ field_id: fieldId, start: `${date}T${time}`, duration, match_id: matchId }} />
                         <label className="flex flex-col gap-1 text-sm">
                           {t("note")}
                           <Textarea name="note" maxLength={500} />
                         </label>
-                        <SubmitButton size="lg">{venue.auto_confirm_bookings ? t("bookNow") : t("sendRequest")}</SubmitButton>
+                        <SubmitButton size="lg">{quote.deposit_amount ? t("holdAndPay") : venue.auto_confirm_bookings ? t("bookNow") : t("sendRequest")}</SubmitButton>
                       </ActionForm>
                       <Link href="/my/bookings" className="text-sm text-accent hover:underline">{t("myBookings")}</Link>
                     </>
@@ -142,7 +166,7 @@ export default async function BookVenuePage({ params, searchParams }: PageProps<
           <h2 className="font-semibold">{t("hours")}</h2>
           <OpeningHours hours={venue.hours ?? []} />
           <p className="text-xs text-muted">{t("noticeRule", { minutes: venue.min_notice_minutes, days: venue.max_advance_days })}</p>
-          <p className="text-xs text-muted">{t("cancellationRule", { hours: venue.cancellation_deadline_hours })}</p>
+          <p className="text-xs text-muted">{t(deposits.on ? "cancellationRuleDeposit" : "cancellationRule", { hours: venue.cancellation_deadline_hours })}</p>
           <p className="text-xs text-muted">{t("signedInAs", { name: user.profile.display_name })}</p>
         </aside>
       </div>

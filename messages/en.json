@@ -419,7 +419,12 @@
     "resend_too_soon": "Please wait a minute before requesting a new code — the previous one may already be in your inbox.",
     "email_limit_reached": "The site has sent too many e-mails in the last hour, so this one couldn't go out. Please try again later.",
     "email_not_authorized": "We can't send e-mail to this address yet: the site's e-mail service isn't fully set up. Please tell the site team.",
-    "email_send_failed": "We couldn't send the e-mail. Please try again in a few minutes, and tell the site team if it keeps happening."
+    "email_send_failed": "We couldn't send the e-mail. Please try again in a few minutes, and tell the site team if it keeps happening.",
+    "venue_deposit_not_set": "This venue hasn't said yet how to pay the booking deposit, so it can't take bookings right now.",
+    "invalid_reference": "Write how the venue can recognise your transfer, such as the number you sent from.",
+    "deposit_not_pending": "This booking isn't waiting for a deposit.",
+    "deposit_window_closed": "The time to send the deposit has passed, so the booking was released. You can book again if the time is still free.",
+    "deposit_not_refundable": "There's no deposit to return on this booking."
   },
   "validation": {
     "invalid": "Invalid value.",
@@ -534,7 +539,11 @@
     "area_saved": "Area saved.",
     "city_saved": "City saved.",
     "message_removed": "Message removed.",
-    "code_sent": "We sent you a new code."
+    "code_sent": "We sent you a new code.",
+    "deposit_reported": "Thanks. The venue has been told and will confirm once it sees the deposit.",
+    "deposit_recorded": "Deposit recorded. The booking is confirmed.",
+    "deposit_refunded": "Recorded as returned. The customer has been told.",
+    "deposit_instructions_saved": "Payment details saved."
   },
   "notifications": {
     "generic": "You have a new update.",
@@ -583,7 +592,13 @@
     "tournament_result_disputed": "A result in {tournament_name} was disputed.",
     "review_received": "You received a review for {match_title}.",
     "account_notice": "{status, select, suspended {Your account has been suspended.} other {Your account has been restored.}}",
-    "moderation_notice": "{hidden, select, yes {Some of your content was hidden by moderators.} other {Your content was restored by moderators.}}"
+    "moderation_notice": "{hidden, select, yes {Some of your content was hidden by moderators.} other {Your content was restored by moderators.}}",
+    "booking_awaiting_deposit": "{user_name} booked {venue_name} for {starts_at}. The time is held while they send the deposit.",
+    "booking_deposit_reported": "{user_name} says the deposit for {starts_at} at {venue_name} is sent. Check it and confirm the booking.",
+    "booking_deposit_expired": "Your booking at {venue_name} for {starts_at} was released: the deposit wasn't confirmed in time.{refund, select, yes { The venue owes you the deposit back.} other {}}",
+    "booking_deposit_refund_due": "The booking at {venue_name} for {starts_at} reached its time without the deposit being checked, so it must be returned to the customer.",
+    "booking_cancelled_refund": "{venue_name} cancelled your booking on {starts_at}. The venue will return your deposit.",
+    "booking_deposit_refunded": "{venue_name} has returned your deposit for the booking on {starts_at}."
   },
   "notificationTypes": {
     "match_participant_joined": "Someone joins my match",
@@ -1740,7 +1755,9 @@
     "policies": "Booking policies",
     "cancellationDeadline": "Free cancellation until {hours} hours before the booking.",
     "autoConfirm": "Requests are confirmed automatically if the slot is free.",
-    "manualConfirm": "The venue confirms each request."
+    "manualConfirm": "The venue confirms each request.",
+    "depositPolicy": "Bookings are confirmed by a {amount} deposit, sent to the venue within {minutes} minutes of booking. If you cancel it isn't refunded; if the venue cancels it's returned.",
+    "cancellationDeadlineDeposit": "You can cancel until {hours} hours before the booking."
   },
   "venueForm": {
     "name": "Venue name",
@@ -1763,7 +1780,7 @@
     "minNotice": "Minimum notice (min)",
     "maxAdvance": "Book up to (days ahead)",
     "cancellationDeadline": "Free cancellation until (hours before)",
-    "autoConfirm": "Confirm requests automatically when the slot is free",
+    "autoConfirm": "Confirm requests automatically when the slot is free and no deposit is due",
     "cancellationPolicy": "Cancellation & refund policy",
     "create": "Create venue",
     "save": "Save venue"
@@ -1860,7 +1877,15 @@
       "noShowRate": "No-show rate",
       "value": "Recorded booking value",
       "valueHint": "Based on prices of bookings; not payments received."
-    }
+    },
+    "depositTitle": "Deposit payment details",
+    "depositHint": "Shown to customers when they book: where to send the {amount} deposit (for example your ZainCash or AsiaHawala number), or that they can pay it at your desk.",
+    "depositSave": "Save payment details",
+    "depositMissingTitle": "Customers can't book until you add your deposit payment details",
+    "depositMissingBody": "Every booking is confirmed by a {amount} deposit paid to you. Tell customers where to send it.",
+    "depositMissingAction": "Add payment details",
+    "refundsDue": "Deposits to return ({count})",
+    "held": "Held, deposit due"
   },
   "booking": {
     "title": "Book {name}",
@@ -1877,7 +1902,7 @@
     "check": "Check availability",
     "busyTitle": "Already booked that day",
     "noBusy": "No confirmed bookings on this field for that day.",
-    "busyNote": "Times include the venue's changeover buffer. Pending requests by others don't block a slot until the venue confirms one.",
+    "busyNote": "Times include the venue's changeover buffer and bookings still waiting for their deposit.",
     "price": "Price",
     "autoConfirmNote": "This venue confirms automatically if the slot is still free when you submit.",
     "requestNote": "The venue will confirm or decline your request. Unanswered requests expire.",
@@ -1890,7 +1915,14 @@
     "hours": "Opening hours",
     "noticeRule": "Book at least {minutes} minutes ahead and up to {days} days ahead.",
     "cancellationRule": "Free cancellation until {hours} hours before.",
-    "signedInAs": "Booking as {name}."
+    "signedInAs": "Booking as {name}.",
+    "depositTitle": "Deposit to confirm",
+    "depositNote": "Booking holds this time for you for {minutes} minutes. Send the deposit to the venue in that time and tell us here; the venue confirms once it sees it.",
+    "remaining": "Paid at the venue",
+    "howToPay": "How to pay this venue",
+    "depositPolicy": "If you cancel, the deposit isn't refunded. If the venue cancels, it returns it.",
+    "holdAndPay": "Book and send the deposit",
+    "cancellationRuleDeposit": "You can cancel until {hours} hours before; the deposit isn't refunded."
   },
   "bookings": {
     "mineTitle": "My bookings",
@@ -1927,7 +1959,34 @@
     "cancelStaffNote": "The customer will be notified.",
     "reason": "Reason (optional)",
     "message": "Message",
-    "review": "Rate venue"
+    "review": "Rate venue",
+    "awaitingTitle": "Waiting for your deposit",
+    "depositAmount": "Deposit: {amount}",
+    "sendBy": "Send it by {time}, or the time is released.",
+    "howToPay": "How to pay",
+    "referenceLabel": "How can the venue recognise your transfer?",
+    "referenceHint": "For example the number you sent from, or the transfer code.",
+    "reportButton": "I've sent the deposit",
+    "reported": "You told the venue it's sent (“{reference}”). Your time stays held until they confirm.",
+    "depositStatus": {
+      "pending": "Deposit due",
+      "reported": "Deposit sent, being checked",
+      "received": "Deposit received",
+      "refund_due": "Deposit to be returned",
+      "refunded": "Deposit returned",
+      "forfeited": "Deposit kept by the venue"
+    },
+    "staffPending": "Waiting for the {amount} deposit until {time}.",
+    "staffReported": "Says the deposit is sent: “{reference}”",
+    "depositReceived": "Deposit received",
+    "depositMissing": "Not received",
+    "depositMissingTitle": "The deposit hasn't arrived?",
+    "depositMissingNote": "The booking is declined and the time is freed. The customer is told.",
+    "markRefunded": "Mark deposit as returned",
+    "depositNotReceivedNote": "Declined: the venue says the deposit didn't arrive.",
+    "depositExpiredNote": "Released: the deposit wasn't confirmed in time.",
+    "cancelForfeitNote": "The venue will be notified, and your {amount} deposit won't be refunded.",
+    "cancelStaffRefundNote": "The customer will be notified, and the {amount} deposit must be returned to them."
   },
   "home": {
     "stage": {

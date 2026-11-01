@@ -9,7 +9,7 @@ import { formatDate } from "@/lib/format";
 import { localizedName } from "@/server/reference";
 import { currentTournaments, teamsRecruitingByPosition } from "@/server/landing";
 import { searchMatches, type MatchCardData } from "@/server/matches/queries";
-import { listVenues, type VenueCardData } from "@/server/venues/queries";
+import { getDepositSettings, listVenues, type VenueCardData } from "@/server/venues/queries";
 import { StageHost } from "@/components/stage/stage-host";
 import { Container } from "@/components/ui/primitives";
 import { cn } from "@/lib/cn";
@@ -35,7 +35,7 @@ export default async function LandingPage({ params }: PageProps<"/[locale]">) {
     getTranslations("venues"),
     getCurrentUser(),
   ]);
-  const [matches, recruiting, venues, tournaments] = await Promise.all([
+  const [matches, recruiting, venues, tournaments, deposits] = await Promise.all([
     searchMatches({ sort: "relevance", includeFull: false })
       .then((r) => r.items)
       .catch(() => [] as MatchCardData[]),
@@ -44,6 +44,7 @@ export default async function LandingPage({ params }: PageProps<"/[locale]">) {
       .then((r) => r.items)
       .catch(() => [] as VenueCardData[]),
     currentTournaments(3).catch(() => [] as Awaited<ReturnType<typeof currentTournaments>>),
+    getDepositSettings().catch(() => ({ on: true })),
   ]);
 
   const Forward = locale === "ar" ? ArrowLeft : ArrowRight;
@@ -200,7 +201,7 @@ export default async function LandingPage({ params }: PageProps<"/[locale]">) {
               {venues.length > 0 ? (
                 <ul className="scene-board">
                   {venues.slice(0, 4).map((v) => (
-                    <VenueRow key={v.id} venue={v} locale={locale} t={t} tv={tv} Forward={Forward} />
+                    <VenueRow key={v.id} venue={v} depositsOn={deposits.on} locale={locale} t={t} tv={tv} Forward={Forward} />
                   ))}
                 </ul>
               ) : (
@@ -399,10 +400,10 @@ function MatchRow({ match, locale, t, tm, Forward }: { match: MatchCardData; loc
   );
 }
 
-function VenueRow({ venue, locale, t, tv, Forward }: { venue: VenueCardData; locale: string; t: Translator; tv: Translator; Forward: typeof ArrowLeft }) {
+function VenueRow({ venue, depositsOn, locale, t, tv, Forward }: { venue: VenueCardData; depositsOn: boolean; locale: string; t: Translator; tv: Translator; Forward: typeof ArrowLeft }) {
   const active = venue.fields.filter((f) => f.is_active);
   const minPrice = active.length ? Math.min(...active.map((f) => f.price_per_hour)) : null;
-  const bookable = acceptsPlatformBookings(venue);
+  const bookable = acceptsPlatformBookings(venue, depositsOn);
   return (
     <li>
       <LinkButton href={`/venues/${venue.id}`} className="board-row board-link ripple group">

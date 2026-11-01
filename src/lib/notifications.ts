@@ -6,12 +6,23 @@ export type NotificationPayload = Record<string, unknown>;
 
 const str = (v: unknown) => (typeof v === "string" ? v : "");
 
+/** Booking news meant for the venue's staff, who act on it from the venue dashboard. */
+const VENUE_STAFF_BOOKING_TYPES = new Set([
+  "booking_requested",
+  "booking_new_confirmed",
+  "booking_awaiting_deposit",
+  "booking_deposit_reported",
+  "booking_deposit_refund_due",
+]);
+
 export function notificationHref(type: string, p: NotificationPayload): string {
   if (p.match_id) return `/matches/${str(p.match_id)}`;
   if (p.conversation_id) return `/messages/${str(p.conversation_id)}`;
   if (p.tournament_id) return `/tournaments/${str(p.tournament_id)}`;
   if (type.startsWith("booking")) {
-    return type === "booking_requested" || type === "booking_new_confirmed" ? `/manage/venues/${str(p.venue_id)}` : "/my/bookings";
+    return VENUE_STAFF_BOOKING_TYPES.has(type) || (type === "booking_cancelled" && p.by === "customer")
+      ? `/manage/venues/${str(p.venue_id)}`
+      : "/my/bookings";
   }
   if (type.startsWith("challenge")) return "/opponents";
   if (type === "team_join_request" || type === "recruitment_response") return `/teams/${str(p.team_id)}/manage`;
