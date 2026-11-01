@@ -1,8 +1,8 @@
 import { Bell, MessageCircle, Plus, ShieldCheck } from "lucide-react";
-import { getLocale, getTranslations } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
 import type { CurrentUser } from "@/lib/auth";
 import { publicStorageUrl } from "@/lib/storage";
-import { getUnreadCounts } from "@/server/reference";
+import { getManagedThings, getUnreadCounts } from "@/server/reference";
 import { Avatar } from "@/components/ui/avatar";
 import { buttonClass } from "@/components/ui/button";
 import { HeaderFrame } from "./header-frame";
@@ -13,8 +13,9 @@ import { LinkButton } from "@/components/ui/link-button";
 
 export async function SiteHeader({ user }: { user: CurrentUser | null }) {
   const t = await getTranslations("nav");
-  const locale = await getLocale();
   const counts = user ? await getUnreadCounts() : { notifications: 0, messages: 0 };
+  // The account menu lists management pages only for people who manage something.
+  const roles = user ? await getManagedThings(user.id) : { venues: false, tournaments: false };
 
   return (
     <HeaderFrame>
@@ -54,7 +55,8 @@ export async function SiteHeader({ user }: { user: CurrentUser | null }) {
                 name={user.profile.display_name}
                 avatar={<Avatar src={publicStorageUrl("avatars", user.profile.avatar_path)} name={user.profile.display_name} size={32} />}
                 isModerator={user.isModerator}
-                locale={locale}
+                managesVenues={roles.venues}
+                organizesTournaments={roles.tournaments}
               />
             </>
           ) : (

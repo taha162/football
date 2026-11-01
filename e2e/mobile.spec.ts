@@ -14,6 +14,14 @@ test.describe("Mobile (Arabic, RTL)", () => {
     // Bottom navigation is the primary navigation on small screens.
     const quickNav = page.getByRole("navigation", { name: "تنقل سريع" });
     await expect(quickNav).toBeVisible();
+    await expect(quickNav.getByRole("link", { name: "الملاعب" })).toBeVisible();
+
+    // The account menu keeps to the essentials: no venue or tournament pages for someone who manages neither.
+    await page.getByLabel(`قائمة حساب ${player.name}`).click();
+    const menu = page.locator("details[open] .menu-panel");
+    await expect(menu.getByRole("link")).toHaveText(["لوحتي", "ملفي الشخصي", "فرقي", "حجوزاتي", "الإعدادات"]);
+    await page.getByLabel(`قائمة حساب ${player.name}`).click();
+
     await quickNav.getByRole("link", { name: "المباريات" }).click();
     await page.waitForURL(/\/ar\/matches/);
     await expect(page.getByRole("heading", { name: "ابحث عن مباراة" })).toBeVisible();

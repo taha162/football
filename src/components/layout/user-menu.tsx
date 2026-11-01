@@ -8,8 +8,24 @@ import { LinkButton } from "@/components/ui/link-button";
 
 const itemClass = "ripple flex min-h-10 w-full items-center rounded-lg px-3 text-start text-sm text-ink transition-[background-color,translate] hover:bg-surface-3 hover:translate-x-[var(--nudge)]";
 
-/** Disclosure menu built on <details>; closes on navigation and Escape. */
-export function UserMenu({ name, avatar, isModerator }: { name: string; avatar: ReactNode; isModerator: boolean; locale: string }) {
+/**
+ * Disclosure menu built on <details>; closes on navigation and Escape. Kept
+ * short: management pages appear only for people who manage something, and
+ * what the bottom bar or the dashboard already offers isn't repeated here.
+ */
+export function UserMenu({
+  name,
+  avatar,
+  isModerator,
+  managesVenues,
+  organizesTournaments,
+}: {
+  name: string;
+  avatar: ReactNode;
+  isModerator: boolean;
+  managesVenues: boolean;
+  organizesTournaments: boolean;
+}) {
   const t = useTranslations("nav");
   const ref = useRef<HTMLDetailsElement>(null);
   const pathname = usePathname();
@@ -46,13 +62,10 @@ export function UserMenu({ name, avatar, isModerator }: { name: string; avatar: 
         <ul className="flex flex-col">
           <li><LinkButton className={itemClass} href="/dashboard">{t("dashboard")}</LinkButton></li>
           <li><LinkButton className={itemClass} href="/profile">{t("profile")}</LinkButton></li>
-          <li><LinkButton className={itemClass} href="/my/matches">{t("myMatches")}</LinkButton></li>
           <li><LinkButton className={itemClass} href="/my/teams">{t("myTeams")}</LinkButton></li>
           <li><LinkButton className={itemClass} href="/my/bookings">{t("myBookings")}</LinkButton></li>
-          <li><LinkButton className={itemClass} href="/opponents">{t("opponents")}</LinkButton></li>
-          <li><LinkButton className={itemClass} href="/manage/venues">{t("venueDashboard")}</LinkButton></li>
-          <li><LinkButton className={itemClass} href="/manage/tournaments">{t("tournamentDashboard")}</LinkButton></li>
-          <li><LinkButton className={itemClass} href="/messages">{t("messages")}</LinkButton></li>
+          {managesVenues ? <li><LinkButton className={itemClass} href="/manage/venues">{t("venueDashboard")}</LinkButton></li> : null}
+          {organizesTournaments ? <li><LinkButton className={itemClass} href="/manage/tournaments">{t("tournamentDashboard")}</LinkButton></li> : null}
           <li><LinkButton className={itemClass} href="/settings">{t("settings")}</LinkButton></li>
           {isModerator ? <li><LinkButton className={itemClass} href="/admin">{t("admin")}</LinkButton></li> : null}
         </ul>
