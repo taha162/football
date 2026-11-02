@@ -78,8 +78,24 @@ test.describe("Journey F — venue onboarding, verification and booking", () => 
     await customerPage.getByRole("textbox", { name: "ملاحظة للملعب (اختياري)" }).fill("Team of ten");
     await customerPage.getByRole("button", { name: "احجز وأرسل العربون" }).click();
 
-    // The time is held; the customer sends the deposit and says so.
-    await customerPage.waitForURL(/\/ar\/my\/bookings/);
+    // The time is held, and the customer is offered to add the booking to a calendar.
+    await customerPage.waitForURL(/\/ar\/my\/bookings\?booked=[0-9a-f-]{36}/);
+    const prompt = customerPage.getByTestId("booked-prompt");
+    await expect(prompt.getByRole("heading", { name: "الوقت محجوز لك" })).toBeVisible();
+    const ics = (await prompt.getByRole("link", { name: "تقويم الهاتف" }).getAttribute("href"))!;
+    const file = await customerPage.request.get(ics);
+    expect(file.headers()["content-type"]).toContain("text/calendar");
+    const event = (await file.text()).replace(/\r\n /g, "");
+    expect(event).toContain("BEGIN:VEVENT");
+    expect(event).toContain(`SUMMARY:حجز ملعب: ${venueName}`);
+    expect(event).toContain("TRIGGER:-PT120M");
+    expect(await prompt.getByRole("link", { name: "تقويم Google" }).getAttribute("href")).toMatch(/^https:\/\/calendar\.google\.com\/calendar\/render\?action=TEMPLATE/);
+    // Only the customer (and the venue) can read it.
+    const stranger = await browser.newContext();
+    expect((await stranger.request.get(new URL(ics, customerPage.url()).toString())).status()).toBe(404);
+    await stranger.close();
+
+    // The customer sends the deposit and says so.
     const held = customerPage.getByRole("listitem").filter({ hasText: venueName });
     await expect(customerPage.getByRole("heading", { name: "بانتظار عربونك" })).toBeVisible();
     await expect(held.getByText("ZainCash 0770 123 4567 (Ahmed)")).toBeVisible();

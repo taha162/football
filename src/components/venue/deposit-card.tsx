@@ -10,13 +10,14 @@ import { ConfirmAction } from "@/components/ui/confirm-action";
 import { Input, controlProps } from "@/components/ui/field";
 import { Badge } from "@/components/ui/primitives";
 import { LinkButton } from "@/components/ui/link-button";
+import { AddToCalendar, type CalendarLinks } from "./add-to-calendar";
 import { depositTone, type BookingRowData } from "./booking-row";
 
 /**
  * A booking holding its time while the customer sends the deposit: how much,
  * by when, where to send it, and a way to tell the venue it is on its way.
  */
-export async function DepositCard({ b, tz, conversationId }: { b: BookingRowData; tz: string; conversationId?: string }) {
+export async function DepositCard({ b, tz, conversationId, calendar }: { b: BookingRowData; tz: string; conversationId?: string; calendar?: CalendarLinks }) {
   const t = await getTranslations("bookings");
   const locale = await getLocale();
   const deposit = formatMoney(b.deposit_amount ?? 0, b.currency, locale);
@@ -69,6 +70,7 @@ export async function DepositCard({ b, tz, conversationId }: { b: BookingRowData
           </LinkButton>
         ) : null}
       </div>
+      {calendar ? <AddToCalendar links={calendar} /> : null}
     </li>
   );
 }

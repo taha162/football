@@ -95,7 +95,9 @@ function TextComposer({ conversationId, onMode }: { conversationId: string; onMo
       ) : null}
       <label htmlFor="message-body" className="sr-only">{t("write")}</label>
       <Textarea id="message-body" name="body" required={!preview} maxLength={2000} placeholder={t("placeholder")} className="min-h-20" dir="auto" />
+      {/* Send on the right, the picture/location/voice tools on the left. */}
       <div className="flex items-center justify-between gap-2">
+        <SubmitButton>{t("send")}</SubmitButton>
         <div className="flex items-center gap-2">
           <label className={tool} title={t("attach")}>
             <ImagePlus aria-hidden="true" className="size-5" />
@@ -130,7 +132,6 @@ function TextComposer({ conversationId, onMode }: { conversationId: string; onMo
             <Mic aria-hidden="true" className="size-5" />
           </button>
         </div>
-        <SubmitButton>{t("send")}</SubmitButton>
       </div>
     </ActionForm>
   );
@@ -372,9 +373,10 @@ function VoiceRecorder({ conversationId, onDone }: { conversationId: string; onD
   return (
     <div className="flex flex-col gap-2 rounded-2xl border border-line bg-surface p-3" data-testid="voice-recorder">
       {error ? <Alert tone="warning">{error}</Alert> : null}
+      {/* As in the text box: send on the right, delete on the left. */}
       <div className="flex items-center justify-between gap-3">
-        <Button variant="ghost" onClick={discard} aria-label={t("discardRecording")} disabled={phase === "sending"} className="size-11 px-0">
-          <Trash2 aria-hidden="true" className="size-5" />
+        <Button onClick={() => void stop(true)} disabled={phase === "starting" || phase === "sending" || Boolean(error && phase !== "stopped")} aria-label={t("sendVoice")} className="size-11 px-0">
+          {phase === "sending" ? <Loader2 aria-hidden="true" className="size-5 animate-spin" /> : <SendHorizontal aria-hidden="true" className="size-5 rtl:-scale-x-100" />}
         </Button>
         <div className="flex min-w-0 flex-1 items-center justify-center gap-3" role="status" aria-live="polite">
           {phase === "starting" && !error ? <Loader2 aria-hidden="true" className="size-4 animate-spin text-muted" /> : null}
@@ -382,8 +384,8 @@ function VoiceRecorder({ conversationId, onDone }: { conversationId: string; onD
           <span className="num font-display text-lg font-bold text-ink">{formatDuration(elapsed, locale)}</span>
           <span className="text-sm text-muted">{phase === "recording" ? t("recording") : phase === "sending" ? t("sendingVoice") : null}</span>
         </div>
-        <Button onClick={() => void stop(true)} disabled={phase === "starting" || phase === "sending" || Boolean(error && phase !== "stopped")} aria-label={t("sendVoice")} className="size-11 px-0">
-          {phase === "sending" ? <Loader2 aria-hidden="true" className="size-5 animate-spin" /> : <SendHorizontal aria-hidden="true" className="size-5 rtl:-scale-x-100" />}
+        <Button variant="ghost" onClick={discard} aria-label={t("discardRecording")} disabled={phase === "sending"} className="size-11 px-0">
+          <Trash2 aria-hidden="true" className="size-5" />
         </Button>
       </div>
       {phase === "stopped" && elapsed >= MAX_RECORDING_SECONDS - 0.5 ? <p className="text-center text-xs text-muted">{t("recordLimit")}</p> : null}

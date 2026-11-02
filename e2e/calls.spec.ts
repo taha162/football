@@ -113,6 +113,55 @@ test.describe("Voice calls", () => {
     await other.context().close();
   });
 
+  test("on a phone that allows it, the speaker button switches between loudspeaker and earpiece", async ({ page, browser }) => {
+    const [caller, callee] = [await createAuthUser("Caller"), await createAuthUser("Callee")];
+    const conv = await rpc<string>(caller.id, "start_direct_conversation", { p_user_id: callee.id });
+
+    // A phone listing the two outputs an iPhone shows during a call (Receiver and Speaker).
+    const phone = await browser.newContext({ isMobile: true, hasTouch: true, viewport: { width: 390, height: 844 } });
+    await phone.addInitScript(() => {
+      const w = window as unknown as { __sinks: string[] };
+      w.__sinks = [];
+      const devices = navigator.mediaDevices;
+      const real = devices.enumerateDevices.bind(devices);
+      const output = (label: string, deviceId: string) => ({ kind: "audiooutput", label, deviceId, groupId: "", toJSON: () => ({}) }) as MediaDeviceInfo;
+      devices.enumerateDevices = async () => [...(await real()).filter((d) => d.kind === "audioinput"), output("Receiver", "receiver"), output("Speaker", "speaker")];
+      HTMLMediaElement.prototype.setSinkId = function (id: string) {
+        w.__sinks.push(id);
+        return Promise.resolve();
+      };
+    });
+    const mobile = await phone.newPage();
+    await signIn(mobile, caller);
+
+    await signIn(page, callee);
+    await page.waitForLoadState("networkidle");
+
+    await mobile.goto(`/ar/messages/${conv}`);
+    await mobile.waitForLoadState("networkidle");
+    await mobile.getByRole("button", { name: "اتصال" }).click();
+    await callScreen(page, caller.name).getByRole("button", { name: "رد" }).click();
+    const screen = callScreen(mobile, callee.name);
+    await expect(screen.getByRole("status")).toHaveText(TALKING, { timeout: 30_000 });
+
+    // The call starts on the loudspeaker; the button moves it to the earpiece and back.
+    const speaker = screen.getByRole("button", { name: "مكبر الصوت" });
+    await expect(speaker).toHaveAttribute("aria-pressed", "true");
+    const sinks = () => mobile.evaluate(() => (window as unknown as { __sinks: string[] }).__sinks.at(-1));
+    expect(await sinks()).toBe("speaker");
+    await speaker.click();
+    await expect(speaker).toHaveAttribute("aria-pressed", "false");
+    expect(await sinks()).toBe("receiver");
+    await speaker.click();
+    await expect(speaker).toHaveAttribute("aria-pressed", "true");
+    expect(await sinks()).toBe("speaker");
+
+    // A laptop offers no such choice: no button there.
+    await expect(callScreen(page, caller.name).getByRole("button", { name: "مكبر الصوت" })).toHaveCount(0);
+    await screen.getByRole("button", { name: "إنهاء" }).click();
+    await phone.close();
+  });
+
   test("declining ends the call for the caller as no answer", async ({ page, browser }) => {
     const [caller, callee] = [await createAuthUser("Caller"), await createAuthUser("Callee")];
     const conv = await rpc<string>(caller.id, "start_direct_conversation", { p_user_id: callee.id });

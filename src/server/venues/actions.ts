@@ -306,9 +306,9 @@ export async function requestBookingAction(_: ActionState, fd: FormData): Promis
   if (error) return fail(dbErrorCode(error, "request_booking"));
   revalidatePath("/[locale]/my/bookings", "page");
   if (v.match_id) revalidatePath(`/[locale]/matches/${v.match_id}`, "page");
-  const booked = data as { status: string; deposit_amount: number | null };
-  // The time is now held: next is sending the deposit, which My bookings explains.
-  if (booked.deposit_amount) redirect({ href: "/my/bookings", locale: await locale() });
+  const booked = data as { booking_id: string; status: string; deposit_amount: number | null };
+  // My bookings shows it, offers to add it to the calendar, and explains the deposit if there is one.
+  redirect({ href: { pathname: "/my/bookings", query: { booked: booked.booking_id } }, locale: await locale() });
   return ok(booked.status === "confirmed" ? "booking_confirmed" : "booking_requested", data);
 }
 

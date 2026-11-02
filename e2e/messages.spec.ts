@@ -15,6 +15,11 @@ test.describe("Conversations", () => {
     await page.goto(`/ar/messages/${conv}`);
     // The picture is read by the page's script: choose it once the page is interactive.
     await page.waitForLoadState("networkidle");
+    // Send sits on the right; the picture, location and voice tools on the left.
+    const sendBox = (await page.getByRole("button", { name: "إرسال", exact: true }).boundingBox())!;
+    for (const tool of ["إرسال موقعي", "تسجيل رسالة صوتية"]) {
+      expect((await page.getByRole("button", { name: tool }).boundingBox())!.x).toBeLessThan(sendBox.x);
+    }
     await page.locator('input[type="file"][name="image"]').setInputFiles({ name: "pitch.png", mimeType: "image/png", buffer: PNG });
     // The chosen picture is previewed and can be removed; text is optional with a picture.
     await expect(page.getByRole("button", { name: "إزالة الصورة" })).toBeVisible();

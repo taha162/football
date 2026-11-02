@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, Mic, MicOff, Phone, PhoneOff, X } from "lucide-react";
+import { ChevronDown, Mic, MicOff, Phone, PhoneOff, Volume2, X } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Avatar } from "@/components/ui/avatar";
 import { cn } from "@/lib/cn";
@@ -30,6 +30,7 @@ export function CallScreen({
   onDecline,
   onHangUp,
   onMute,
+  onSpeaker,
   onMinimize,
   onDismiss,
 }: {
@@ -38,6 +39,7 @@ export function CallScreen({
   onDecline: () => void;
   onHangUp: () => void;
   onMute: () => void;
+  onSpeaker: () => void;
   onMinimize: (minimized: boolean) => void;
   onDismiss: () => void;
 }) {
@@ -127,7 +129,7 @@ export function CallScreen({
         {view.phase === "outgoing" && view.ringing ? <p className="max-w-xs text-xs text-faint">{t("ringsWhereOpen")}</p> : null}
       </div>
 
-      <div className="flex w-full max-w-xs items-start justify-around gap-6">
+      <div className="flex w-full max-w-sm items-start justify-around gap-4">
         {view.phase === "incoming" ? (
           <>
             <span className="flex flex-col items-center gap-2 text-sm text-muted">
@@ -158,6 +160,21 @@ export function CallScreen({
               </button>
               {view.muted ? t("unmute") : t("mute")}
             </span>
+            {/* Only where the phone lets the page choose (see audio-route.ts). */}
+            {view.speakerAvailable ? (
+              <span className="flex flex-col items-center gap-2 text-sm text-muted">
+                <button
+                  type="button"
+                  onClick={onSpeaker}
+                  aria-pressed={view.speaker}
+                  aria-label={t("speaker")}
+                  className={cn(round, "focus-visible:outline-accent", view.speaker ? "bg-ink text-bg" : "bg-surface-3 text-ink")}
+                >
+                  <Volume2 aria-hidden="true" className="size-7" />
+                </button>
+                {t("speaker")}
+              </span>
+            ) : null}
             <span className="flex flex-col items-center gap-2 text-sm text-muted">
               <button ref={primary} type="button" onClick={onHangUp} aria-label={t("hangUp")} className={cn(round, "bg-danger text-white focus-visible:outline-danger")}>
                 <PhoneOff aria-hidden="true" className="size-7" />
