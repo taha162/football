@@ -1,11 +1,16 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { ImagePlus, X } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useEffect, useRef, useState } from "react";
+import { ImagePlus, Loader2, MapPin, X } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { ActionForm, Hidden, SubmitButton } from "@/components/ui/action-form";
+import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/field";
+import { Alert } from "@/components/ui/primitives";
+import { formatDistance } from "@/lib/duration";
+import type { SharedPoint } from "@/lib/geo";
 import { sendMessageAction } from "@/server/messages";
+import { LocationMap } from "./location-map";
 
 const MAX_SIDE = 1600;
 
@@ -30,8 +35,22 @@ async function shrink(file: File): Promise<File> {
   }
 }
 
-/** Text and/or one picture. The picture is previewed, and can be removed before sending. */
+type Mode = "text" | "location";
+
+/**
+ * What the member writes or sends: text with an optional picture, or their
+ * current location. Location opens its own panel in place of the text box,
+ * with its own send and cancel.
+ */
 export function Composer({ conversationId }: { conversationId: string }) {
+  const [mode, setMode] = useState<Mode>("text");
+  const back = () => setMode("text");
+  if (mode === "location") return <LocationPanel conversationId={conversationId} onDone={back} />;
+  return <TextComposer conversationId={conversationId} onMode={setMode} />;
+}
+
+/** Text and/or one picture. The picture is previewed, and can be removed before sending. */
+function TextComposer({ conversationId, onMode }: { conversationId: string; onMode: (mode: Mode) => void }) {
   const t = useTranslations("messages");
   const fileInput = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -87,9 +106,93 @@ export function Composer({ conversationId }: { conversationId: string }) {
               }}
             />
           </label>
+          <button type="button" className={tool} title={t("shareLocation")} aria-label={t("shareLocation")} onClick={() => onMode("location")}>
+            <MapPin aria-hidden="true" className="size-5" />
+          </button>
         </div>
         <SubmitButton>{t("send")}</SubmitButton>
       </div>
     </ActionForm>
+  );
+}
+
+type Fix = { kind: "locating" } | { kind: "ready"; point: SharedPoint } | { kind: "error"; code: "locationDenied" | "locationFailed" | "locationUnsupported" };
+
+/**
+ * Finds the phone's current position with the GPS (high accuracy), shows it
+ * on a map with how accurate it is (it sharpens over a few seconds), and sends
+ * it only when the member confirms.
+ */
+function LocationPanel({ conversationId, onDone }: { conversationId: string; onDone: () => void }) {
+  const t = useTranslations("messages");
+  const locale = useLocale();
+  const [fix, setFix] = useState<Fix>(() =>
+    typeof navigator !== "undefined" && !("geolocation" in navigator) ? { kind: "error", code: "locationUnsupported" } : { kind: "locating" },
+  );
+
+  useEffect(() => {
+    if (!("geolocation" in navigator)) return;
+    let best: SharedPoint | null = null;
+    const id = navigator.geolocation.watchPosition(
+      (pos) => {
+        const point = { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy };
+        // Keep the sharpest reading.
+        if (!best || point.accuracy <= (best.accuracy ?? Infinity)) {
+          best = point;
+          setFix({ kind: "ready", point });
+        }
+      },
+      (err) => {
+        if (!best) setFix({ kind: "error", code: err.code === err.PERMISSION_DENIED ? "locationDenied" : "locationFailed" });
+      },
+      { enableHighAccuracy: true, timeout: 20_000, maximumAge: 0 },
+    );
+    return () => navigator.geolocation.clearWatch(id);
+  }, []);
+
+  const distance = (m: number) => formatDistance(m, locale, { m: (n) => t("metres", { n }), km: (n) => t("kilometres", { n }) });
+  return (
+    <div className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-3" data-testid="location-panel">
+      {fix.kind === "locating" ? (
+        <p role="status" className="flex min-h-12 items-center gap-2 text-sm text-muted">
+          <Loader2 aria-hidden="true" className="size-4 animate-spin" />
+          {t("locating")}
+        </p>
+      ) : null}
+      {fix.kind === "ready" ? (
+        <>
+          <LocationMap lat={fix.point.lat} lng={fix.point.lng} accuracy={fix.point.accuracy} height={168} className="rounded-xl" />
+          <p className="text-sm text-ink" role="status">
+            {t("locationAccuracy", { distance: distance(fix.point.accuracy ?? 0) })}
+            {(fix.point.accuracy ?? 0) > 50 ? <span className="block text-xs text-muted">{t("locationImproving")}</span> : null}
+          </p>
+          <ActionForm action={sendMessageAction} hideSuccess onSuccess={onDone} className="gap-2">
+            <Hidden
+              values={{
+                conversation_id: conversationId,
+                location_lat: fix.point.lat,
+                location_lng: fix.point.lng,
+                location_accuracy: Math.round(fix.point.accuracy ?? 0),
+              }}
+            />
+            <div className="flex flex-wrap items-center gap-2">
+              <SubmitButton>
+                <MapPin aria-hidden="true" className="size-4" />
+                {t("sendLocation")}
+              </SubmitButton>
+              <Button variant="ghost" onClick={onDone}>{t("cancel")}</Button>
+            </div>
+          </ActionForm>
+        </>
+      ) : null}
+      {fix.kind === "error" ? (
+        <>
+          <Alert tone="warning">{t(fix.code)}</Alert>
+          <Button variant="ghost" className="self-start" onClick={onDone}>{t("cancel")}</Button>
+        </>
+      ) : fix.kind === "locating" ? (
+        <Button variant="ghost" className="self-start" onClick={onDone}>{t("cancel")}</Button>
+      ) : null}
+    </div>
   );
 }

@@ -36,4 +36,37 @@ test.describe("Conversations", () => {
     expect((await other.request.get(src.replace("/object/sign/", "/object/public/").split("?")[0])).ok()).toBe(false);
     await other.context().close();
   });
+
+  test.describe("location", () => {
+    test.use({ geolocation: { latitude: 36.3456, longitude: 43.1234, accuracy: 12 }, permissions: ["geolocation"] });
+
+    test("the current location is shown with its accuracy, sent on confirmation, and opens in maps", async ({ page, browser }) => {
+      const [sender, receiver] = [await createAuthUser("Sender"), await createAuthUser("Receiver")];
+      const conv = await rpc<string>(sender.id, "start_direct_conversation", { p_user_id: receiver.id });
+
+      await signIn(page, sender);
+      await page.goto(`/ar/messages/${conv}`);
+      await page.waitForLoadState("networkidle");
+      await page.getByRole("button", { name: "إرسال موقعي" }).click();
+      const panel = page.getByTestId("location-panel");
+      await expect(panel.getByText("الدقة ± ١٢ م")).toBeVisible();
+      // Nothing is sent until confirmed; cancelling brings the text box back.
+      await panel.getByRole("button", { name: "إلغاء" }).click();
+      await expect(page.getByRole("textbox", { name: "اكتب رسالة" })).toBeVisible();
+      await page.getByRole("button", { name: "إرسال موقعي" }).click();
+      await page.getByTestId("location-panel").getByRole("button", { name: "إرسال الموقع" }).click();
+      const card = page.getByTestId("location-card");
+      await expect(card).toBeVisible();
+      await expect(card).toHaveAttribute("href", "https://www.google.com/maps/search/?api=1&query=36.345600,43.123400");
+      await expect(card).toContainText("فتح في الخرائط");
+
+      const other = await (await browser.newContext()).newPage();
+      await signIn(other, receiver);
+      await other.goto("/ar/messages");
+      await expect(other.getByText("📍 الموقع")).toBeVisible();
+      await other.goto(`/ar/messages/${conv}`);
+      await expect(other.getByTestId("location-card")).toContainText("الدقة ± ١٢ م");
+      await other.context().close();
+    });
+  });
 });
