@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { ActionForm, FormField, Hidden, SubmitButton } from "@/components/ui/action-form";
 import { Checkbox, ChoiceChips, Input, Select, Textarea } from "@/components/ui/field";
 import { Alert } from "@/components/ui/primitives";
+import { MoreOptions } from "@/components/ui/more-options";
 import { LocationFields, type AreaOption, type CityOption } from "@/components/forms/location-fields";
 import { defaultRosterSize, MATCH_FORMATS, POSITIONS, SKILL_LEVELS, type MatchFormat } from "@/lib/domain/match";
 import { formatMoney, parseMoneyInput, splitCost } from "@/lib/domain/money";
@@ -86,14 +87,87 @@ export function MatchForm({
   const venue = venues.find((v) => v.id === venueId);
 
   return (
-    <ActionForm action={mode === "create" ? createMatchAction : updateMatchAction} className="gap-8">
+    <ActionForm action={mode === "create" ? createMatchAction : updateMatchAction} className="gap-6">
       <Hidden values={{ match_id: defaults.id }} />
 
-      <fieldset className="flex flex-col gap-4">
-        <legend className="mb-3 font-display text-xl font-semibold">{t("basics")}</legend>
-        <FormField name="title" label={t("title")} hint={t("titleHint")} required>
-          {(a) => <Input {...a} defaultValue={defaults.title} required minLength={3} maxLength={100} />}
+      {/* The essentials: what, when, where, how many, how much. Everything else is folded below. */}
+      <FormField name="title" label={t("title")} required>
+        {(a) => <Input {...a} defaultValue={defaults.title} required minLength={3} maxLength={100} placeholder={t("titlePlaceholder")} />}
+      </FormField>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <FormField name="start" label={t("start")} required>
+          {(a) => <Input {...a} type="datetime-local" defaultValue={defaults.start} min={minStart} required dir="ltr" />}
         </FormField>
+        <FormField name="duration" label={t("duration")} required>
+          {(a) => (
+            <Select {...a} defaultValue={String(defaults.duration ?? 90)}>
+              {[60, 90, 120, 150, 180].map((d) => (
+                <option key={d} value={d}>{t("minutes", { count: d })}</option>
+              ))}
+            </Select>
+          )}
+        </FormField>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <FormField name="venue_id" label={t("venue")} hint={t("venueHint")}>
+          {(a) => (
+            <Select {...a} value={venueId} onChange={(ev) => setVenueId(ev.target.value)}>
+              <option value="">{t("noVenue")}</option>
+              {venues.map((v) => (
+                <option key={v.id} value={v.id}>{v.name}</option>
+              ))}
+            </Select>
+          )}
+        </FormField>
+        {venue && venue.fields.length > 0 ? (
+          <FormField name="field_id" label={t("field")}>
+            {(a) => (
+              <Select {...a} defaultValue={defaults.field_id ?? ""} key={venue.id}>
+                <option value="">{t("anyField")}</option>
+                {venue.fields.map((f) => (
+                  <option key={f.id} value={f.id}>{f.name}</option>
+                ))}
+              </Select>
+            )}
+          </FormField>
+        ) : null}
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        {mode === "create" ? (
+          <FormField name="format" label={t("format")} required>
+            {(a) => (
+              <Select
+                {...a}
+                value={format}
+                onChange={(ev) => {
+                  const f = ev.target.value as MatchFormat;
+                  setFormat(f);
+                  setTotal(defaultRosterSize(f));
+                }}
+              >
+                {MATCH_FORMATS.map((f) => (
+                  <option key={f} value={f}>{f}</option>
+                ))}
+              </Select>
+            )}
+          </FormField>
+        ) : null}
+        <FormField name="total_players" label={t("totalPlayers")} required>
+          {(a) => <Input {...a} type="number" min={2} max={30} value={total} onChange={(ev) => setTotal(Number(ev.target.value))} required />}
+        </FormField>
+      </div>
+      <FormField name="total_cost" label={t("totalCost")} hint={t("currencyHint")}>
+        {(a) => <Input {...a} inputMode="numeric" value={cost} onChange={(ev) => setCost(ev.target.value)} dir="ltr" placeholder="50000" />}
+      </FormField>
+      <p aria-live="polite" className="-mt-2 text-sm text-muted">
+        {override && parseMoneyInput(override, currency) != null
+          ? t("sharePreviewOverride", { amount: formatMoney(parseMoneyInput(override, currency)!, currency, locale) })
+          : share != null
+            ? t("sharePreview", { amount: formatMoney(share, currency, locale), players: paying || total })
+            : t("sharePreviewNone")}
+      </p>
+
+      <MoreOptions label={t("moreOptions")}>
         {mode === "create" ? (
           <>
             <ChoiceChips
@@ -125,24 +199,6 @@ export function MatchForm({
         <FormField name="description" label={t("description")}>
           {(a) => <Textarea {...a} defaultValue={defaults.description ?? ""} maxLength={2000} />}
         </FormField>
-      </fieldset>
-
-      <fieldset className="flex flex-col gap-4">
-        <legend className="mb-3 font-display text-xl font-semibold">{t("whenWhere")}</legend>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <FormField name="start" label={t("start")} hint={t("startHint")} required>
-            {(a) => <Input {...a} type="datetime-local" defaultValue={defaults.start} min={minStart} required dir="ltr" />}
-          </FormField>
-          <FormField name="duration" label={t("duration")} required>
-            {(a) => (
-              <Select {...a} defaultValue={String(defaults.duration ?? 90)}>
-                {[60, 90, 120, 150, 180].map((d) => (
-                  <option key={d} value={d}>{t("minutes", { count: d })}</option>
-                ))}
-              </Select>
-            )}
-          </FormField>
-        </div>
         {mode === "create" ? (
           <LocationFields cities={cities} areas={areas} defaultCity={defaults.city_id} defaultArea={defaults.area_id} />
         ) : (
@@ -159,77 +215,10 @@ export function MatchForm({
             )}
           </FormField>
         )}
-        <div className="grid gap-4 sm:grid-cols-2">
-          <FormField name="venue_id" label={t("venue")} hint={t("venueHint")}>
-            {(a) => (
-              <Select {...a} value={venueId} onChange={(ev) => setVenueId(ev.target.value)}>
-                <option value="">{t("noVenue")}</option>
-                {venues.map((v) => (
-                  <option key={v.id} value={v.id}>{v.name}</option>
-                ))}
-              </Select>
-            )}
-          </FormField>
-          {venue && venue.fields.length > 0 ? (
-            <FormField name="field_id" label={t("field")}>
-              {(a) => (
-                <Select {...a} defaultValue={defaults.field_id ?? ""} key={venue.id}>
-                  <option value="">{t("anyField")}</option>
-                  {venue.fields.map((f) => (
-                    <option key={f.id} value={f.id}>{f.name}</option>
-                  ))}
-                </Select>
-              )}
-            </FormField>
-          ) : null}
-        </div>
         <FormField name="location_note" label={t("locationNote")} hint={t("locationNoteHint")}>
           {(a) => <Input {...a} defaultValue={defaults.location_note ?? ""} maxLength={300} />}
         </FormField>
         <Checkbox name="external_booking" defaultChecked={defaults.external_booking} label={t("externalBooking")} />
-      </fieldset>
-
-      <fieldset className="flex flex-col gap-4">
-        <legend className="mb-3 font-display text-xl font-semibold">{t("players")}</legend>
-        <div className="grid gap-4 sm:grid-cols-3">
-          {mode === "create" ? (
-            <FormField name="format" label={t("format")} required>
-              {(a) => (
-                <Select
-                  {...a}
-                  value={format}
-                  onChange={(ev) => {
-                    const f = ev.target.value as MatchFormat;
-                    setFormat(f);
-                    setTotal(defaultRosterSize(f));
-                  }}
-                >
-                  {MATCH_FORMATS.map((f) => (
-                    <option key={f} value={f}>{f}</option>
-                  ))}
-                </Select>
-              )}
-            </FormField>
-          ) : null}
-          <FormField name="total_players" label={t("totalPlayers")} hint={t("totalPlayersHint")} required>
-            {(a) => <Input {...a} type="number" min={2} max={30} value={total} onChange={(ev) => setTotal(Number(ev.target.value))} required />}
-          </FormField>
-          <FormField name="reserved_spots" label={t("reservedSpots")} hint={t("reservedSpotsHint")}>
-            {(a) => <Input {...a} type="number" min={0} max={29} defaultValue={defaults.reserved_spots ?? 0} />}
-          </FormField>
-        </div>
-        <fieldset className="flex flex-col gap-2">
-          <legend className="mb-1 text-sm font-medium">{t("positionsNeeded")}</legend>
-          <p className="text-xs text-muted">{t("positionsNeededHint")}</p>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {POSITIONS.map((p) => (
-              <label key={p} className="flex flex-col gap-1 text-xs text-muted">
-                {e(`position.${p}`)}
-                <Input type="number" name={`need_${p}`} min={0} max={30} defaultValue={defaults.positions_needed?.[p] ?? 0} />
-              </label>
-            ))}
-          </div>
-        </fieldset>
         <ChoiceChips
           name="skill_level"
           type="radio"
@@ -252,30 +241,28 @@ export function MatchForm({
             </FormField>
           </div>
         ) : null}
-      </fieldset>
-
-      <fieldset className="flex flex-col gap-4">
-        <legend className="mb-3 font-display text-xl font-semibold">{t("cost")}</legend>
-        <p className="text-sm text-muted">{t("costIntro")}</p>
-        <div className="grid gap-4 sm:grid-cols-3">
-          <FormField name="total_cost" label={t("totalCost")} hint={t("currencyHint")}>
-            {(a) => <Input {...a} inputMode="numeric" value={cost} onChange={(ev) => setCost(ev.target.value)} dir="ltr" placeholder="50000" />}
-          </FormField>
+        <FormField name="reserved_spots" label={t("reservedSpots")} hint={t("reservedSpotsHint")}>
+          {(a) => <Input {...a} type="number" min={0} max={29} defaultValue={defaults.reserved_spots ?? 0} />}
+        </FormField>
+        <fieldset className="flex flex-col gap-2">
+          <legend className="mb-1 text-sm font-medium">{t("positionsNeeded")}</legend>
+          <p className="text-xs text-muted">{t("positionsNeededHint")}</p>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {POSITIONS.map((p) => (
+              <label key={p} className="flex flex-col gap-1 text-xs text-muted">
+                {e(`position.${p}`)}
+                <Input type="number" name={`need_${p}`} min={0} max={30} defaultValue={defaults.positions_needed?.[p] ?? 0} />
+              </label>
+            ))}
+          </div>
+        </fieldset>
+        <div className="grid gap-4 sm:grid-cols-2">
           <FormField name="paying_players" label={t("payingPlayers")} hint={t("payingPlayersHint")}>
             {(a) => <Input {...a} type="number" min={1} max={60} value={paying} onChange={(ev) => setPaying(ev.target.value)} placeholder={String(total)} />}
           </FormField>
           <FormField name="price_per_player" label={t("pricePerPlayer")} hint={t("pricePerPlayerHint")}>
             {(a) => <Input {...a} inputMode="numeric" value={override} onChange={(ev) => setOverride(ev.target.value)} dir="ltr" />}
           </FormField>
-        </div>
-        <div aria-live="polite" className="rounded-xl border border-line bg-surface-2 p-3 text-sm">
-          {override && parseMoneyInput(override, currency) != null ? (
-            t("sharePreviewOverride", { amount: formatMoney(parseMoneyInput(override, currency)!, currency, locale) })
-          ) : share != null ? (
-            t("sharePreview", { amount: formatMoney(share, currency, locale), players: paying || total })
-          ) : (
-            t("sharePreviewNone")
-          )}
         </div>
         <Checkbox name="cost_is_estimate" defaultChecked={defaults.cost_is_estimate ?? true} label={t("costIsEstimate")} />
         <div className="grid gap-4 sm:grid-cols-2">
@@ -292,10 +279,6 @@ export function MatchForm({
             {(a) => <Input {...a} defaultValue={defaults.payment_notes ?? ""} maxLength={500} />}
           </FormField>
         </div>
-      </fieldset>
-
-      <fieldset className="flex flex-col gap-4">
-        <legend className="mb-3 font-display text-xl font-semibold">{t("rules")}</legend>
         <div className="grid gap-4 sm:grid-cols-3">
           {matchType !== "private" ? (
             <>
@@ -336,14 +319,14 @@ export function MatchForm({
             )}
           </FormField>
         ) : null}
-      </fieldset>
+      </MoreOptions>
 
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <SubmitButton size="lg" name="intent" value="publish">
           {mode === "create" ? t("publish") : t("saveChanges")}
         </SubmitButton>
         {mode === "create" ? (
-          <SubmitButton size="lg" variant="outline" name="intent" value="draft">
+          <SubmitButton size="lg" variant="ghost" name="intent" value="draft">
             {t("saveDraft")}
           </SubmitButton>
         ) : null}

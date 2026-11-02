@@ -13,6 +13,8 @@ test.describe("Conversations", () => {
 
     await signIn(page, sender);
     await page.goto(`/ar/messages/${conv}`);
+    // The picture is read by the page's script: choose it once the page is interactive.
+    await page.waitForLoadState("networkidle");
     await page.locator('input[type="file"][name="image"]').setInputFiles({ name: "pitch.png", mimeType: "image/png", buffer: PNG });
     // The chosen picture is previewed and can be removed; text is optional with a picture.
     await expect(page.getByRole("button", { name: "إزالة الصورة" })).toBeVisible();

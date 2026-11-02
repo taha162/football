@@ -107,7 +107,7 @@
     "verifyMethod": "Verification method",
     "methodEmail": "With e-mail",
     "methodTelegram": "With Telegram",
-    "telegramSignupNote": "We won't ask for your number or send you messages. Next, you open Al-Malab's bot in Telegram and tap “Share my number”: your account is activated and linked to the number on your Telegram account.",
+    "telegramSignupNote": "You'll confirm your number with Al-Malab's Telegram bot in one tap, with no SMS.",
     "continueTelegram": "Continue with Telegram",
     "verifyEmailTitle": "Enter your code",
     "verifyEmailSubtitle": "We sent a verification code to <email></email>. Enter it here to activate your account.",
@@ -120,7 +120,7 @@
     "tgSubtitleSignup": "One last step to activate your account and link your number.",
     "tgSubtitleReset": "Confirm the number linked to your account to choose a new password.",
     "tgStep1": "Tap the button to open Al-Malab's bot in Telegram, then tap Start.",
-    "tgStep2": "Tap “Share my number” in the bot and confirm.",
+    "tgStep2": "Tap “Share my number” in the bot and confirm, then come back here.",
     "tgStep3": "Come back here: we continue automatically within seconds.",
     "tgOpen": "Open Telegram",
     "tgLinked": "The bot is open. Now tap “Share my number” in Telegram.",
@@ -134,7 +134,8 @@
     "tgPhoneTaken": "This number already has an Al-Malab account.",
     "tgNoAccount": "No account is linked to this number.",
     "tgVerified": "Verified! Taking you there…",
-    "or": "or"
+    "or": "or",
+    "tgNoBot": "The bot didn't open?"
   },
   "onboarding": {
     "eyebrow": "Step 1 of 1",
@@ -162,7 +163,8 @@
     "photoHint": "JPG, PNG or WebP, up to 5 MB.",
     "uploadPhoto": "Upload photo",
     "removePhoto": "Remove photo",
-    "viewPublic": "View public profile"
+    "viewPublic": "View public profile",
+    "moreOptions": "More options"
   },
   "forms": {
     "city": "City",
@@ -798,7 +800,7 @@
     "area": "Area",
     "noArea": "No specific area",
     "venue": "Venue",
-    "venueHint": "Optional. Choose a listed venue or describe the location below.",
+    "venueHint": "Optional. You can describe the place under “More options”.",
     "noVenue": "No venue selected",
     "field": "Field",
     "anyField": "Any field",
@@ -857,7 +859,9 @@
     "repeatWeeks": "{count, plural, one {# more week} other {# more weeks}}",
     "publish": "Publish match",
     "saveDraft": "Save as draft",
-    "saveChanges": "Save changes"
+    "saveChanges": "Save changes",
+    "moreOptions": "More options",
+    "titlePlaceholder": "e.g. Thursday night five-a-side"
   },
   "matchDetail": {
     "allLevels": "All levels",

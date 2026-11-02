@@ -27,7 +27,7 @@ export default async function NewMatchPage({ params, searchParams }: PageProps<"
   const teamId = typeof sp.team === "string" ? sp.team : undefined;
   return (
     <Container className="max-w-3xl py-10">
-      <PageHeader title={t("createTitle")} description={t("createDescription")} />
+      <PageHeader title={t("createTitle")} />
       <MatchForm
         mode="create"
         cities={cities}

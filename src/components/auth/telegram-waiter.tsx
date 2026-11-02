@@ -8,6 +8,7 @@ import { buttonClass } from "@/components/ui/button";
 import { Alert } from "@/components/ui/primitives";
 import { pollTelegramAction, type TelegramPoll } from "@/server/telegram";
 import { ExternalLinkButton } from "@/components/ui/link-button";
+import { MoreOptions } from "@/components/ui/more-options";
 
 const POLL_MS = 3000;
 
@@ -97,7 +98,6 @@ export function TelegramWaiter({
       <ol className="flex flex-col gap-2 text-sm text-muted">
         <li>1. {t("tgStep1")}</li>
         <li>2. {t("tgStep2")}</li>
-        <li>3. {t("tgStep3")}</li>
       </ol>
       <ExternalLinkButton href={link} className={buttonClass("primary", "lg", "w-full")}>
         <Send aria-hidden="true" className="size-5 rtl:-scale-x-100" />
@@ -106,7 +106,9 @@ export function TelegramWaiter({
       {linked ? (
         <Alert tone="info" title={t("tgLinked")} />
       ) : null}
-      <div className="flex flex-col items-center gap-2 rounded-2xl border border-line bg-surface-2 p-5">
+      {/* The fallback (typing the code to the bot) is folded: the button is enough for most people. */}
+      <MoreOptions label={t("tgNoBot")}>
+      <div className="flex flex-col items-center gap-2">
         <span className="text-center text-xs text-muted">
           {t("tgManual")} <span className="font-semibold text-ink" dir="ltr">@{bot}</span>
         </span>
@@ -124,6 +126,7 @@ export function TelegramWaiter({
           {copied ? t("tgCopied") : t("tgCopy")}
         </button>
       </div>
+      </MoreOptions>
       <div role="status" aria-live="polite" className="flex items-center justify-center gap-2 text-sm text-muted">
         <Loader2 aria-hidden="true" className="size-4 animate-spin" />
         {t("tgWaiting")}
