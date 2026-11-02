@@ -47,6 +47,25 @@ export async function inspectImage(file: File): Promise<{ ok: true; mime: string
   return { ok: true, mime: match.mime, ext: match.ext, bytes };
 }
 
+export const MAX_VOICE_BYTES = 5 * 1024 * 1024;
+
+/** What browsers record voice in: WebM or Ogg (Opus), or MP4 (AAC/Opus, Safari). */
+const AUDIO_SIGNATURES: { mime: string; ext: string; test: (b: Uint8Array) => boolean }[] = [
+  { mime: "audio/webm", ext: "webm", test: (b) => b[0] === 0x1a && b[1] === 0x45 && b[2] === 0xdf && b[3] === 0xa3 },
+  { mime: "audio/ogg", ext: "ogg", test: (b) => String.fromCharCode(...b.slice(0, 4)) === "OggS" },
+  { mime: "audio/mp4", ext: "m4a", test: (b) => String.fromCharCode(...b.slice(4, 8)) === "ftyp" },
+];
+
+/** As inspectImage, for a recorded voice note. */
+export async function inspectAudio(file: File): Promise<{ ok: true; mime: string; ext: string; bytes: Uint8Array } | { ok: false; error: string }> {
+  if (!(file instanceof File) || file.size === 0) return { ok: false, error: "file_missing" };
+  if (file.size > MAX_VOICE_BYTES) return { ok: false, error: "file_too_large" };
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const match = AUDIO_SIGNATURES.find((s) => s.test(bytes));
+  if (!match) return { ok: false, error: "file_type_not_allowed" };
+  return { ok: true, mime: match.mime, ext: match.ext, bytes };
+}
+
 export function randomFileName(ext: string): string {
   return `${crypto.randomUUID()}.${ext}`;
 }

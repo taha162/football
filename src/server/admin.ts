@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { dbErrorCode, fail, ok, str, uuid, type ActionState } from "@/lib/actions";
 import { logger } from "@/lib/log";
+import { removeMessageFiles } from "@/lib/message-files";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -53,11 +54,12 @@ export async function setHiddenAction(_: ActionState, fd: FormData): Promise<Act
 export async function removeMessageAction(_: ActionState, fd: FormData): Promise<ActionState> {
   const id = z.coerce.number().int().positive().safeParse(fd.get("message_id"));
   if (!id.success) return fail("invalid");
-  // Moderators needn't belong to the conversation: read the picture's path with the server key.
+  // Moderators needn't belong to the conversation: read the files' paths with the server key.
   const admin = createAdminClient();
-  const { data: before } = admin ? await admin.from("messages").select("image_path").eq("id", id.data).maybeSingle() : { data: null };
+  const { data: before } = admin ? await admin.from("messages").select("*").eq("id", id.data).maybeSingle() : { data: null };
   const result = await run("admin_remove_message", { p_message_id: id.data, p_reason: str(fd, "reason") }, "message_removed");
-  if (result?.ok && before?.image_path) await admin?.storage.from("message-images").remove([before.image_path]);
+  // Only once the database accepted the removal (the caller is a moderator).
+  if (result?.ok) await removeMessageFiles(before);
   return result;
 }
 

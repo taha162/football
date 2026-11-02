@@ -429,7 +429,13 @@
     "deposit_not_pending": "هذا الحجز لا ينتظر عربوناً.",
     "deposit_window_closed": "انتهت مهلة إرسال العربون فأُلغي الحجز. يمكنك الحجز من جديد إن كان الوقت ما زال متاحاً.",
     "deposit_not_refundable": "لا يوجد عربون مستحق الإرجاع في هذا الحجز.",
-    "invalid_image": "تعذّر إرسال الصورة. حاول مرة أخرى."
+    "invalid_image": "تعذّر إرسال الصورة. حاول مرة أخرى.",
+    "invalid_location": "الموقع غير صالح.",
+    "invalid_voice": "الرسالة الصوتية غير صالحة.",
+    "user_busy": "مشغول بمكالمة أخرى.",
+    "call_not_found": "المكالمة غير موجودة.",
+    "call_ended": "انتهت المكالمة.",
+    "invalid_signal": "تعذّر وصل المكالمة."
   },
   "validation": {
     "invalid": "قيمة غير صالحة.",
@@ -604,7 +610,8 @@
     "booking_deposit_expired": "أُلغي حجزك في {venue_name} يوم {starts_at} لأن العربون لم يُؤكَّد في الوقت المحدد.{refund, select, yes { وعلى الملعب أن يُرجع لك العربون.} other {}}",
     "booking_deposit_refund_due": "وصل موعد حجز {starts_at} في {venue_name} دون التأكد من العربون، فيجب إرجاعه للزبون.",
     "booking_cancelled_refund": "ألغى {venue_name} حجزك يوم {starts_at}، وسيُرجع لك العربون.",
-    "booking_deposit_refunded": "أرجع {venue_name} عربون حجزك يوم {starts_at}."
+    "booking_deposit_refunded": "أرجع {venue_name} عربون حجزك يوم {starts_at}.",
+    "missed_call": "مكالمة فائتة من {caller_name}."
   },
   "notificationTypes": {
     "match_participant_joined": "انضمام لاعب لمباراتي",
@@ -1404,7 +1411,18 @@
     "tgDatabaseOk": "مطبّق",
     "tgDatabaseMissing": "غير مطبّق بعد: شغّل الملف في SQL Editor في Supabase (DEPLOYMENT.md، القسم 6).",
     "tgExpectedUrl": "يجب أن يرسل البوت التحديثات إلى:",
-    "reportedPicture": "الصورة في الرسالة المبلّغ عنها"
+    "reportedPicture": "الصورة في الرسالة المبلّغ عنها",
+    "voiceCalls": "المكالمات الصوتية",
+    "callsDatabase": "قاعدة البيانات",
+    "callsDatabaseOk": "جاهزة",
+    "callsDatabaseMissing": "غير جاهزة: شغّل الملف 20261102000017_location_voice_calls.sql في SQL Editor",
+    "callsRelay": "خادم الوصل (TURN)",
+    "callsRelayCloudflare": "يعمل (Cloudflare)",
+    "callsRelayRejected": "مفاتيح Cloudflare مرفوضة أو لا تصل. راجع CLOUDFLARE_TURN_KEY_ID و CLOUDFLARE_TURN_API_TOKEN",
+    "callsRelayStatic": "مضبوط (خادم TURN خاص)",
+    "callsRelayNone": "غير مضبوط: تعمل المكالمات على أغلب الشبكات، وقد تفشل بين بعض شبكات الهاتف",
+    "callsHint": "المكالمة تمر مباشرة بين المتصفحين ولا يُحفظ منها شيء. خادم الوصل يمرر الصوت حين يتعذّر الطريق المباشر. خطوات ضبطه في DEPLOYMENT.md.",
+    "reportedVoice": "الرسالة الصوتية المبلّغ عنها"
   },
   "teams": {
     "title": "الفرق",
@@ -1704,7 +1722,37 @@
     "removeImage": "إزالة الصورة",
     "photo": "صورة",
     "openImage": "فتح الصورة",
-    "imageAlt": "صورة مرسلة"
+    "imageAlt": "صورة مرسلة",
+    "location": "الموقع",
+    "shareLocation": "إرسال موقعي",
+    "locating": "جارٍ تحديد موقعك…",
+    "locationAccuracy": "الدقة ± {distance}",
+    "locationImproving": "تتحسن الدقة خلال ثوانٍ، وتكون أفضل في مكان مكشوف.",
+    "sendLocation": "إرسال الموقع",
+    "cancel": "إلغاء",
+    "locationDenied": "لم يُسمح للموقع بمعرفة مكانك. اسمح بذلك من إعدادات المتصفح ثم حاول مجدداً.",
+    "locationFailed": "تعذّر تحديد موقعك. تأكد أن خدمة الموقع مفعّلة في هاتفك ثم حاول مجدداً.",
+    "locationUnsupported": "متصفحك لا يدعم تحديد الموقع.",
+    "openInMaps": "فتح في الخرائط",
+    "metres": "{n} م",
+    "kilometres": "{n} كم",
+    "voice": "رسالة صوتية",
+    "record": "تسجيل رسالة صوتية",
+    "recording": "جارٍ التسجيل",
+    "sendVoice": "إرسال الرسالة الصوتية",
+    "sendingVoice": "جارٍ الإرسال…",
+    "discardRecording": "حذف التسجيل",
+    "recordLimit": "وصلت إلى الحد الأقصى: دقيقتان.",
+    "micDenied": "لم يُسمح باستخدام الميكروفون. اسمح به من إعدادات المتصفح ثم حاول مجدداً.",
+    "recordUnsupported": "متصفحك لا يدعم التسجيل الصوتي.",
+    "recordFailed": "تعذّر التسجيل. حاول مجدداً.",
+    "play": "تشغيل الرسالة الصوتية",
+    "pause": "إيقاف مؤقت",
+    "voiceProgress": "موضع التشغيل",
+    "call": "مكالمة",
+    "callAnswered": "مكالمة صوتية · {duration}",
+    "callMissed": "مكالمة فائتة",
+    "callNoAnswer": "مكالمة لم يُرَد عليها"
   },
   "notificationsPage": {
     "title": "الإشعارات",
@@ -2110,6 +2158,37 @@
         "payments": "لا يوجد دفع إلكتروني حالياً — تُسوّى التكاليف يدوياً ولا يُقتطع أي مبلغ عبر التطبيق.",
         "more": "اقرأ عن نهجنا في الأمان"
       }
+    }
+  },
+  "calls": {
+    "call": "اتصال",
+    "calling": "جارٍ الاتصال…",
+    "ringing": "يرن…",
+    "connecting": "جارٍ الوصل…",
+    "reconnecting": "انقطع الصوت، جارٍ إعادة الوصل…",
+    "incoming": "مكالمة صوتية واردة",
+    "accept": "رد",
+    "decline": "رفض",
+    "hangUp": "إنهاء",
+    "mute": "كتم",
+    "unmute": "إلغاء الكتم",
+    "minimize": "تصغير المكالمة",
+    "expand": "عرض المكالمة",
+    "close": "إغلاق",
+    "inCall": "مكالمة جارية",
+    "someone": "مكالمة",
+    "ringsWhereOpen": "يرن عنده إن كان الموقع مفتوحاً لديه، وإلا يصله إشعار بمكالمة فائتة.",
+    "note": {
+      "ended": "انتهت المكالمة",
+      "noAnswer": "لا يوجد رد",
+      "busy": "مشغول بمكالمة أخرى",
+      "failed": "تعذّر وصل المكالمة. جرّب شبكة أخرى (واي فاي مثلاً) ثم أعد المحاولة.",
+      "micDenied": "اسمح باستخدام الميكروفون من إعدادات المتصفح لتتمكن من الاتصال.",
+      "unsupported": "متصفحك لا يدعم المكالمات الصوتية.",
+      "blocked": "لا يمكن الاتصال بهذا الشخص.",
+      "unavailable": "لا يمكن الاتصال الآن.",
+      "rateLimited": "اتصلت كثيراً خلال وقت قصير. انتظر قليلاً ثم حاول.",
+      "error": "تعذّر الاتصال. حاول مجدداً."
     }
   }
 }

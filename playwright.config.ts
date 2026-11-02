@@ -20,6 +20,8 @@ export default defineConfig({
     screenshot: "only-on-failure",
     locale: "en-GB",
     timezoneId: "Asia/Baghdad",
+    // Voice notes and calls: a fake microphone (a steady tone) that needs no prompt.
+    launchOptions: { args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"] },
   },
   webServer: {
     command: process.env.E2E_SERVER_COMMAND ?? "pnpm start",

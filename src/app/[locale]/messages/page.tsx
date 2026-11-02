@@ -21,6 +21,16 @@ export default async function MessagesPage({ params }: PageProps<"/[locale]/mess
   const supabase = await createClient();
   const { data } = await supabase.rpc("my_conversations", { p_limit: 100 });
   const rows = data ?? [];
+  // A message with no text says what it carried. (last_kind is absent on a
+  // database without the location/voice/calls update: an empty text is a picture.)
+  const preview = (c: (typeof rows)[number]) => {
+    const kind = (c as { last_kind?: string | null }).last_kind;
+    if (kind === "location") return `📍 ${t("location")}`;
+    if (kind === "voice") return `🎤 ${t("voice")}`;
+    if (kind === "call") return `📞 ${t("call")}`;
+    if (c.last_message === "") return `📷 ${t("photo")}`;
+    return c.last_message ?? t("noMessages");
+  };
   return (
     <Container className="max-w-3xl py-10">
       <PageHeader title={t("title")} description={t("description")} />
@@ -37,7 +47,7 @@ export default async function MessagesPage({ params }: PageProps<"/[locale]/mess
                     <Badge>{t(`kind.${c.kind}`)}</Badge>
                     {c.is_locked ? <Badge tone="warning">{t("locked")}</Badge> : null}
                   </div>
-                  <p className="truncate text-sm text-muted" dir="auto">{c.last_message === "" ? `📷 ${t("photo")}` : (c.last_message ?? t("noMessages"))}</p>
+                  <p className="truncate text-sm text-muted" dir="auto">{preview(c)}</p>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
                   {c.last_message_at ? <time className="text-xs text-faint" dateTime={c.last_message_at}>{formatDateTime(c.last_message_at, locale, "Asia/Baghdad")}</time> : null}

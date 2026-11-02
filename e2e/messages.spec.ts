@@ -18,7 +18,7 @@ test.describe("Conversations", () => {
     await page.locator('input[type="file"][name="image"]').setInputFiles({ name: "pitch.png", mimeType: "image/png", buffer: PNG });
     // The chosen picture is previewed and can be removed; text is optional with a picture.
     await expect(page.getByRole("button", { name: "إزالة الصورة" })).toBeVisible();
-    await page.getByRole("button", { name: "إرسال" }).click();
+    await page.getByRole("button", { name: "إرسال", exact: true }).click();
     await expect(page.getByRole("img", { name: "صورة مرسلة" })).toBeVisible();
 
     const other = await (await browser.newContext()).newPage();

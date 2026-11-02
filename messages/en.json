@@ -429,7 +429,13 @@
     "deposit_not_pending": "This booking isn't waiting for a deposit.",
     "deposit_window_closed": "The time to send the deposit has passed, so the booking was released. You can book again if the time is still free.",
     "deposit_not_refundable": "There's no deposit to return on this booking.",
-    "invalid_image": "The picture couldn't be sent. Please try again."
+    "invalid_image": "The picture couldn't be sent. Please try again.",
+    "invalid_location": "That location isn't valid.",
+    "invalid_voice": "That voice message isn't valid.",
+    "user_busy": "On another call.",
+    "call_not_found": "Call not found.",
+    "call_ended": "The call has ended.",
+    "invalid_signal": "Couldn't connect the call."
   },
   "validation": {
     "invalid": "Invalid value.",
@@ -604,7 +610,8 @@
     "booking_deposit_expired": "Your booking at {venue_name} for {starts_at} was released: the deposit wasn't confirmed in time.{refund, select, yes { The venue owes you the deposit back.} other {}}",
     "booking_deposit_refund_due": "The booking at {venue_name} for {starts_at} reached its time without the deposit being checked, so it must be returned to the customer.",
     "booking_cancelled_refund": "{venue_name} cancelled your booking on {starts_at}. The venue will return your deposit.",
-    "booking_deposit_refunded": "{venue_name} has returned your deposit for the booking on {starts_at}."
+    "booking_deposit_refunded": "{venue_name} has returned your deposit for the booking on {starts_at}.",
+    "missed_call": "Missed call from {caller_name}."
   },
   "notificationTypes": {
     "match_participant_joined": "Someone joins my match",
@@ -1404,7 +1411,18 @@
     "tgDatabaseOk": "Applied",
     "tgDatabaseMissing": "Not applied yet: run the file in Supabase's SQL Editor (DEPLOYMENT.md, section 6).",
     "tgExpectedUrl": "The bot should send updates to:",
-    "reportedPicture": "Picture in the reported message"
+    "reportedPicture": "Picture in the reported message",
+    "voiceCalls": "Voice calls",
+    "callsDatabase": "Database",
+    "callsDatabaseOk": "Ready",
+    "callsDatabaseMissing": "Not ready: run 20261102000017_location_voice_calls.sql in the SQL Editor",
+    "callsRelay": "Relay server (TURN)",
+    "callsRelayCloudflare": "Working (Cloudflare)",
+    "callsRelayRejected": "Cloudflare keys rejected or unreachable. Check CLOUDFLARE_TURN_KEY_ID and CLOUDFLARE_TURN_API_TOKEN",
+    "callsRelayStatic": "Set (own TURN server)",
+    "callsRelayNone": "Not set: calls work on most networks, but may fail between some mobile networks",
+    "callsHint": "A call goes straight between the two browsers and nothing of it is stored. The relay passes the sound on when a direct path isn't possible. Setup steps are in DEPLOYMENT.md.",
+    "reportedVoice": "The reported voice message"
   },
   "teams": {
     "title": "Teams",
@@ -1704,7 +1722,37 @@
     "removeImage": "Remove the picture",
     "photo": "Photo",
     "openImage": "Open the picture",
-    "imageAlt": "Sent picture"
+    "imageAlt": "Sent picture",
+    "location": "Location",
+    "shareLocation": "Send my location",
+    "locating": "Finding your location…",
+    "locationAccuracy": "Accurate to {distance}",
+    "locationImproving": "Accuracy improves over a few seconds, and is better in the open.",
+    "sendLocation": "Send location",
+    "cancel": "Cancel",
+    "locationDenied": "The site isn't allowed to see your location. Allow it in your browser settings, then try again.",
+    "locationFailed": "Couldn't find your location. Check location services are on, then try again.",
+    "locationUnsupported": "Your browser can't share a location.",
+    "openInMaps": "Open in Maps",
+    "metres": "{n} m",
+    "kilometres": "{n} km",
+    "voice": "Voice message",
+    "record": "Record a voice message",
+    "recording": "Recording",
+    "sendVoice": "Send voice message",
+    "sendingVoice": "Sending…",
+    "discardRecording": "Delete recording",
+    "recordLimit": "That's the limit: two minutes.",
+    "micDenied": "The microphone isn't allowed. Allow it in your browser settings, then try again.",
+    "recordUnsupported": "Your browser can't record audio.",
+    "recordFailed": "Recording failed. Try again.",
+    "play": "Play voice message",
+    "pause": "Pause",
+    "voiceProgress": "Playback position",
+    "call": "Call",
+    "callAnswered": "Voice call · {duration}",
+    "callMissed": "Missed call",
+    "callNoAnswer": "Call not answered"
   },
   "notificationsPage": {
     "title": "Notifications",
@@ -2110,6 +2158,37 @@
         "payments": "No online payments yet — costs are settled in person and nothing is charged through the app.",
         "more": "Read our safety approach"
       }
+    }
+  },
+  "calls": {
+    "call": "Call",
+    "calling": "Calling…",
+    "ringing": "Ringing…",
+    "connecting": "Connecting…",
+    "reconnecting": "Sound lost, reconnecting…",
+    "incoming": "Incoming voice call",
+    "accept": "Answer",
+    "decline": "Decline",
+    "hangUp": "End",
+    "mute": "Mute",
+    "unmute": "Unmute",
+    "minimize": "Minimise call",
+    "expand": "Show call",
+    "close": "Close",
+    "inCall": "Call in progress",
+    "someone": "Call",
+    "ringsWhereOpen": "It rings if they have the site open; otherwise they get a missed-call notification.",
+    "note": {
+      "ended": "Call ended",
+      "noAnswer": "No answer",
+      "busy": "On another call",
+      "failed": "Couldn't connect the call. Try another network (Wi-Fi, for example), then call again.",
+      "micDenied": "Allow the microphone in your browser settings to make calls.",
+      "unsupported": "Your browser can't make voice calls.",
+      "blocked": "You can't call this person.",
+      "unavailable": "Can't call right now.",
+      "rateLimited": "You've called a lot in a short time. Wait a little, then try again.",
+      "error": "Couldn't call. Try again."
     }
   }
 }

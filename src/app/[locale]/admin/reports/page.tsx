@@ -42,13 +42,17 @@ export default async function AdminReportsPage({ searchParams }: PageProps<"/[lo
   // path is read with the server key; the signed link is made with the moderator's own
   // session, which the storage policy allows for moderators only.
   const messageIds = rows.flatMap((rep) => (rep.target_type === "message" && /^\d+$/.test(rep.target_id) ? [Number(rep.target_id)] : []));
-  const { data: pictured } = messageIds.length
-    ? ((await createAdminClient()?.from("messages").select("id, image_path").in("id", messageIds).not("image_path", "is", null)) ?? { data: [] })
+  const { data: reported } = messageIds.length
+    ? ((await createAdminClient()?.from("messages").select("*").in("id", messageIds)) ?? { data: [] })
     : { data: [] };
-  const signed = pictured?.length
-    ? ((await supabase.storage.from("message-images").createSignedUrls(pictured.map((m) => m.image_path!), 3600)).data ?? [])
-    : [];
-  const pictureOf = new Map((pictured ?? []).map((m, i) => [String(m.id), signed[i]?.signedUrl ?? null]));
+  const pictured = (reported ?? []).filter((m) => m.image_path);
+  const voiced = (reported ?? []).filter((m) => m.voice_path);
+  const [signed, signedVoice] = await Promise.all([
+    pictured.length ? supabase.storage.from("message-images").createSignedUrls(pictured.map((m) => m.image_path!), 3600).then((r) => r.data ?? []) : [],
+    voiced.length ? supabase.storage.from("message-voice").createSignedUrls(voiced.map((m) => m.voice_path!), 3600).then((r) => r.data ?? []) : [],
+  ]);
+  const pictureOf = new Map(pictured.map((m, i) => [String(m.id), signed[i]?.signedUrl ?? null]));
+  const voiceOf = new Map(voiced.map((m, i) => [String(m.id), signedVoice[i]?.signedUrl ?? null]));
   return (
     <>
       <PageHeader title={t("nav.reports")} description={t("reportsDescription")} />
@@ -81,6 +85,9 @@ export default async function AdminReportsPage({ searchParams }: PageProps<"/[lo
                   {rep.target_type === "message" && pictureOf.get(rep.target_id) ? (
                     // eslint-disable-next-line @next/next/no-img-element -- private, signed, short-lived link
                     <img src={pictureOf.get(rep.target_id)!} alt={t("reportedPicture")} className="max-h-60 w-fit rounded-lg border border-line" />
+                  ) : null}
+                  {rep.target_type === "message" && voiceOf.get(rep.target_id) ? (
+                    <audio controls preload="none" src={voiceOf.get(rep.target_id)!} aria-label={t("reportedVoice")} className="w-full max-w-sm" />
                   ) : null}
                   <div className="flex flex-wrap gap-2">
                     {href ? <LinkButton href={href} className={buttonClass("outline", "sm")}>{t("viewTarget")}</LinkButton> : null}
