@@ -82,6 +82,37 @@ test.describe("Voice calls", () => {
     await other.context().close();
   });
 
+  test("a player's page has a call button; names in a conversation lead there", async ({ page, browser }) => {
+    const [caller, callee] = [await createAuthUser("Caller"), await createAuthUser("Callee")];
+    const other = await (await browser.newContext()).newPage();
+    await signIn(other, callee);
+    await other.waitForLoadState("networkidle");
+
+    // No conversation yet: calling from the player's page opens it.
+    await signIn(page, caller);
+    await page.goto(`/ar/players/${callee.id}`);
+    await page.waitForLoadState("networkidle");
+    await page.getByRole("button", { name: "اتصال" }).click();
+    await expect(callScreen(page, callee.name).getByRole("status")).toHaveText("يرن…");
+    await callScreen(other, caller.name).getByRole("button", { name: "رفض" }).click();
+    await expect(callScreen(page, callee.name).getByRole("status")).toHaveText("لا يوجد رد", { timeout: 15_000 });
+
+    // The call's record is in their direct conversation; the caller's name there opens the caller's page.
+    await other.goto("/ar/messages");
+    await expect(other.getByText("📞 مكالمة")).toBeVisible();
+    await other.getByText("📞 مكالمة").click();
+    await expect(other.getByTestId("call-line")).toContainText("مكالمة فائتة");
+    await rpc(caller.id, "send_message", {
+      p_conversation_id: other.url().split("/").pop(),
+      p_body: "اتصل بي",
+    });
+    await other.reload();
+    await other.getByRole("link", { name: caller.name }).click();
+    await other.waitForURL(new RegExp(`/ar/players/${caller.id}$`));
+    await expect(other.getByRole("button", { name: "اتصال" })).toBeVisible();
+    await other.context().close();
+  });
+
   test("declining ends the call for the caller as no answer", async ({ page, browser }) => {
     const [caller, callee] = [await createAuthUser("Caller"), await createAuthUser("Callee")];
     const conv = await rpc<string>(caller.id, "start_direct_conversation", { p_user_id: callee.id });
