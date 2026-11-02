@@ -52,7 +52,8 @@ export interface CallView {
 const IDLE: CallView = { phase: "idle", peer: null, ringing: false, connectedAt: null, durationAtEnd: null, note: null, muted: false, reconnecting: false, minimized: false };
 
 interface CallApi {
-  start: (conversationId: string, peer: CallPeer) => void;
+  /** A direct conversation's id, or null to open (or create) the one with `peer` first. */
+  start: (conversationId: string | null, peer: CallPeer) => void;
   busy: boolean;
 }
 
@@ -474,7 +475,8 @@ function createEngine(setView: Dispatch<SetStateAction<CallView>>) {
     }
   }
 
-  async function start(conversationId: string, peer: CallPeer) {
+  /** Calls the other member of a direct conversation; without one (from a player's page), opens it first. */
+  async function start(conversationId: string | null, peer: CallPeer) {
     const l = L();
     if (!l.me || (l.phase !== "idle" && l.phase !== "ended")) return;
     teardown();
@@ -493,7 +495,15 @@ function createEngine(setView: Dispatch<SetStateAction<CallView>>) {
     if (!current(gen)) return stream.getTracks().forEach((track) => track.stop());
     l.local = stream;
     void rememberToken();
-    const { data, error } = await db().rpc("start_call", { p_conversation_id: conversationId });
+    let conversation = conversationId;
+    if (!conversation) {
+      // The same conversation «مراسلة» opens; it is where the call's record goes.
+      const { data: opened, error: openError } = await db().rpc("start_direct_conversation", { p_user_id: peer.id });
+      if (!current(gen)) return;
+      if (openError || !opened) return finish(noteFor(openError?.message ?? ""));
+      conversation = String(opened);
+    }
+    const { data, error } = await db().rpc("start_call", { p_conversation_id: conversation });
     if (!current(gen)) {
       // Hung up while it was being placed.
       if (data) void endOnServer(String(data), "hangup");

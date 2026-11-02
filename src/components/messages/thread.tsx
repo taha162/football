@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Phone, PhoneIncoming, PhoneMissed } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { ReportButton } from "@/components/report-button";
 import { prefersReducedMotion } from "@/components/motion/scroll";
 import type { RealtimeChannel } from "@supabase/supabase-js";
@@ -141,7 +142,16 @@ export function Thread({
           const hasLocation = m.location_lat != null && m.location_lng != null && !m.deleted_at;
           return (
             <li key={m.id} className={cn("flex max-w-[85%] flex-col gap-1", mine ? "self-end items-end" : "self-start items-start")}>
-              {!mine ? <span className="text-xs text-muted">{m.sender_id ? (names[m.sender_id] ?? t("member")) : t("deletedUser")}</span> : null}
+              {/* The name opens the person's page (where «اتصال» and «مراسلة» are). */}
+              {!mine ? (
+                m.sender_id ? (
+                  <Link href={`/players/${m.sender_id}`} className="text-xs text-muted underline-offset-2 hover:text-ink hover:underline">
+                    {names[m.sender_id] ?? t("member")}
+                  </Link>
+                ) : (
+                  <span className="text-xs text-muted">{t("deletedUser")}</span>
+                )
+              ) : null}
               {m.image_url && !m.deleted_at ? (
                 <a href={m.image_url} target="_blank" rel="noopener noreferrer" aria-label={t("openImage")} className="block overflow-hidden rounded-2xl border border-line">
                   {/* eslint-disable-next-line @next/next/no-img-element -- private, signed, short-lived link */}

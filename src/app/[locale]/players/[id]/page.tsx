@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { getCurrentUser } from "@/lib/auth";
+import { publicStorageUrl } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
+import { CallButton } from "@/components/calls/call-button";
 import { blockUserAction } from "@/server/profile";
 import { startDirectConversationAction } from "@/server/messages";
 import { PlayerSummary } from "@/components/player/player-summary";
@@ -37,10 +39,13 @@ export default async function PlayerPage({ params }: PageProps<"/[locale]/player
       <div className="mb-6 flex flex-wrap justify-end gap-2">
         {isSelf ? <LinkButton href="/profile" className={buttonClass("secondary", "sm")}>{t("editProfile")}</LinkButton> : null}
         {viewer && !isSelf && !block ? (
-          <ActionForm action={startDirectConversationAction}>
-            <Hidden values={{ user_id: id }} />
-            <SubmitButton size="sm" variant="secondary">{t("message")}</SubmitButton>
-          </ActionForm>
+          <>
+            <CallButton variant="secondary" peer={{ id, name: profile.display_name, avatarUrl: publicStorageUrl("avatars", profile.avatar_path) }} />
+            <ActionForm action={startDirectConversationAction}>
+              <Hidden values={{ user_id: id }} />
+              <SubmitButton size="sm" variant="secondary">{t("message")}</SubmitButton>
+            </ActionForm>
+          </>
         ) : null}
         {viewer && !isSelf ? (
           <ActionForm action={blockUserAction}>
