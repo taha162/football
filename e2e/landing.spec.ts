@@ -44,8 +44,11 @@ test.describe("Landing stage", () => {
     for (const href of await page.locator('[data-scene="matches"] a.board-stretch').evaluateAll((els) => els.map((e) => e.getAttribute("href")))) {
       expect(href).toMatch(/^\/ar\/matches\/[0-9a-f-]{36}$/);
     }
+    // The site footer (logo, links, legal) closes the landing page only.
+    await expect(page.getByRole("contentinfo").getByRole("link", { name: "شروط الاستخدام" })).toBeAttached();
     await page.getByRole("link", { name: "ابحث عن مباراتك القادمة" }).click();
     await page.waitForURL(/\/ar\/matches$/);
+    await expect(page.getByRole("contentinfo")).toHaveCount(0);
   });
 
   test("recruitment figures on the pitch come from the database", async ({ page }) => {
