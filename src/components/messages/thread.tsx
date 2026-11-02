@@ -1,15 +1,18 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ImagePlus, X } from "lucide-react";
+import { Phone, PhoneIncoming, PhoneMissed } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { ActionForm, Hidden, SubmitButton } from "@/components/ui/action-form";
-import { Textarea } from "@/components/ui/field";
 import { ReportButton } from "@/components/report-button";
 import { prefersReducedMotion } from "@/components/motion/scroll";
-import { getBrowserClient } from "@/lib/supabase/client";
+import type { RealtimeChannel } from "@supabase/supabase-js";
+import { getBrowserClient, getRealtimeClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/cn";
-import { markConversationReadAction, sendMessageAction } from "@/server/messages";
+import { formatDuration } from "@/lib/duration";
+import { markConversationReadAction } from "@/server/messages";
+import { Composer } from "./composer";
+import { LocationCard } from "./location-card";
+import { VoiceNote } from "./voice-note";
 
 export interface ThreadMessage {
   id: number;
@@ -20,29 +23,15 @@ export interface ThreadMessage {
   image_path?: string | null;
   /** Short-lived signed link to the picture, when there is one. */
   image_url?: string | null;
-}
-
-const MAX_SIDE = 1600;
-
-/**
- * Phone photos are often several megabytes: shrink to at most 1600 px on the
- * long side as JPEG before sending (faster on mobile data, and under the 5 MB
- * limit). Falls back to the original file if the browser can't decode it.
- */
-async function shrink(file: File): Promise<File> {
-  try {
-    const bitmap = await createImageBitmap(file);
-    const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height));
-    if (scale === 1 && file.size < 1_500_000 && file.type === "image/jpeg") return file;
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.round(bitmap.width * scale);
-    canvas.height = Math.round(bitmap.height * scale);
-    canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.82));
-    return blob ? new File([blob], "photo.jpg", { type: "image/jpeg" }) : file;
-  } catch {
-    return file;
-  }
+  location_lat?: number | null;
+  location_lng?: number | null;
+  location_accuracy?: number | null;
+  voice_path?: string | null;
+  voice_seconds?: number | null;
+  /** Short-lived signed link to the voice note, when there is one. */
+  voice_url?: string | null;
+  call_outcome?: string | null;
+  call_seconds?: number | null;
 }
 
 /**
@@ -84,26 +73,36 @@ export function Thread({
 
   useEffect(() => {
     void markConversationReadAction(conversationId);
-    const supabase = getBrowserClient();
-    const channel = supabase
-      .channel(`conversation:${conversationId}`)
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "messages", filter: `conversation_id=eq.${conversationId}` },
-        async (payload) => {
-          const msg = payload.new as ThreadMessage;
-          // Live messages carry the picture's path only; sign it with the member's session.
-          if (msg.image_path && !msg.image_url) {
-            const { data } = await supabase.storage.from("message-images").createSignedUrl(msg.image_path, 3600);
-            msg.image_url = data?.signedUrl ?? null;
-          }
-          setMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]));
-          void markConversationReadAction(conversationId);
-        },
-      )
-      .subscribe();
+    let channel: RealtimeChannel | null = null;
+    let closed = false;
+    // Joined as the member (RLS decides what reaches them), once the session has loaded.
+    void getRealtimeClient().then((supabase) => {
+      if (closed) return;
+      channel = supabase
+        .channel(`conversation:${conversationId}`)
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "messages", filter: `conversation_id=eq.${conversationId}` },
+          async (payload) => {
+            const msg = payload.new as ThreadMessage;
+            // Live messages carry the files' paths only; sign them with the member's session.
+            if (msg.image_path && !msg.image_url) {
+              const { data } = await supabase.storage.from("message-images").createSignedUrl(msg.image_path, 3600);
+              msg.image_url = data?.signedUrl ?? null;
+            }
+            if (msg.voice_path && !msg.voice_url) {
+              const { data } = await supabase.storage.from("message-voice").createSignedUrl(msg.voice_path, 3600);
+              msg.voice_url = data?.signedUrl ?? null;
+            }
+            setMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]));
+            void markConversationReadAction(conversationId);
+          },
+        )
+        .subscribe();
+    });
     return () => {
-      void supabase.removeChannel(channel);
+      closed = true;
+      if (channel) void getBrowserClient().removeChannel(channel);
     };
   }, [conversationId]);
 
@@ -124,6 +123,22 @@ export function Thread({
         {messages.length === 0 ? <li className="m-auto text-sm text-muted">{t("noMessages")}</li> : null}
         {messages.map((m) => {
           const mine = m.sender_id === me;
+          const time = <time className="text-[11px] text-faint" dateTime={m.created_at}>{fmt.format(new Date(m.created_at))}</time>;
+          // A call's record sits in the middle: it belongs to both.
+          if (m.call_outcome && !m.deleted_at) {
+            const answered = m.call_outcome === "answered";
+            const Icon = answered ? (mine ? Phone : PhoneIncoming) : PhoneMissed;
+            return (
+              <li key={m.id} className="flex flex-col items-center gap-1 self-center" data-testid="call-line">
+                <span className={cn("flex items-center gap-2 rounded-full border border-line bg-surface-2 px-3 py-1.5 text-xs font-semibold", !answered && !mine ? "text-danger" : "text-muted")}>
+                  <Icon aria-hidden="true" className="size-3.5" />
+                  {answered ? t("callAnswered", { duration: formatDuration(m.call_seconds ?? 0, locale) }) : mine ? t("callNoAnswer") : t("callMissed")}
+                </span>
+                {time}
+              </li>
+            );
+          }
+          const hasLocation = m.location_lat != null && m.location_lng != null && !m.deleted_at;
           return (
             <li key={m.id} className={cn("flex max-w-[85%] flex-col gap-1", mine ? "self-end items-end" : "self-start items-start")}>
               {!mine ? <span className="text-xs text-muted">{m.sender_id ? (names[m.sender_id] ?? t("member")) : t("deletedUser")}</span> : null}
@@ -133,13 +148,15 @@ export function Thread({
                   <img src={m.image_url} alt={t("imageAlt")} loading="lazy" className="max-h-72 w-auto max-w-full object-contain" />
                 </a>
               ) : null}
+              {hasLocation ? <LocationCard lat={m.location_lat!} lng={m.location_lng!} accuracy={m.location_accuracy ?? null} /> : null}
+              {m.voice_path && !m.deleted_at ? <VoiceNote src={m.voice_url ?? null} seconds={m.voice_seconds ?? 1} mine={mine} /> : null}
               {m.deleted_at || m.body ? (
                 <div className={cn("whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2 text-sm", mine ? "bg-accent text-accent-ink" : "bg-surface-3 text-ink", m.deleted_at && "italic opacity-60")} dir="auto">
                   {m.deleted_at ? t("deleted") : m.body}
                 </div>
               ) : null}
               <div className="flex items-center gap-1">
-                <time className="text-[11px] text-faint" dateTime={m.created_at}>{fmt.format(new Date(m.created_at))}</time>
+                {time}
                 {!mine && !m.deleted_at ? <ReportButton targetType="message" targetId={String(m.id)} compact /> : null}
               </div>
             </li>
@@ -152,66 +169,5 @@ export function Thread({
         <Composer conversationId={conversationId} />
       )}
     </div>
-  );
-}
-
-/** Text and/or one picture. The picture is previewed, and can be removed before sending. */
-function Composer({ conversationId }: { conversationId: string }) {
-  const t = useTranslations("messages");
-  const fileInput = useRef<HTMLInputElement>(null);
-  const [preview, setPreview] = useState<string | null>(null);
-
-  const clear = () => {
-    if (fileInput.current) fileInput.current.value = "";
-    setPreview((old) => {
-      if (old) URL.revokeObjectURL(old);
-      return null;
-    });
-  };
-
-  return (
-    <ActionForm action={sendMessageAction} resetOnSuccess hideSuccess onSuccess={clear} className="gap-2">
-      <Hidden values={{ conversation_id: conversationId }} />
-      {preview ? (
-        <div className="relative w-fit">
-          {/* eslint-disable-next-line @next/next/no-img-element -- local preview of the chosen file */}
-          <img src={preview} alt="" className="max-h-40 rounded-xl border border-line" />
-          <button type="button" onClick={clear} aria-label={t("removeImage")} className="absolute -top-2 -end-2 flex size-7 items-center justify-center rounded-full bg-surface-3 text-ink shadow">
-            <X aria-hidden="true" className="size-4" />
-          </button>
-        </div>
-      ) : null}
-      <label htmlFor="message-body" className="sr-only">{t("write")}</label>
-      <Textarea id="message-body" name="body" required={!preview} maxLength={2000} placeholder={t("placeholder")} className="min-h-20" dir="auto" />
-      <div className="flex items-center justify-between gap-2">
-        <label className="flex size-11 cursor-pointer items-center justify-center rounded-xl border border-line text-muted transition-colors hover:text-ink" title={t("attach")}>
-          <ImagePlus aria-hidden="true" className="size-5" />
-          <span className="sr-only">{t("attach")}</span>
-          <input
-            ref={fileInput}
-            type="file"
-            name="image"
-            accept="image/jpeg,image/png,image/webp,image/*"
-            className="sr-only"
-            onChange={async (e) => {
-              const input = e.currentTarget;
-              const chosen = input.files?.[0];
-              if (!chosen) return clear();
-              const small = await shrink(chosen);
-              if (small !== chosen) {
-                const list = new DataTransfer();
-                list.items.add(small);
-                input.files = list.files;
-              }
-              setPreview((old) => {
-                if (old) URL.revokeObjectURL(old);
-                return URL.createObjectURL(small);
-              });
-            }}
-          />
-        </label>
-        <SubmitButton>{t("send")}</SubmitButton>
-      </div>
-    </ActionForm>
   );
 }

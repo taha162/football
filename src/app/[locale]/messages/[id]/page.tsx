@@ -2,7 +2,10 @@ import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import type { Locale } from "@/i18n/routing";
 import { requireOnboardedUser } from "@/lib/auth";
+import { publicStorageUrl } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
+import { CallButton } from "@/components/calls/call-button";
+import type { CallPeer } from "@/components/calls/call-provider";
 import { Thread, type ThreadMessage } from "@/components/messages/thread";
 import { Badge, Container, PageHeader } from "@/components/ui/primitives";
 import { buttonClass } from "@/components/ui/button";
@@ -20,16 +23,29 @@ export default async function ConversationPage({ params, searchParams }: PagePro
   const { data: conv } = await supabase.from("conversations").select("*").eq("id", id).maybeSingle();
   if (!conv) notFound();
   const before = Number((await searchParams).before);
-  let q = supabase.from("messages").select("id, sender_id, body, created_at, deleted_at, image_path").eq("conversation_id", id).order("id", { ascending: false }).limit(PAGE + 1);
+  // Every column: members see the whole message, and a database without the
+  // newest columns still loads (they are simply absent).
+  let q = supabase.from("messages").select("*").eq("conversation_id", id).order("id", { ascending: false }).limit(PAGE + 1);
   if (Number.isSafeInteger(before) && before > 0) q = q.lt("id", before);
   const { data: rows } = await q;
   const hasOlder = (rows ?? []).length > PAGE;
   const page = (rows ?? []).slice(0, PAGE).reverse();
-  // Pictures are private: a signed link valid for an hour, made with the member's own session.
-  const paths = page.flatMap((m) => (m.image_path && !m.deleted_at ? [m.image_path] : []));
-  const signed = paths.length ? (await supabase.storage.from("message-images").createSignedUrls(paths, 3600)).data ?? [] : [];
-  const urlOf = new Map(signed.flatMap((s) => (s.path && s.signedUrl ? [[s.path, s.signedUrl] as const] : [])));
-  const messages: ThreadMessage[] = page.map((m) => ({ ...m, image_url: m.image_path ? (urlOf.get(m.image_path) ?? null) : null }));
+  // Pictures and voice notes are private: signed links valid for an hour, made with the member's own session.
+  const sign = async (bucket: string, paths: string[]) => {
+    if (!paths.length) return new Map<string, string>();
+    const { data } = await supabase.storage.from(bucket).createSignedUrls(paths, 3600);
+    return new Map((data ?? []).flatMap((s) => (s.path && s.signedUrl ? [[s.path, s.signedUrl] as const] : [])));
+  };
+  const live = page.filter((m) => !m.deleted_at);
+  const [imageUrls, voiceUrls] = await Promise.all([
+    sign("message-images", live.flatMap((m) => (m.image_path ? [m.image_path] : []))),
+    sign("message-voice", live.flatMap((m) => (m.voice_path ? [m.voice_path] : []))),
+  ]);
+  const messages: ThreadMessage[] = page.map((m) => ({
+    ...m,
+    image_url: m.image_path ? (imageUrls.get(m.image_path) ?? null) : null,
+    voice_url: m.voice_path ? (voiceUrls.get(m.voice_path) ?? null) : null,
+  }));
   const senderIds = [...new Set(messages.map((m) => m.sender_id).filter(Boolean))] as string[];
   const { data: profiles } = senderIds.length ? await supabase.from("profiles").select("id, display_name").in("id", senderIds) : { data: [] };
   const names = Object.fromEntries((profiles ?? []).map((p) => [p.id, p.display_name]));
@@ -43,9 +59,13 @@ export default async function ConversationPage({ params, searchParams }: PagePro
   else if (conv.booking_id) link = "/my/bookings";
   else if (conv.tournament_id) link = `/tournaments/${conv.tournament_id}`;
   else if (conv.challenge_id) link = "/opponents";
-  if (conv.kind === "direct" && !meta?.title) {
-    const { data: members } = await supabase.from("conversation_members").select("user_id, profile:profiles(display_name)").eq("conversation_id", id).neq("user_id", user.id);
-    title = members?.[0]?.profile?.display_name ?? title;
+  // A direct conversation: the other person, for the title and the call button.
+  let peer: CallPeer | null = null;
+  if (conv.kind === "direct") {
+    const { data: members } = await supabase.from("conversation_members").select("user_id, profile:profiles(display_name, avatar_path)").eq("conversation_id", id).neq("user_id", user.id);
+    const other = members?.[0];
+    if (!meta?.title) title = other?.profile?.display_name ?? title;
+    if (other) peer = { id: other.user_id, name: other.profile?.display_name ?? title, avatarUrl: publicStorageUrl("avatars", other.profile?.avatar_path) };
   }
 
   return (
@@ -55,6 +75,7 @@ export default async function ConversationPage({ params, searchParams }: PagePro
         eyebrow={<Badge>{t(`kind.${conv.kind}`)}</Badge>}
         actions={
           <>
+            {peer && !conv.is_locked ? <CallButton conversationId={id} peer={peer} /> : null}
             <LinkButton href="/messages" className={buttonClass("ghost", "sm")}>{t("all")}</LinkButton>
             {link ? <LinkButton href={link} className={buttonClass("outline", "sm")}>{t("open")}</LinkButton> : null}
           </>

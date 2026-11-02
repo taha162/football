@@ -1481,3 +1481,42 @@ html[data-intro="headline"] .intro-reveal,
 html[data-intro="headline"] .reveal-line > span {
   transition-delay: var(--d, 0ms);
 }
+
+/* =========================================================================
+   Conversations — shared location, voice notes, calls
+   ========================================================================= */
+/* Under the map tiles, and in their place if they can't load: a plain grid. */
+.location-map {
+  background-color: var(--color-surface-2);
+  background-image:
+    linear-gradient(var(--color-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--color-line) 1px, transparent 1px);
+  background-size: 32px 32px;
+  background-position: center;
+}
+/* A touch darker than the stock tiles, so the map sits calmly in the dark theme. */
+.location-tile {
+  filter: brightness(0.9) saturate(0.85);
+}
+/* Recording: the dot breathes with the voice (--level, 0–1, set by the recorder). */
+.rec-dot {
+  transform: scale(calc(1 + var(--level, 0) * 0.9));
+  transition: transform 90ms linear;
+}
+@keyframes call-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgb(184 242 63 / 0.45);
+  }
+  100% {
+    box-shadow: 0 0 0 28px rgb(184 242 63 / 0);
+  }
+}
+/* The other person's picture pulses while the phone rings. */
+.call-ringing {
+  animation: call-ring 1.6s ease-out infinite;
+}
+.call-screen {
+  background:
+    radial-gradient(120% 60% at 50% 0%, rgb(31 107 58 / 0.55), transparent 70%),
+    var(--color-bg);
+}

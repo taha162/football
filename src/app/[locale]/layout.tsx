@@ -6,6 +6,8 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { directionOf, routing } from "@/i18n/routing";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
+import { LandingOnly } from "@/components/layout/landing-only";
+import { CallProvider } from "@/components/calls/call-provider";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { getCurrentUser } from "@/lib/auth";
 import { publicEnv } from "@/lib/env";
@@ -79,12 +81,17 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
           >
             {t("skipToContent")}
           </a>
-          <SiteHeader user={user} />
-          <main id="main" className="flex-1 pb-24 lg:pb-12">
-            <PageTransition>{children}</PageTransition>
-          </main>
-          <SiteFooter />
-          <MobileNav signedIn={Boolean(user)} />
+          {/* Voice calls ring on every page, and carry on while the person moves around the site. */}
+          <CallProvider me={user?.profile.onboarded_at ? user.id : null}>
+            <SiteHeader user={user} />
+            <main id="main" className="flex-1 pb-24 lg:pb-12">
+              <PageTransition>{children}</PageTransition>
+            </main>
+            <LandingOnly>
+              <SiteFooter />
+            </LandingOnly>
+            <MobileNav signedIn={Boolean(user)} />
+          </CallProvider>
           {/* After the page content, so its effects run once the router has placed the new page. */}
           <MotionRoot />
         </NextIntlClientProvider>

@@ -119,6 +119,64 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"call_signals": {
+                  Row: {
+                    "call_id": string,"created_at": string,"id": number,"kind": string,"payload": NonNullable<Json>,"sender_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "call_id": string,"created_at"?: string,"id"?: never,"kind": string,"payload": NonNullable<Json>,"sender_id": string
+                  }
+                  Update: {
+                    "call_id"?: string,"created_at"?: string,"id"?: never,"kind"?: string,"payload"?: NonNullable<Json>,"sender_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "call_signals_call_id_fkey"
+      columns: ["call_id"]
+isOneToOne: false
+      referencedRelation: "calls"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "call_signals_sender_id_fkey"
+      columns: ["sender_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"calls": {
+                  Row: {
+                    "answered_at": string | null,"callee_id": string,"callee_seen_at": string | null,"caller_id": string,"caller_seen_at": string,"conversation_id": string,"created_at": string,"ended_at": string | null,"id": string,"status": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "answered_at"?: string | null,"callee_id": string,"callee_seen_at"?: string | null,"caller_id": string,"caller_seen_at"?: string,"conversation_id": string,"created_at"?: string,"ended_at"?: string | null,"id"?: string,"status"?: string
+                  }
+                  Update: {
+                    "answered_at"?: string | null,"callee_id"?: string,"callee_seen_at"?: string | null,"caller_id"?: string,"caller_seen_at"?: string,"conversation_id"?: string,"created_at"?: string,"ended_at"?: string | null,"id"?: string,"status"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "calls_callee_id_fkey"
+      columns: ["callee_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "calls_caller_id_fkey"
+      columns: ["caller_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "calls_conversation_id_fkey"
+      columns: ["conversation_id"]
+isOneToOne: false
+      referencedRelation: "conversations"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"cities": {
                   Row: {
                     "country_code": string,"created_at": string,"currency": string,"id": string,"is_active": boolean,"latitude": number | null,"longitude": number | null,"name_ar": string,"name_en": string,"slug": string,"sort_order": number,"timezone": string
@@ -511,14 +569,14 @@ isOneToOne: false
                   ]
                 },"messages": {
                   Row: {
-                    "body": string,"conversation_id": string,"created_at": string,"deleted_at": string | null,"id": number,"image_path": string | null,"sender_id": string | null
+                    "body": string,"call_outcome": string | null,"call_seconds": number | null,"conversation_id": string,"created_at": string,"deleted_at": string | null,"id": number,"image_path": string | null,"location_accuracy": number | null,"location_lat": number | null,"location_lng": number | null,"sender_id": string | null,"voice_path": string | null,"voice_seconds": number | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "body": string,"conversation_id": string,"created_at"?: string,"deleted_at"?: string | null,"id"?: never,"image_path"?: string | null,"sender_id"?: string | null
+                    "body": string,"call_outcome"?: string | null,"call_seconds"?: number | null,"conversation_id": string,"created_at"?: string,"deleted_at"?: string | null,"id"?: never,"image_path"?: string | null,"location_accuracy"?: number | null,"location_lat"?: number | null,"location_lng"?: number | null,"sender_id"?: string | null,"voice_path"?: string | null,"voice_seconds"?: number | null
                   }
                   Update: {
-                    "body"?: string,"conversation_id"?: string,"created_at"?: string,"deleted_at"?: string | null,"id"?: never,"image_path"?: string | null,"sender_id"?: string | null
+                    "body"?: string,"call_outcome"?: string | null,"call_seconds"?: number | null,"conversation_id"?: string,"created_at"?: string,"deleted_at"?: string | null,"id"?: never,"image_path"?: string | null,"location_accuracy"?: number | null,"location_lat"?: number | null,"location_lng"?: number | null,"sender_id"?: string | null,"voice_path"?: string | null,"voice_seconds"?: number | null
                   }
                   Relationships: [
                     {
@@ -1360,6 +1418,9 @@ isOneToOne: false
 "admin_upsert_city":
 { Args: { "p_country_code": string,"p_currency": string,"p_id": string,"p_is_active"?: boolean,"p_latitude"?: number,"p_longitude"?: number,"p_name_ar": string,"p_name_en": string,"p_slug": string,"p_timezone": string }; Returns: string
                            },
+"answer_call":
+{ Args: { "p_call_id": string }; Returns: string
+                           },
 "archive_team":
 { Args: { "p_team_id": string }; Returns: undefined
                            },
@@ -1368,6 +1429,12 @@ isOneToOne: false
                            },
 "block_user":
 { Args: { "p_user_id": string }; Returns: undefined
+                           },
+"call_heartbeat":
+{ Args: { "p_call_id": string }; Returns: string
+                           },
+"calls_cleanup":
+{ Args: Record<PropertyKey, never>; Returns: Json
                            },
 "cancel_booking":
 { Args: { "p_booking_id": string,"p_reason"?: string }; Returns: undefined
@@ -1429,6 +1496,9 @@ isOneToOne: false
 "dispute_tournament_result":
 { Args: { "p_match_id": string,"p_reason": string }; Returns: undefined
                            },
+"end_call":
+{ Args: { "p_call_id": string,"p_reason"?: string }; Returns: string
+                           },
 "entity_conversation_id":
 { Args: { "p_entity_id": string,"p_kind": Database["public"]['Enums']["conversation_kind"] }; Returns: string
                            },
@@ -1472,7 +1542,7 @@ isOneToOne: false
                            },
 "my_conversations":
 { Args: { "p_limit"?: number }; Returns: {
-              "conversation_id": string,"is_locked": boolean,"kind": Database["public"]['Enums']["conversation_kind"],"last_message": string,"last_message_at": string,"ref_id": string,"title": string,"unread_count": number
+              "conversation_id": string,"is_locked": boolean,"kind": Database["public"]['Enums']["conversation_kind"],"last_kind": string,"last_message": string,"last_message_at": string,"ref_id": string,"title": string,"unread_count": number
             }[]
                            },
 "my_phone":
@@ -1621,11 +1691,14 @@ isOneToOne: false
         isOneToOne: false
         isSetofReturn: true
       } },
+"send_call_signal":
+{ Args: { "p_call_id": string,"p_kind": string,"p_payload": Json }; Returns: undefined
+                           },
 "send_challenge":
 { Args: { "p_challenger_team_id": string,"p_cost_per_team"?: number,"p_duration_minutes": number,"p_format"?: Database["public"]['Enums']["match_format"],"p_location_note"?: string,"p_message"?: string,"p_request_id"?: string,"p_start_local": string,"p_target_team_id"?: string,"p_venue_id"?: string }; Returns: string
                            },
 "send_message":
-{ Args: { "p_body": string,"p_conversation_id": string,"p_image_path"?: string }; Returns: number
+{ Args: { "p_body": string,"p_conversation_id": string,"p_image_path"?: string,"p_location_accuracy"?: number,"p_location_lat"?: number,"p_location_lng"?: number,"p_voice_path"?: string,"p_voice_seconds"?: number }; Returns: number
                            },
 "set_field_pricing_rules":
 { Args: { "p_field_id": string,"p_rules": Json }; Returns: undefined
@@ -1662,6 +1735,9 @@ isOneToOne: false
                            },
 "set_venue_opening_hours":
 { Args: { "p_hours": Json,"p_venue_id": string }; Returns: undefined
+                           },
+"start_call":
+{ Args: { "p_conversation_id": string }; Returns: string
                            },
 "start_direct_conversation":
 { Args: { "p_user_id": string }; Returns: string

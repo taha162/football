@@ -5,6 +5,7 @@ import { publicEnv } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { readWebhookState, telegramConfig } from "@/lib/telegram";
+import { cloudflareIceServers, turnSetup } from "@/lib/turn";
 import { updateSettingAction, upsertAreaAction, upsertCityAction } from "@/server/admin";
 import { connectTelegramAction } from "@/server/telegram";
 import { ActionForm, Hidden, SubmitButton } from "@/components/ui/action-form";
@@ -88,6 +89,43 @@ async function TelegramPanel() {
   );
 }
 
+/**
+ * Voice calls: is the database ready, and is a TURN relay configured (calls
+ * between some mobile networks need one). With Cloudflare, it checks that the
+ * key works.
+ */
+async function CallsPanel() {
+  const t = await getTranslations("admin");
+  const admin = createAdminClient();
+  const dbReady = admin ? !(await admin.from("calls").select("id").limit(1)).error : false;
+  const setup = turnSetup();
+  const check = setup.kind === "cloudflare" ? await cloudflareIceServers(setup.keyId, setup.token) : null;
+  const bad = (text: React.ReactNode) => <span className="text-danger">{text}</span>;
+  const good = (text: React.ReactNode) => <span className="text-success">{text}</span>;
+  const items: { label: string; value: React.ReactNode }[] = [
+    { label: t("callsDatabase"), value: dbReady ? good(t("callsDatabaseOk")) : bad(t("callsDatabaseMissing")) },
+    {
+      label: t("callsRelay"),
+      value:
+        setup.kind === "cloudflare"
+          ? check?.ok
+            ? good(t("callsRelayCloudflare"))
+            : bad(<>{t("callsRelayRejected")} <span dir="ltr">({check && !check.ok ? check.error : ""})</span></>)
+          : setup.kind === "static"
+            ? good(t("callsRelayStatic"))
+            : <span className="text-warning">{t("callsRelayNone")}</span>,
+    },
+  ];
+  return (
+    <Card>
+      <CardBody className="flex flex-col gap-3">
+        <DefinitionList items={items} />
+        <p className="text-xs text-muted">{t("callsHint")}</p>
+      </CardBody>
+    </Card>
+  );
+}
+
 export default async function AdminSettingsPage() {
   const locale = await getLocale();
   if (!(await getCurrentUser())?.isAdmin) redirect({ href: "/admin", locale });
@@ -103,6 +141,9 @@ export default async function AdminSettingsPage() {
       <PageHeader title={t("nav.settings")} />
       <Section title={t("telegramBot")} id="telegram">
         <TelegramPanel />
+      </Section>
+      <Section title={t("voiceCalls")} id="calls">
+        <CallsPanel />
       </Section>
       <Section title={t("policies")} id="policies">
         <ul className="flex flex-col gap-2">
