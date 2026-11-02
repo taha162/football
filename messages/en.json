@@ -2189,6 +2189,7 @@
       "unavailable": "Can't call right now.",
       "rateLimited": "You've called a lot in a short time. Wait a little, then try again.",
       "error": "Couldn't call. Try again."
-    }
+    },
+    "speaker": "Speaker"
   }
 }

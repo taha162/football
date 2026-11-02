@@ -7,6 +7,7 @@ import { publicStorageUrl } from "@/lib/storage";
 import { getBrowserClient, getRealtimeClient } from "@/lib/supabase/client";
 import type { Database, Json } from "@/lib/supabase/types";
 import { callIceServersAction } from "@/server/calls";
+import { findAudioRoute, type AudioRoute } from "./audio-route";
 import { CallScreen } from "./call-screen";
 import { playTone, vibrateRing } from "./tones";
 
@@ -45,11 +46,27 @@ export interface CallView {
   durationAtEnd: number | null;
   note: CallNote | null;
   muted: boolean;
+  /** The phone lets the page switch between loudspeaker and earpiece (see audio-route.ts). */
+  speakerAvailable: boolean;
+  /** The sound plays from the loudspeaker (rather than the earpiece). */
+  speaker: boolean;
   reconnecting: boolean;
   minimized: boolean;
 }
 
-const IDLE: CallView = { phase: "idle", peer: null, ringing: false, connectedAt: null, durationAtEnd: null, note: null, muted: false, reconnecting: false, minimized: false };
+const IDLE: CallView = {
+  phase: "idle",
+  peer: null,
+  ringing: false,
+  connectedAt: null,
+  durationAtEnd: null,
+  note: null,
+  muted: false,
+  speakerAvailable: false,
+  speaker: true,
+  reconnecting: false,
+  minimized: false,
+};
 
 interface CallApi {
   /** A direct conversation's id, or null to open (or create) the one with `peer` first. */
@@ -105,6 +122,9 @@ interface Live {
   buzz: { stop: () => void } | null;
   token: string | null;
   offered: boolean;
+  muted: boolean;
+  route: AudioRoute | null;
+  speakerOn: boolean;
   /** Bumped when a call ends, so late answers from an old call are ignored. */
   generation: number;
 }
@@ -130,6 +150,9 @@ function newLive(): Live {
     buzz: null,
     token: null,
     offered: false,
+    muted: false,
+    route: null,
+    speakerOn: true,
     generation: 0,
   } as unknown as Live;
   live.peerWait = new Promise((resolve) => (live.peerResolve = resolve));
@@ -199,6 +222,9 @@ function createEngine(setView: Dispatch<SetStateAction<CallView>>) {
     l.ice = null;
     l.offered = false;
     l.connectedAt = null;
+    l.muted = false;
+    l.route = null;
+    l.speakerOn = true;
   }
 
   /** Closes the call screen, after a short note when there is something to say. */
@@ -495,6 +521,8 @@ function createEngine(setView: Dispatch<SetStateAction<CallView>>) {
     if (!current(gen)) return stream.getTracks().forEach((track) => track.stop());
     l.local = stream;
     void rememberToken();
+    await prepareRoute(gen);
+    if (!current(gen)) return;
     let conversation = conversationId;
     if (!conversation) {
       // The same conversation «مراسلة» opens; it is where the call's record goes.
@@ -547,6 +575,8 @@ function createEngine(setView: Dispatch<SetStateAction<CallView>>) {
     l.local = stream;
     void rememberToken();
     l.ice = callIceServersAction(callId);
+    await prepareRoute(gen);
+    if (!current(gen)) return;
     // Listen before picking up, so the caller's first message can't slip past.
     await openSignals(callId, gen);
     if (!current(gen)) return;
@@ -571,10 +601,76 @@ function createEngine(setView: Dispatch<SetStateAction<CallView>>) {
   }
 
   function toggleMute() {
-    const track = L().local?.getAudioTracks()[0];
+    const l = L();
+    const track = l.local?.getAudioTracks()[0];
     if (!track) return;
-    track.enabled = !track.enabled;
-    patch({ muted: !track.enabled });
+    l.muted = !l.muted;
+    track.enabled = !l.muted;
+    patch({ muted: l.muted });
+  }
+
+  /**
+   * Finds whether this phone lets the page choose loudspeaker or earpiece,
+   * and starts on the loudspeaker: the screen, and its buttons, stay in view
+   * rather than against the cheek.
+   */
+  async function prepareRoute(gen: number) {
+    if (typeof window.matchMedia !== "function" || !window.matchMedia("(pointer: coarse)").matches) return;
+    let devices: MediaDeviceInfo[];
+    try {
+      devices = await navigator.mediaDevices.enumerateDevices();
+    } catch {
+      return;
+    }
+    if (!current(gen)) return;
+    const route = findAudioRoute(devices, typeof HTMLMediaElement !== "undefined" && "setSinkId" in HTMLMediaElement.prototype);
+    if (!route) return;
+    L().route = route;
+    patch({ speakerAvailable: true, speaker: true });
+    await applyRoute(true, gen).catch(() => false);
+  }
+
+  /** Points the sound at the loudspeaker (on) or the earpiece (off). */
+  async function applyRoute(on: boolean, gen: number): Promise<boolean> {
+    const l = L();
+    const route = l.route;
+    if (!route) return false;
+    const target = on ? route.speaker : route.earpiece;
+    if (route.kind === "output") {
+      if (!audioEl) return false;
+      // Called straight from the tap: iPhone allows it only right after one.
+      await (audioEl as HTMLAudioElement & { setSinkId: (id: string) => Promise<void> }).setSinkId(target);
+    } else {
+      // Android: the microphone the call uses decides where its sound plays.
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { deviceId: { exact: target }, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+        video: false,
+      });
+      if (!current(gen)) {
+        stream.getTracks().forEach((track) => track.stop());
+        return false;
+      }
+      const track = stream.getAudioTracks()[0];
+      track.enabled = !l.muted;
+      const sender = l.pc?.getSenders().find((s) => s.track?.kind === "audio");
+      if (sender) await sender.replaceTrack(track);
+      l.local?.getTracks().forEach((old) => old.stop());
+      l.local = stream;
+    }
+    l.speakerOn = on;
+    return true;
+  }
+
+  function toggleSpeaker() {
+    const l = L();
+    if (!l.route) return;
+    const gen = l.generation;
+    const next = !l.speakerOn;
+    applyRoute(next, gen)
+      .then((done) => {
+        if (done && current(gen)) patch({ speaker: next });
+      })
+      .catch(() => undefined);
   }
 
   function dismiss() {
@@ -610,6 +706,7 @@ function createEngine(setView: Dispatch<SetStateAction<CallView>>) {
     decline,
     hangUp,
     toggleMute,
+    toggleSpeaker,
     dismiss,
     hangUpOnLeave,
     minimize: (minimized: boolean) => patch({ minimized }),
@@ -642,6 +739,7 @@ export function CallProvider({ me, children }: { me: string | null; children: Re
             onDecline={engine.decline}
             onHangUp={engine.hangUp}
             onMute={engine.toggleMute}
+            onSpeaker={engine.toggleSpeaker}
             onMinimize={engine.minimize}
             onDismiss={engine.dismiss}
           />
