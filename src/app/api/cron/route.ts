@@ -33,7 +33,10 @@ export async function GET(request: NextRequest) {
   // Abandoned phone sign-ups (never verified) and old verification rows.
   const { data: cleanup, error: cleanupError } = await admin.rpc("phone_verify_cleanup");
   if (cleanupError) logger.error("cron_phone_verify_cleanup_failed", { code: cleanupError.code });
-  const result = { ...(data as Record<string, unknown>), ...((cleanup as Record<string, unknown>) ?? {}) };
+  // Calls both browsers abandoned: recorded as missed (with the notification) or ended.
+  const { data: calls, error: callsError } = await admin.rpc("calls_cleanup");
+  if (callsError) logger.error("cron_calls_cleanup_failed", { code: callsError.code });
+  const result = { ...(data as Record<string, unknown>), ...((cleanup as Record<string, unknown>) ?? {}), ...((calls as Record<string, unknown>) ?? {}) };
   logger.info("cron_completed", { ms: Date.now() - started, ...result });
   return NextResponse.json({ ok: true, result });
 }

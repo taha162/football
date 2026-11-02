@@ -2,7 +2,10 @@ import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import type { Locale } from "@/i18n/routing";
 import { requireOnboardedUser } from "@/lib/auth";
+import { publicStorageUrl } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
+import { CallButton } from "@/components/calls/call-button";
+import type { CallPeer } from "@/components/calls/call-provider";
 import { Thread, type ThreadMessage } from "@/components/messages/thread";
 import { Badge, Container, PageHeader } from "@/components/ui/primitives";
 import { buttonClass } from "@/components/ui/button";
@@ -56,9 +59,13 @@ export default async function ConversationPage({ params, searchParams }: PagePro
   else if (conv.booking_id) link = "/my/bookings";
   else if (conv.tournament_id) link = `/tournaments/${conv.tournament_id}`;
   else if (conv.challenge_id) link = "/opponents";
-  if (conv.kind === "direct" && !meta?.title) {
-    const { data: members } = await supabase.from("conversation_members").select("user_id, profile:profiles(display_name)").eq("conversation_id", id).neq("user_id", user.id);
-    title = members?.[0]?.profile?.display_name ?? title;
+  // A direct conversation: the other person, for the title and the call button.
+  let peer: CallPeer | null = null;
+  if (conv.kind === "direct") {
+    const { data: members } = await supabase.from("conversation_members").select("user_id, profile:profiles(display_name, avatar_path)").eq("conversation_id", id).neq("user_id", user.id);
+    const other = members?.[0];
+    if (!meta?.title) title = other?.profile?.display_name ?? title;
+    if (other) peer = { id: other.user_id, name: other.profile?.display_name ?? title, avatarUrl: publicStorageUrl("avatars", other.profile?.avatar_path) };
   }
 
   return (
@@ -68,6 +75,7 @@ export default async function ConversationPage({ params, searchParams }: PagePro
         eyebrow={<Badge>{t(`kind.${conv.kind}`)}</Badge>}
         actions={
           <>
+            {peer && !conv.is_locked ? <CallButton conversationId={id} peer={peer} /> : null}
             <LinkButton href="/messages" className={buttonClass("ghost", "sm")}>{t("all")}</LinkButton>
             {link ? <LinkButton href={link} className={buttonClass("outline", "sm")}>{t("open")}</LinkButton> : null}
           </>
