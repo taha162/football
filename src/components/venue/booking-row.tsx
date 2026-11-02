@@ -10,6 +10,7 @@ import { buttonClass } from "@/components/ui/button";
 import { ConfirmAction } from "@/components/ui/confirm-action";
 import { Badge, type Tone } from "@/components/ui/primitives";
 import { LinkButton } from "@/components/ui/link-button";
+import { AddToCalendar, type CalendarLinks } from "./add-to-calendar";
 
 export interface BookingRowData {
   id: string;
@@ -55,7 +56,20 @@ export const depositTone: Record<DepositStatus, Tone> = {
 /** A deposit that changed hands, or one still being asked for. Unpaid deposits on closed bookings are noise. */
 const showDeposit = (b: BookingRowData) => b.deposit_status != null && (b.deposit_status !== "pending" || b.status === "requested");
 
-export async function BookingRow({ b, mode, tz, conversationId }: { b: BookingRowData; mode: "customer" | "staff"; tz: string; conversationId?: string }) {
+export async function BookingRow({
+  b,
+  mode,
+  tz,
+  conversationId,
+  calendar,
+}: {
+  b: BookingRowData;
+  mode: "customer" | "staff";
+  tz: string;
+  conversationId?: string;
+  /** Offered to the customer while the booking still holds its time. */
+  calendar?: CalendarLinks;
+}) {
   const t = await getTranslations("bookings");
   const locale = await getLocale();
   const started = new Date(b.starts_at) <= new Date();
@@ -146,6 +160,7 @@ export async function BookingRow({ b, mode, tz, conversationId }: { b: BookingRo
           <LinkButton href={{ pathname: `/venues/${b.venue.id}/review`, query: { booking: b.id } }} className={buttonClass("outline", "sm")}>{t("review")}</LinkButton>
         ) : null}
       </div>
+      {calendar ? <AddToCalendar links={calendar} /> : null}
     </li>
   );
 }

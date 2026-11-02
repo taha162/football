@@ -2076,7 +2076,20 @@
     "depositNotReceivedNote": "Declined: the venue says the deposit didn't arrive.",
     "depositExpiredNote": "Released: the deposit wasn't confirmed in time.",
     "cancelForfeitNote": "The venue will be notified, and your {amount} deposit won't be refunded.",
-    "cancelStaffRefundNote": "The customer will be notified, and the {amount} deposit must be returned to them."
+    "cancelStaffRefundNote": "The customer will be notified, and the {amount} deposit must be returned to them.",
+    "calendar": {
+      "title": "Pitch booking: {venue}",
+      "field": "Pitch: {field}",
+      "pending": "Waiting for the venue to confirm.",
+      "map": "On the map: {url}",
+      "add": "Add to calendar",
+      "phone": "Phone calendar",
+      "google": "Google Calendar",
+      "heldTitle": "The time is held for you",
+      "requestedTitle": "Booking requested",
+      "confirmedTitle": "Booking confirmed",
+      "promptBody": "Add it to your calendar for a reminder two hours before."
+    }
   },
   "home": {
     "stage": {

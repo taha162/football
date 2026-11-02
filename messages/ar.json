@@ -2076,7 +2076,20 @@
     "depositNotReceivedNote": "رُفض: يقول الملعب إن العربون لم يصل.",
     "depositExpiredNote": "أُلغي: لم يُؤكَّد العربون في الوقت المحدد.",
     "cancelForfeitNote": "سيُبلَّغ الملعب، ولن يُرجَع عربونك البالغ {amount}.",
-    "cancelStaffRefundNote": "سيُبلَّغ الزبون، ويجب إرجاع العربون البالغ {amount} له."
+    "cancelStaffRefundNote": "سيُبلَّغ الزبون، ويجب إرجاع العربون البالغ {amount} له.",
+    "calendar": {
+      "title": "حجز ملعب: {venue}",
+      "field": "الملعب: {field}",
+      "pending": "الحجز بانتظار تثبيت الملعب.",
+      "map": "الموقع على الخريطة: {url}",
+      "add": "أضف إلى التقويم",
+      "phone": "تقويم الهاتف",
+      "google": "تقويم Google",
+      "heldTitle": "الوقت محجوز لك",
+      "requestedTitle": "تم طلب الحجز",
+      "confirmedTitle": "تم تأكيد الحجز",
+      "promptBody": "أضفه إلى تقويمك ليذكّرك قبل الموعد بساعتين."
+    }
   },
   "home": {
     "stage": {
