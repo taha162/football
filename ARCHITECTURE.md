@@ -9,7 +9,7 @@ Browser ──► Next.js (proxy.ts → App Router server components / server ac
            Supabase PostgREST ──► Postgres
                - RLS: SELECT policies only
                - Writes: SECURITY DEFINER RPCs (business rules, locks, audit, notifications)
-           Supabase Auth / Storage / Realtime (messages, notifications)
+           Supabase Auth / Storage / Realtime (messages, notifications, calls)
 Scheduler ──► /api/cron (Bearer CRON_SECRET) ──► service role ──► run_scheduled_jobs()
 ```
 
@@ -51,7 +51,8 @@ Server actions return `{ ok, message | error, fieldErrors }` codes, never transl
 - **Money is integer minor units** (`bigint`; IQD exponent 0). The per-player share is a ceiling division, and the UI labels it as an estimate. Payments are tracked manually by organizers ("paid (marked)"). No payment is processed.
 - **Venue deposits are recorded, not processed.** A booking is confirmed when venue staff record its deposit, which the customer pays the venue directly by wallet transfer or in cash. Until then the request holds its slot for an hour, inside the double-booking constraint, so nobody can pay for a time that is already held. No payment gateway is involved, so no card data or merchant account is needed; an online gateway can later report into the same deposit statuses. See DATABASE_DESIGN.md.
 - **Tournament structure is generated in TS** (round robin, seeded single elimination with byes, groups → knockout). The `save_tournament_fixtures` RPC validates and persists it. Knockout advancement and byes are handled in SQL so results always propagate atomically.
-- **Messaging access is derived, not stored.** `private.can_access_conversation` checks match, team, booking, challenge or tournament membership live. Leaving a team therefore removes chat access immediately. Realtime is published for `messages` and `notifications`, and RLS applies to those streams.
+- **Messaging access is derived, not stored.** `private.can_access_conversation` checks match, team, booking, challenge or tournament membership live. Leaving a team therefore removes chat access immediately. Realtime is published for `messages`, `notifications`, `calls` and `call_signals`, and RLS applies to those streams. Browser channels join only after the session has loaded (`getRealtimeClient`), so they carry the user's token rather than joining as a guest.
+- **Voice calls are browser to browser.** WebRTC carries the sound; the database only rings (`calls`), relays the connection set-up (`call_signals`, deleted when the call ends) and records the outcome as a line in the conversation. The call UI is mounted once in the locale layout, so a call rings on any page and survives navigation; check-ins every few seconds back up the live updates. TURN credentials are minted server-side per call (Cloudflare or a static TURN server, both optional) and handed only to the two participants of an open call.
 - **Cache Components / PPR are not enabled.** Almost every page is personalized (session, RLS-filtered data, locale). Correctness was prioritized over static shells, and `cacheComponents` was left off. Request-scoped memoization uses React `cache` (`getCurrentUser`, `getNow`).
 - **Signed-out protection is two-layered.** `proxy.ts` redirects signed-out users from private prefixes with a real 307. Pages also call `requireUser()` and similar helpers, which also handle suspension, onboarding and roles.
 - **Maps.** `src/lib/maps.ts` defines a provider abstraction. `none` (the default) shows the address plus an "open in maps" link built from stored coordinates. `mapbox` adds static map images when a token is set. The app never shows a placeholder or fake map.
