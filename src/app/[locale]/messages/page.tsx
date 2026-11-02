@@ -37,7 +37,7 @@ export default async function MessagesPage({ params }: PageProps<"/[locale]/mess
                     <Badge>{t(`kind.${c.kind}`)}</Badge>
                     {c.is_locked ? <Badge tone="warning">{t("locked")}</Badge> : null}
                   </div>
-                  <p className="truncate text-sm text-muted" dir="auto">{c.last_message ?? t("noMessages")}</p>
+                  <p className="truncate text-sm text-muted" dir="auto">{c.last_message === "" ? `📷 ${t("photo")}` : (c.last_message ?? t("noMessages"))}</p>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
                   {c.last_message_at ? <time className="text-xs text-faint" dateTime={c.last_message_at}>{formatDateTime(c.last_message_at, locale, "Asia/Baghdad")}</time> : null}

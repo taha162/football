@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { ActionForm, FormField, Hidden, SubmitButton } from "@/components/ui/action-form";
 import { Checkbox, ChoiceChips, Input, Textarea } from "@/components/ui/field";
+import { MoreOptions } from "@/components/ui/more-options";
 import { MATCH_FORMATS, POSITIONS, SKILL_LEVELS } from "@/lib/domain/match";
 import { saveProfileAction } from "@/server/profile";
 import { LocationFields, type AreaOption, type CityOption } from "./location-fields";
@@ -42,14 +43,6 @@ export function ProfileForm({
       <FormField name="display_name" label={t("displayName")} hint={t("displayNameHint")} required>
         {(a) => <Input {...a} defaultValue={defaults.display_name} required minLength={2} maxLength={40} autoComplete="nickname" />}
       </FormField>
-      <LocationFields
-        cities={cities}
-        areas={areas}
-        defaultCity={defaults.city_id}
-        defaultArea={defaults.area_id}
-        areaLabel={t("publicArea")}
-        areaHint={t("publicAreaHint")}
-      />
       <ChoiceChips
         name="positions"
         legend={t("positions")}
@@ -63,25 +56,35 @@ export function ProfileForm({
         defaultValue={defaults.skill_level}
         options={SKILL_LEVELS.map((s) => ({ value: s, label: e(`skill.${s}`) }))}
       />
-      <p className="-mt-4 text-xs text-muted">{t("skillSelfReported")}</p>
-      <ChoiceChips
-        name="preferred_formats"
-        legend={t("formats")}
-        defaultValue={defaults.preferred_formats}
-        options={MATCH_FORMATS.map((f) => ({ value: f, label: f }))}
-      />
-      <ChoiceChips
-        name="preferred_times"
-        legend={t("times")}
-        defaultValue={defaults.preferred_times}
-        options={TIMES.map((x) => ({ value: x, label: e(`time.${x}`) }))}
-      />
-      {!onboarding ? (
-        <FormField name="bio" label={t("bio")} hint={t("bioHint")}>
-          {(a) => <Textarea {...a} defaultValue={defaults.bio ?? ""} maxLength={500} />}
-        </FormField>
-      ) : null}
-      <Checkbox name="show_match_history" defaultChecked={defaults.show_match_history} label={t("showHistory")} />
+      {/* Optional details, folded so the form stays short. */}
+      <MoreOptions label={t("moreOptions")}>
+        <LocationFields
+          cities={cities}
+          areas={areas}
+          defaultCity={defaults.city_id}
+          defaultArea={defaults.area_id}
+          areaLabel={t("publicArea")}
+          areaHint={t("publicAreaHint")}
+        />
+        <ChoiceChips
+          name="preferred_formats"
+          legend={t("formats")}
+          defaultValue={defaults.preferred_formats}
+          options={MATCH_FORMATS.map((f) => ({ value: f, label: f }))}
+        />
+        <ChoiceChips
+          name="preferred_times"
+          legend={t("times")}
+          defaultValue={defaults.preferred_times}
+          options={TIMES.map((x) => ({ value: x, label: e(`time.${x}`) }))}
+        />
+        {!onboarding ? (
+          <FormField name="bio" label={t("bio")} hint={t("bioHint")}>
+            {(a) => <Textarea {...a} defaultValue={defaults.bio ?? ""} maxLength={500} />}
+          </FormField>
+        ) : null}
+        <Checkbox name="show_match_history" defaultChecked={defaults.show_match_history} label={t("showHistory")} />
+      </MoreOptions>
       <SubmitButton size="lg" className="self-start">
         {onboarding ? t("finishOnboarding") : t("save")}
       </SubmitButton>

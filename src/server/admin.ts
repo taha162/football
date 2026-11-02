@@ -53,7 +53,12 @@ export async function setHiddenAction(_: ActionState, fd: FormData): Promise<Act
 export async function removeMessageAction(_: ActionState, fd: FormData): Promise<ActionState> {
   const id = z.coerce.number().int().positive().safeParse(fd.get("message_id"));
   if (!id.success) return fail("invalid");
-  return run("admin_remove_message", { p_message_id: id.data, p_reason: str(fd, "reason") }, "message_removed");
+  // Moderators needn't belong to the conversation: read the picture's path with the server key.
+  const admin = createAdminClient();
+  const { data: before } = admin ? await admin.from("messages").select("image_path").eq("id", id.data).maybeSingle() : { data: null };
+  const result = await run("admin_remove_message", { p_message_id: id.data, p_reason: str(fd, "reason") }, "message_removed");
+  if (result?.ok && before?.image_path) await admin?.storage.from("message-images").remove([before.image_path]);
+  return result;
 }
 
 export async function setVerificationAction(_: ActionState, fd: FormData): Promise<ActionState> {
