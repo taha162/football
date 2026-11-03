@@ -59,7 +59,7 @@ export default async function BookVenuePage({ params, searchParams }: PageProps<
 
   return (
     <Container className="max-w-3xl py-10">
-      <PageHeader title={t("title", { name: venue.name })} description={t("description")} />
+      <PageHeader title={t("title", { name: venue.name })} description={fields.length > 1 ? t("description") : t("descriptionOne")} />
       {matchId ? <Alert tone="info" className="mb-4">{t("forMatch")}</Alert> : null}
       <div className="grid gap-6 md:grid-cols-[1fr_16rem]">
         <div className="flex flex-col gap-6">
@@ -67,12 +67,17 @@ export default async function BookVenuePage({ params, searchParams }: PageProps<
             <CardBody>
               <Form action="" scroll={false} className="grid gap-4 sm:grid-cols-2">
                 {matchId ? <input type="hidden" name="match" value={matchId} /> : null}
-                <label className="flex flex-col gap-1 text-sm">
-                  {t("field")}
-                  <Select name="field" defaultValue={fieldId}>
-                    {fields.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
-                  </Select>
-                </label>
+                {/* One court: booked straight away, without a choice. Several: the customer picks. */}
+                {fields.length > 1 ? (
+                  <label className="flex flex-col gap-1 text-sm">
+                    {t("field")}
+                    <Select name="field" defaultValue={fieldId}>
+                      {fields.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+                    </Select>
+                  </label>
+                ) : fieldId ? (
+                  <input type="hidden" name="field" value={fieldId} />
+                ) : null}
                 <label className="flex flex-col gap-1 text-sm">
                   {t("date")}
                   <Input type="date" name="date" defaultValue={date} min={todayIn(tz)} dir="ltr" required />

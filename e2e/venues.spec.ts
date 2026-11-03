@@ -11,7 +11,8 @@ test.describe("Journey F — venue onboarding, verification and booking", () => 
     const customer = await createAuthUser("Customer");
     const venueName = `E2E Arena ${randomUUID().slice(0, 6)}`;
 
-    // Owner lists the venue, adds a field and opening hours, and asks for verification.
+    // Owner lists a venue with one court (its price and size filled in right away),
+    // adds opening hours, and asks for verification.
     const ownerCtx = await browser.newContext();
     const ownerPage = await ownerCtx.newPage();
     await signIn(ownerPage, owner);
@@ -19,17 +20,19 @@ test.describe("Journey F — venue onboarding, verification and booking", () => 
     await ownerPage.getByRole("textbox", { name: "اسم الملعب" }).fill(venueName);
     await ownerPage.getByRole("textbox", { name: "العنوان" }).fill("Al-Zuhur, near the roundabout");
     await ownerPage.getByRole("textbox", { name: "الهاتف" }).fill("0770 555 1234");
+    await expect(ownerPage.getByRole("radio", { name: "ساحة واحدة" })).toBeChecked();
+    await ownerPage.getByRole("textbox", { name: "السعر للساعة" }).fill("30000");
+    await ownerPage.getByText("5v5", { exact: true }).click();
     await ownerPage.getByRole("button", { name: "إنشاء الملعب" }).click();
     await ownerPage.waitForURL(/\/ar\/manage\/venues\/[0-9a-f-]{36}/);
     const venueId = ownerPage.url().match(/venues\/([0-9a-f-]{36})/)![1];
     await expect(ownerPage.getByRole("heading", { name: venueName })).toBeVisible();
 
-    await ownerPage.getByRole("link", { name: "الملاعب والتسعير" }).click();
-    await ownerPage.getByRole("textbox", { name: "اسم الملعب الفرعي" }).fill("Pitch A");
-    await ownerPage.getByRole("textbox", { name: "السعر للساعة" }).fill("30000");
-    await ownerPage.getByText("5v5", { exact: true }).click();
-    await ownerPage.getByRole("button", { name: "أضف ملعباً فرعياً" }).click();
-    await expect(ownerPage.getByRole("heading", { name: "Pitch A" })).toBeVisible();
+    // One court: edited in place, with no name to type and no "sub-pitch" anywhere.
+    await ownerPage.getByRole("link", { name: "الساحة والسعر" }).click();
+    await expect(ownerPage.getByRole("textbox", { name: "السعر للساعة" }).first()).toHaveValue("30000");
+    await expect(ownerPage.getByRole("textbox", { name: "اسم الساحة" })).toHaveCount(0);
+    await expect(ownerPage.getByText("فرعي")).toHaveCount(0);
 
     await ownerPage.getByRole("link", { name: "ساعات العمل" }).click();
     for (const day of DAYS) await ownerPage.getByRole("checkbox", { name: day }).check();
@@ -73,6 +76,10 @@ test.describe("Journey F — venue onboarding, verification and booking", () => 
     await customerPage.goto(`/ar/venues/${venueId}`);
     await expect(customerPage.getByRole("link", { name: "احجز موعداً" })).toBeVisible();
     await expect(customerPage.getByText("0770 555 1234")).toHaveCount(0);
+
+    // One court: the booking page offers no court to choose.
+    await customerPage.goto(`/ar/venues/${venueId}/book`);
+    await expect(customerPage.getByRole("combobox", { name: "الساحة" })).toHaveCount(0);
 
     // The customer sees the deposit and where to send it, and books.
     const date = localTime(1).slice(0, 10);
@@ -127,6 +134,54 @@ test.describe("Journey F — venue onboarding, verification and booking", () => 
   });
 });
 
+test.describe("Journey F2 — a venue with several courts", () => {
+  test("the owner adds courts by name, and only then do customers choose one", async ({ browser }) => {
+    const owner = await createAuthUser("Owner");
+    const customer = await createAuthUser("Customer");
+    const venueName = `E2E Courts ${randomUUID().slice(0, 6)}`;
+    const ownerCtx = await browser.newContext();
+    const ownerPage = await ownerCtx.newPage();
+    await signIn(ownerPage, owner);
+    await ownerPage.goto("/ar/manage/venues/new");
+    await ownerPage.waitForLoadState("networkidle");
+    await ownerPage.getByRole("textbox", { name: "اسم الملعب" }).fill(venueName);
+    await ownerPage.getByText("أكثر من ساحة", { exact: true }).click();
+    // Several courts: no price here, they're added next, each with its name.
+    await expect(ownerPage.getByRole("textbox", { name: "السعر للساعة" })).toHaveCount(0);
+    await ownerPage.getByRole("button", { name: "إنشاء الملعب" }).click();
+    await ownerPage.waitForURL(/\/ar\/manage\/venues\/[0-9a-f-]{36}\?tab=fields/);
+    const venueId = ownerPage.url().match(/venues\/([0-9a-f-]{36})/)![1];
+    await ownerPage.getByRole("textbox", { name: "اسم الساحة" }).fill("Court A");
+    await ownerPage.getByRole("textbox", { name: "السعر للساعة" }).fill("20000");
+    await ownerPage.getByText("5v5", { exact: true }).click();
+    await ownerPage.getByRole("button", { name: "أضف ساحة" }).click();
+    // With one court so far, it's edited in place; the second comes from «عندي أكثر من ساحة».
+    await ownerPage.getByText("عندي أكثر من ساحة").click();
+    const more = ownerPage.locator("details").filter({ hasText: "عندي أكثر من ساحة" });
+    await more.getByRole("textbox", { name: "اسم الساحة" }).fill("Court B");
+    await more.getByRole("textbox", { name: "السعر للساعة" }).fill("40000");
+    await more.getByText("7v7", { exact: true }).click();
+    await more.getByRole("button", { name: "أضف ساحة" }).click();
+    await expect(ownerPage.getByRole("heading", { name: "Court B" })).toBeVisible();
+    await expect(ownerPage.getByRole("link", { name: "الساحات والأسعار" })).toBeVisible();
+
+    // Make it bookable (verification is a moderator decision, outside this journey).
+    await rpc(owner.id, "set_venue_opening_hours", { p_venue_id: venueId, p_hours: [0, 1, 2, 3, 4, 5, 6].map((weekday) => ({ weekday, opens: "08:00", closes: "02:00" })) });
+    await admin("update public.venues set verification_status = 'verified' where id = $1", [venueId]);
+    await rpc(owner.id, "set_venue_deposit_instructions", { p_venue_id: venueId, p_instructions: "Cash at the desk" });
+
+    const customerCtx = await browser.newContext();
+    const customerPage = await customerCtx.newPage();
+    await signIn(customerPage, customer);
+    await customerPage.goto(`/ar/venues/${venueId}`);
+    await expect(customerPage.getByRole("heading", { name: "الساحات والأسعار" })).toBeVisible();
+    await customerPage.goto(`/ar/venues/${venueId}/book`);
+    const court = customerPage.getByRole("combobox", { name: "الساحة" });
+    await expect(court.locator("option")).toHaveText(["Court A", "Court B"]);
+    await Promise.all([ownerCtx.close(), customerCtx.close()]);
+  });
+});
+
 test.describe("Journey H — the platform team handles a venue's bookings", () => {
   test("an admin sees every booking and confirms one from the venue's bookings, without its settings", async ({ browser }) => {
     const owner = await createAuthUser("Owner");
@@ -150,7 +205,7 @@ test.describe("Journey H — the platform team handles a venue's bookings", () =
     await page.waitForURL(new RegExp(`/ar/manage/venues/${venue}`));
     await expect(page.getByText("تدير حجوزات هذا الملعب بنفس صلاحيات إدارته", { exact: false })).toBeVisible();
     // The bookings only: the venue's settings stay its own.
-    await expect(page.getByRole("link", { name: "الملاعب والتسعير" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: /^الساح(ة|ات)/ })).toHaveCount(0);
     const request = page.getByRole("listitem").filter({ hasText: "from 0771 222 3333" });
     await request.getByRole("button", { name: "استلمت العربون" }).click();
     await expect(page.getByText("لا توجد طلبات معلقة.")).toBeVisible();

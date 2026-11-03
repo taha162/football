@@ -101,14 +101,46 @@ export default async function ManageVenuePage({ params, searchParams }: PageProp
       <nav aria-label={t("sections")} className="flex flex-wrap gap-2 border-b border-line pb-3">
         {visibleTabs.map((x) => (
           <LinkButton key={x} href={{ pathname: `/manage/venues/${id}`, query: { tab: x } }} aria-current={tab === x ? "page" : undefined} className={cn(buttonClass(tab === x ? "secondary" : "ghost", "sm"))}>
-            {t(`tabs.${x}`)}
+            {x === "fields" && fields.length <= 1 ? t("tabs.court") : t(`tabs.${x}`)}
           </LinkButton>
         ))}
       </nav>
 
       {tab === "bookings" ? <BookingsTab venueId={id} fields={fields} tz={tz} date={typeof sp.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(sp.date) ? sp.date : todayIn(tz)} /> : null}
 
-      {tab === "fields" && canManage ? (
+      {tab === "fields" && canManage && fields.length <= 1 ? (
+        <div className="flex flex-col gap-6">
+          {fields[0] ? (
+            <>
+              <Card>
+                <CardBody className="flex flex-col gap-4">
+                  {!fields[0].is_active ? <Badge tone="warning" className="self-start">{t("inactive")}</Badge> : null}
+                  <FieldForm venueId={id} field={fields[0]} t={t} vp={vp} single />
+                  <details className="rounded-xl border border-line p-3">
+                    <summary className="cursor-pointer text-sm font-semibold">{t("pricingRules", { count: (fields[0].rules ?? []).length })}</summary>
+                    <PricingForm venueId={id} fieldId={fields[0].id} rules={fields[0].rules ?? []} t={t} locale={locale} />
+                  </details>
+                </CardBody>
+              </Card>
+              <details className="flex flex-col gap-3 rounded-xl border border-line p-4">
+                <summary className="cursor-pointer font-semibold">{t("moreCourts")}</summary>
+                <p className="my-3 text-sm text-muted">{t("moreCourtsHint")}</p>
+                <FieldForm venueId={id} t={t} vp={vp} />
+              </details>
+            </>
+          ) : (
+            <Card>
+              <CardBody className="flex flex-col gap-3">
+                <h2 className="font-display text-lg font-semibold">{t("addField")}</h2>
+                <p className="text-sm text-muted">{t("firstCourtHint")}</p>
+                <FieldForm venueId={id} t={t} vp={vp} />
+              </CardBody>
+            </Card>
+          )}
+        </div>
+      ) : null}
+
+      {tab === "fields" && canManage && fields.length > 1 ? (
         <div className="flex flex-col gap-6">
           {fields.map((f) => (
             <Card key={f.id}>
@@ -298,7 +330,7 @@ export default async function ManageVenuePage({ params, searchParams }: PageProp
             {fs.filter((f) => f.is_active).map((f) => (
               <Card key={f.id}>
                 <CardBody className="flex flex-col gap-2">
-                  <h3 className="font-semibold">{f.name}</h3>
+                  {fs.filter((x) => x.is_active).length > 1 ? <h3 className="font-semibold">{f.name}</h3> : null}
                   {sameDay.filter((b) => b.field_id === f.id).length === 0 ? <p className="text-sm text-muted">{t("free")}</p> : null}
                   <ul className="flex flex-col gap-1 text-sm">
                     {sameDay
@@ -329,11 +361,15 @@ export default async function ManageVenuePage({ params, searchParams }: PageProp
               <ActionForm action={manualBookingAction} resetOnSuccess>
                 <Hidden values={{ venue_id: venueId }} />
                 <div className="grid gap-4 sm:grid-cols-3">
-                  <FormField name="field_id" label={t("field")} required>
-                    <Select {...controlProps("field_id")}>
-                      {fs.filter((f) => f.is_active).map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
-                    </Select>
-                  </FormField>
+                  {fs.filter((f) => f.is_active).length > 1 ? (
+                    <FormField name="field_id" label={t("field")} required>
+                      <Select {...controlProps("field_id")}>
+                        {fs.filter((f) => f.is_active).map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+                      </Select>
+                    </FormField>
+                  ) : (
+                    <Hidden values={{ field_id: fs.find((f) => f.is_active)?.id }} />
+                  )}
                   <FormField name="start" label={t("start")} required>
                     <Input {...controlProps("start")} type="datetime-local" defaultValue={`${date}T20:00`} required dir="ltr" />
                   </FormField>
@@ -447,28 +483,35 @@ async function ReportsTab({ venueId, currency, locale }: { venueId: string; curr
 function FieldForm({
   venueId,
   field,
+  single = false,
   t,
   vp,
 }: {
   venueId: string;
   field?: { id: string; name: string; surface: string; formats: string[]; is_covered: boolean; has_lights: boolean; price_per_hour: number; is_active: boolean };
+  /** The venue's only court: customers never see its name, so there is none to type. */
+  single?: boolean;
   t: Awaited<ReturnType<typeof getTranslations<"venueDashboard">>>;
   vp: Awaited<ReturnType<typeof getTranslations<"venuePage">>>;
 }) {
+  // Several court forms share the page: each gets its own control ids, so every label finds its box.
+  const idOf = (name: string) => `court-${field?.id ?? "new"}-${name}`;
   return (
     <ActionForm action={upsertFieldAction} resetOnSuccess={!field}>
-      <Hidden values={{ venue_id: venueId, field_id: field?.id }} />
+      <Hidden values={{ venue_id: venueId, field_id: field?.id, ...(single ? { name: field?.name } : {}) }} />
       <div className="grid gap-4 sm:grid-cols-3">
-        <FormField name="name" label={t("fieldName")} required>
-          <Input {...controlProps("name")} defaultValue={field?.name} required maxLength={60} />
-        </FormField>
-        <FormField name="surface" label={t("surface")}>
-          <Select {...controlProps("surface")} defaultValue={field?.surface ?? "artificial_turf"}>
+        {!single ? (
+          <FormField name="name" id={idOf("name")} label={t("fieldName")} required>
+            <Input {...controlProps("name")} id={idOf("name")} defaultValue={field?.name} required maxLength={60} />
+          </FormField>
+        ) : null}
+        <FormField name="surface" id={idOf("surface")} label={t("surface")}>
+          <Select {...controlProps("surface")} id={idOf("surface")} defaultValue={field?.surface ?? "artificial_turf"}>
             {SURFACES.map((s) => <option key={s} value={s}>{vp(`surface.${s}`)}</option>)}
           </Select>
         </FormField>
-        <FormField name="price_per_hour" label={t("pricePerHour")} hint={t("currencyHint")} required>
-          <Input {...controlProps("price_per_hour")} inputMode="numeric" defaultValue={field?.price_per_hour} required dir="ltr" />
+        <FormField name="price_per_hour" id={idOf("price_per_hour")} label={t("pricePerHour")} hint={t("currencyHint")} required>
+          <Input {...controlProps("price_per_hour")} id={idOf("price_per_hour")} inputMode="numeric" defaultValue={field?.price_per_hour} required dir="ltr" />
         </FormField>
       </div>
       <ChoiceChips name="formats" legend={t("formats")} defaultValue={field?.formats ?? []} options={MATCH_FORMATS.map((f) => ({ value: f, label: f }))} />

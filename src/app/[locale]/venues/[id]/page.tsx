@@ -102,14 +102,15 @@ export default async function VenuePage({ params }: PageProps<"/[locale]/venues/
           ) : null}
           {venue.description ? <p className="whitespace-pre-line text-muted">{venue.description}</p> : null}
 
-          <Section title={t("fields")} id="fields">
+          {/* One court: its price and details, with no name. Several: each court by name. */}
+          <Section title={fields.length > 1 ? t("fields") : t("court")} id="fields">
             {fields.length === 0 ? <p className="text-sm text-muted">{t("noFields")}</p> : null}
             <div className="grid gap-3 sm:grid-cols-2">
               {fields.map((f) => (
                 <Card key={f.id}>
                   <CardBody className="flex flex-col gap-2">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold">{f.name}</h3>
+                    <div className="flex items-center justify-between gap-2">
+                      {fields.length > 1 ? <h3 className="font-semibold">{f.name}</h3> : <span className="sr-only">{f.name}</span>}
                       <span className="num font-display font-bold">{t("perHour", { price: formatMoney(f.price_per_hour, venue.city?.currency ?? "IQD", locale) })}</span>
                     </div>
                     <div className="flex flex-wrap gap-1.5">

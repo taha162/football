@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getLocale } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { redirect } from "@/i18n/navigation";
 import { isLocale } from "@/i18n/routing";
@@ -77,9 +77,26 @@ function parseVenue(fd: FormData) {
     });
 }
 
+/**
+ * A new venue says whether it has one court or several. With one, the court
+ * (price, formats, surface, cover, lights) comes in the same form and is
+ * created with the venue: customers then book it straight away, without
+ * choosing. With several, the owner adds them next, each with its name.
+ */
 export async function createVenueAction(_: ActionState, fd: FormData): Promise<ActionState> {
   const parsed = parseVenue(fd);
-  if (!parsed.success) return fail("validation", zodFieldErrors(parsed.error));
+  const several = str(fd, "courts") === "several";
+  const court = z
+    .object({
+      surface: z.enum(SURFACES),
+      formats: z.array(z.enum(MATCH_FORMATS)),
+      price: z.string().optional().transform(money),
+    })
+    .safeParse({ surface: str(fd, "surface") ?? "artificial_turf", formats: strs(fd, "formats"), price: str(fd, "price_per_hour") });
+  const courtErrors = several ? {} : !court.success ? zodFieldErrors(court.error) : court.data.price == null ? { price_per_hour: "required" } : {};
+  if (!parsed.success || Object.keys(courtErrors).length) {
+    return fail("validation", { ...(parsed.success ? {} : zodFieldErrors(parsed.error)), ...courtErrors });
+  }
   const v = parsed.data;
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("create_venue", {
@@ -95,7 +112,27 @@ export async function createVenueAction(_: ActionState, fd: FormData): Promise<A
     p_facilities: v.facilities,
   });
   if (error) return fail(dbErrorCode(error, "create_venue"));
-  redirect({ href: `/manage/venues/${data as string}`, locale: await locale() });
+  const venueId = data as string;
+  let courtSaved = several;
+  if (!several && court.success) {
+    const t = await getTranslations({ locale: "ar", namespace: "venueForm" });
+    const { error: courtError } = await supabase.rpc("upsert_venue_field", {
+      p_venue_id: venueId,
+      // A new court (the generated type doesn't know the function accepts null here).
+      p_field_id: null as unknown as string,
+      p_name: t("courtName"),
+      p_surface: court.data.surface,
+      p_formats: court.data.formats,
+      p_is_covered: bool(fd, "is_covered"),
+      p_has_lights: bool(fd, "has_lights"),
+      p_price_per_hour: court.data.price!,
+      p_is_active: true,
+    });
+    courtSaved = !courtError;
+    if (courtError) logger.error("venue_court_create_failed", { code: courtError.code });
+  }
+  // Several courts (or one that didn't save): the courts tab is the next step.
+  redirect({ href: courtSaved && !several ? `/manage/venues/${venueId}` : { pathname: `/manage/venues/${venueId}`, query: { tab: "fields" } }, locale: await locale() });
   return ok();
 }
 
