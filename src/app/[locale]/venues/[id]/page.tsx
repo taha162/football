@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { BadgeCheck, CalendarCheck, Phone, Settings } from "lucide-react";
+import { BadgeCheck, CalendarCheck, Settings } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { getCurrentUser } from "@/lib/auth";
 import { formatMoney } from "@/lib/domain/money";
@@ -170,29 +170,22 @@ export default async function VenuePage({ params }: PageProps<"/[locale]/venues/
         </div>
 
         <aside className="flex flex-col gap-4">
-          <Card>
-            <CardBody className="flex flex-col gap-3">
-              <h2 className="font-display text-lg font-semibold">{t("contact")}</h2>
-              {venue.phone ? (
-                <a href={`tel:${venue.phone.replace(/\s/g, "")}`} className="flex items-center gap-2 text-sm hover:underline" dir="ltr">
-                  <Phone aria-hidden="true" className="size-4 text-accent" /> {venue.phone}
-                </a>
-              ) : null}
-              {venue.whatsapp ? (
-                <a href={`https://wa.me/${venue.whatsapp.replace(/[^0-9]/g, "")}`} target="_blank" rel="noopener noreferrer" className="text-sm text-accent hover:underline">
-                  {t("whatsapp")}
-                </a>
-              ) : null}
-              {!venue.phone && !venue.whatsapp ? <p className="text-sm text-muted">{t("noContact")}</p> : null}
-              {point ? (
-                <ExternalLinkButton href={provider.directionsUrl(point)} className={buttonClass("outline", "sm")}>{t("directions")}</ExternalLinkButton>
-              ) : null}
-              {mapUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={mapUrl} alt={t("mapAlt", { name: venue.name })} className="rounded-xl border border-line" loading="lazy" />
-              ) : null}
-            </CardBody>
-          </Card>
+          {/* Where the venue is. Its phone and WhatsApp aren't shown: bookings happen in the site,
+              and a customer reaches the venue from their booking's conversation. */}
+          {point || mapUrl ? (
+            <Card>
+              <CardBody className="flex flex-col gap-3">
+                <h2 className="font-display text-lg font-semibold">{t("placeTitle")}</h2>
+                {point ? (
+                  <ExternalLinkButton href={provider.directionsUrl(point)} className={buttonClass("outline", "sm")}>{t("directions")}</ExternalLinkButton>
+                ) : null}
+                {mapUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={mapUrl} alt={t("mapAlt", { name: venue.name })} className="rounded-xl border border-line" loading="lazy" />
+                ) : null}
+              </CardBody>
+            </Card>
+          ) : null}
           <Card>
             <CardBody className="flex flex-col gap-3">
               <h2 className="font-display text-lg font-semibold">{t("hours")}</h2>

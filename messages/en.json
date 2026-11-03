@@ -1850,7 +1850,8 @@
     "depositPolicy": "Bookings are confirmed by a {amount} deposit, sent to the venue within {minutes} minutes of booking. If you cancel it isn't refunded; if the venue cancels it's returned.",
     "cancellationDeadlineDeposit": "You can cancel until {hours} hours before the booking.",
     "notBookableTitle": "Not bookable yet",
-    "notBookableBody": "Bookings happen on the site only. Booking opens on this page once our team has verified the venue and the venue has said how to pay the deposit."
+    "notBookableBody": "Bookings happen on the site only. Booking opens on this page once our team has verified the venue and the venue has said how to pay the deposit.",
+    "placeTitle": "Where it is"
   },
   "venueForm": {
     "name": "Venue name",
@@ -1859,7 +1860,7 @@
     "longitude": "Longitude",
     "coordsHint": "Optional. Copy from a map app; used for directions and distance.",
     "phone": "Phone",
-    "phoneHint": "Shown publicly as the venue's business contact.",
+    "phoneHint": "Not shown to customers: bookings happen on the site, and you talk with customers in each booking's conversation.",
     "whatsapp": "WhatsApp",
     "description": "Description",
     "facilities": "Facilities",

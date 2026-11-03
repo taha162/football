@@ -18,6 +18,7 @@ test.describe("Journey F — venue onboarding, verification and booking", () => 
     await ownerPage.goto("/ar/manage/venues/new");
     await ownerPage.getByRole("textbox", { name: "اسم الملعب" }).fill(venueName);
     await ownerPage.getByRole("textbox", { name: "العنوان" }).fill("Al-Zuhur, near the roundabout");
+    await ownerPage.getByRole("textbox", { name: "الهاتف" }).fill("0770 555 1234");
     await ownerPage.getByRole("button", { name: "إنشاء الملعب" }).click();
     await ownerPage.waitForURL(/\/ar\/manage\/venues\/[0-9a-f-]{36}/);
     const venueId = ownerPage.url().match(/venues\/([0-9a-f-]{36})/)![1];
@@ -67,6 +68,11 @@ test.describe("Journey F — venue onboarding, verification and booking", () => 
     await ownerPage.getByRole("textbox", { name: "طريقة دفع العربون" }).fill("ZainCash 0770 123 4567 (Ahmed)");
     await ownerPage.getByRole("button", { name: "حفظ طريقة الدفع" }).click();
     await expect(ownerPage.getByText("حُفظت طريقة الدفع.")).toBeVisible();
+
+    // The venue page sends people to book in the site: its phone isn't shown.
+    await customerPage.goto(`/ar/venues/${venueId}`);
+    await expect(customerPage.getByRole("link", { name: "احجز موعداً" })).toBeVisible();
+    await expect(customerPage.getByText("0770 555 1234")).toHaveCount(0);
 
     // The customer sees the deposit and where to send it, and books.
     const date = localTime(1).slice(0, 10);
