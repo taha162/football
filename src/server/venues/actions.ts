@@ -104,7 +104,6 @@ export async function updateVenueAction(_: ActionState, fd: FormData): Promise<A
   const parsed = parseVenue(fd);
   const settings = z
     .object({
-      booking_mode: z.enum(["platform", "contact_only"]),
       buffer_minutes: intIn(0, 60),
       min_notice_minutes: intIn(0, 10080),
       max_advance_days: intIn(1, 180),
@@ -112,7 +111,6 @@ export async function updateVenueAction(_: ActionState, fd: FormData): Promise<A
       cancellation_policy: z.string().max(1000, "too_long").optional(),
     })
     .safeParse({
-      booking_mode: str(fd, "booking_mode") ?? "contact_only",
       buffer_minutes: str(fd, "buffer_minutes") ?? "0",
       min_notice_minutes: str(fd, "min_notice_minutes") ?? "60",
       max_advance_days: str(fd, "max_advance_days") ?? "30",
@@ -139,7 +137,8 @@ export async function updateVenueAction(_: ActionState, fd: FormData): Promise<A
       p_phone: v.phone,
       p_whatsapp: v.whatsapp,
       p_facilities: v.facilities,
-      p_booking_mode: s.booking_mode,
+      // Bookings happen in the site only.
+      p_booking_mode: "platform",
       p_auto_confirm: bool(fd, "auto_confirm"),
       p_buffer_minutes: s.buffer_minutes,
       p_min_notice_minutes: s.min_notice_minutes,

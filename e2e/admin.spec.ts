@@ -25,7 +25,11 @@ test.describe("Journey I — reporting and moderation", () => {
     const adminCtx = await browser.newContext();
     const adm = await adminCtx.newPage();
     await signIn(adm, moderator);
+    // Bookings belong to each venue: the admin area has no bookings list.
+    await adm.goto("/ar/admin/bookings");
+    await expect(adm.getByRole("heading", { name: "الصفحة غير موجودة" })).toBeVisible();
     await adm.goto("/ar/admin/reports");
+    await expect(adm.getByRole("navigation").getByRole("link", { name: "الحجوزات" })).toHaveCount(0);
     const card = adm.getByRole("listitem").filter({ hasText: details });
     await expect(card).toBeVisible();
     await expect(card).toContainText(reporter.name);

@@ -35,12 +35,12 @@ test.describe("Journey F — venue onboarding, verification and booking", () => 
     await ownerPage.getByRole("button", { name: "حفظ الساعات" }).click();
     await expect(ownerPage.getByText("تم الحفظ.").or(ownerPage.getByRole("status")).first()).toBeVisible();
 
-    // Not verified yet: the booking page refuses in-app bookings.
+    // Not verified yet: the booking page refuses bookings, and there is no other way to book.
     const customerCtx = await browser.newContext();
     const customerPage = await customerCtx.newPage();
     await signIn(customerPage, customer);
     await customerPage.goto(`/ar/venues/${venueId}/book`);
-    await expect(customerPage.getByText("هذا الملعب لا يستقبل الحجز في التطبيق")).toBeVisible();
+    await expect(customerPage.getByText("الحجز غير متاح بعد في هذا الملعب")).toBeVisible();
 
     await ownerPage.getByRole("button", { name: "اطلب التحقق" }).click();
     await expect(ownerPage.getByText("التحقق قيد المراجعة")).toBeVisible();
@@ -55,15 +55,15 @@ test.describe("Journey F — venue onboarding, verification and booking", () => 
     await card.getByRole("button", { name: "تحديث" }).click();
     await expect(adminPage.getByRole("listitem").filter({ hasText: venueName })).toHaveCount(0);
 
-    // The owner switches the venue to in-app booking; customers can't book
-    // until it says where the deposit goes.
+    // Verified, the venue books in the site (there is no other method to choose);
+    // customers can't book until it says where the deposit goes.
     await ownerPage.goto(`/ar/manage/venues/${venueId}?tab=profile`);
-    await ownerPage.getByRole("combobox", { name: "طريقة الحجز" }).selectOption("platform");
-    await ownerPage.getByRole("button", { name: "حفظ الملعب" }).click();
     await expect(ownerPage.getByText("التحقق قيد المراجعة")).toHaveCount(0);
+    await expect(ownerPage.getByRole("combobox", { name: "طريقة الحجز" })).toHaveCount(0);
+    await expect(ownerPage.getByText("الحجز يتم من الموقع فقط", { exact: false })).toBeVisible();
     await expect(ownerPage.getByText("لا يستطيع الزبائن الحجز حتى تضيف طريقة دفع العربون")).toBeVisible();
     await customerPage.goto(`/ar/venues/${venueId}/book`);
-    await expect(customerPage.getByText("هذا الملعب لا يستقبل الحجز في التطبيق")).toBeVisible();
+    await expect(customerPage.getByText("الحجز غير متاح بعد في هذا الملعب")).toBeVisible();
     await ownerPage.getByRole("textbox", { name: "طريقة دفع العربون" }).fill("ZainCash 0770 123 4567 (Ahmed)");
     await ownerPage.getByRole("button", { name: "حفظ طريقة الدفع" }).click();
     await expect(ownerPage.getByText("حُفظت طريقة الدفع.")).toBeVisible();

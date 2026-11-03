@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { ActionForm, FormField, Hidden, SubmitButton } from "@/components/ui/action-form";
-import { Checkbox, ChoiceChips, Input, Select, Textarea } from "@/components/ui/field";
+import { Checkbox, ChoiceChips, Input, Textarea } from "@/components/ui/field";
 import { Alert } from "@/components/ui/primitives";
 import { LocationFields, type AreaOption, type CityOption } from "@/components/forms/location-fields";
 import { FACILITIES } from "@/lib/domain/venue";
@@ -67,15 +67,9 @@ export function VenueForm({ defaults, cities, areas, canEditSettings }: { defaul
         <fieldset className="flex flex-col gap-4 rounded-xl border border-line p-4">
           <legend className="px-1 font-display text-lg font-semibold">{t("bookingSettings")}</legend>
           {defaults.verification_status !== "verified" ? <Alert tone="info">{t("verificationRequired")}</Alert> : null}
+          {/* Bookings happen in the site only: there is no other method to choose. */}
+          <p className="text-sm text-muted">{t("bookingInSite")}</p>
           <div className="grid gap-4 sm:grid-cols-2">
-            <FormField name="booking_mode" label={t("bookingMode")}>
-              {(a) => (
-                <Select {...a} defaultValue={defaults.booking_mode ?? "contact_only"}>
-                  <option value="contact_only">{t("modeContact")}</option>
-                  <option value="platform">{t("modePlatform")}</option>
-                </Select>
-              )}
-            </FormField>
             <FormField name="buffer_minutes" label={t("buffer")} hint={t("bufferHint")}>
               {(a) => <Input {...a} type="number" min={0} max={60} step={5} defaultValue={defaults.buffer_minutes ?? 0} />}
             </FormField>

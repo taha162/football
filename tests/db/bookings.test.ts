@@ -194,10 +194,35 @@ describe("venue booking", () => {
     expect(busy).toHaveLength(2);
   });
 
-  it("does not take platform bookings for unverified or contact-only venues", async () => {
+  it("does not take bookings for unverified venues", async () => {
     const unverified = await createVenue({ verified: false });
-    // update_venue was allowed to set platform mode, but requests are refused.
     expect(await errorOf(book(await createUser(), unverified.field, localTime(3, 18)))).toBe("venue_not_verified");
+  });
+
+  it("books every venue in the site: there is no contact-only mode left", async () => {
+    const v = await createVenue();
+    const mode = async () => (await admin<{ booking_mode: string }>("select booking_mode from public.venues where id = $1", [v.venue]))[0].booking_mode;
+    expect(await mode()).toBe("platform");
+    // Asking for contact-only changes nothing, from the owner or from an older function.
+    const [row] = await admin<Record<string, unknown>>("select * from public.venues where id = $1", [v.venue]);
+    await rpc(v.owner, "update_venue", { p_venue_id: v.venue, p_name: row.name, p_city_id: row.city_id, p_booking_mode: "contact_only", p_min_notice_minutes: 0 });
+    expect(await mode()).toBe("platform");
+    const moderator = await createUser("Mod", { admin: true });
+    await rpc(moderator, "admin_set_venue_verification", { p_venue_id: v.venue, p_status: "rejected" });
+    expect(await mode()).toBe("platform");
+    // A new venue starts that way too.
+    const owner = await createUser("Owner");
+    const fresh = await rpc<string>(owner, "create_venue", { p_name: `Pitch ${owner.slice(0, 5)}`, p_city_id: await mosul() });
+    expect((await admin<{ booking_mode: string }>("select booking_mode from public.venues where id = $1", [fresh]))[0].booking_mode).toBe("platform");
+  });
+
+  it("a match at a listed venue can't be marked as booked outside the site; elsewhere it can", async () => {
+    const organizer = await createUser("Organizer");
+    const atVenue = await createMatch(organizer, { extra: { p_venue_id: fx.venue, p_external_booking: true } });
+    const elsewhere = await createMatch(organizer, { extra: { p_external_booking: true } });
+    const status = async (id: string) => (await admin<{ booking_status: string }>("select booking_status from public.matches where id = $1", [id]))[0].booking_status;
+    expect(await status(atVenue)).toBe("none");
+    expect(await status(elsewhere)).toBe("external");
   });
 
   it("restricts booking decisions and visibility to the venue's own staff", async () => {
@@ -210,6 +235,9 @@ describe("venue booking", () => {
     expect(await asUser(await createUser(), "select id from public.bookings where id = $1", [r.booking_id])).toEqual([]);
     expect(await asUser(customer, "select id from public.bookings where id = $1", [r.booking_id])).toHaveLength(1);
     expect(await asUser(fx.owner, "select id from public.bookings where id = $1", [r.booking_id])).toHaveLength(1);
+    // A venue's bookings are its own: platform moderators and admins don't see them either.
+    const moderator = await createUser("Mod", { admin: true });
+    expect(await asUser(moderator, "select id from public.bookings where id = $1", [r.booking_id])).toEqual([]);
     // Another venue's owner cannot edit this venue either.
     expect(
       await errorOf(rpc(other.owner, "upsert_venue_field", {

@@ -67,7 +67,7 @@ export default async function VenuePage({ params }: PageProps<"/[locale]/venues/
           </h1>
           <p className="text-muted">{[venue.address, localizedName(venue.area, locale), localizedName(venue.city, locale)].filter(Boolean).join("، ")}</p>
           <div className="flex flex-wrap gap-1.5">
-            {bookable ? <Badge tone="accent">{v("bookable")}</Badge> : <Badge>{v("contactOnly")}</Badge>}
+            {bookable ? <Badge tone="accent">{v("bookable")}</Badge> : <Badge>{v("notBookableYet")}</Badge>}
             {venue.verification_status !== "verified" ? <Badge tone="warning">{t(`verification.${venue.verification_status}`)}</Badge> : null}
             {r.average != null ? <Badge tone="success">★ {r.average} ({r.count})</Badge> : null}
           </div>
@@ -92,7 +92,7 @@ export default async function VenuePage({ params }: PageProps<"/[locale]/venues/
       <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
         <div className="flex flex-col gap-8">
           {!bookable ? (
-            <Alert tone="info" title={t("contactTitle")}>{t("contactBody")}</Alert>
+            <Alert tone="info" title={t("notBookableTitle")}>{t("notBookableBody")}</Alert>
           ) : null}
           {venue.description ? <p className="whitespace-pre-line text-muted">{venue.description}</p> : null}
 

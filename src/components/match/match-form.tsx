@@ -218,7 +218,8 @@ export function MatchForm({
         <FormField name="location_note" label={t("locationNote")} hint={t("locationNoteHint")}>
           {(a) => <Input {...a} defaultValue={defaults.location_note ?? ""} maxLength={300} />}
         </FormField>
-        <Checkbox name="external_booking" defaultChecked={defaults.external_booking} label={t("externalBooking")} />
+        {/* A listed venue is booked through the site; "booked elsewhere" is for places that aren't listed. */}
+        {!venueId ? <Checkbox name="external_booking" defaultChecked={defaults.external_booking} label={t("externalBooking")} /> : null}
         <ChoiceChips
           name="skill_level"
           type="radio"
