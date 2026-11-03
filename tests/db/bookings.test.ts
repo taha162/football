@@ -235,9 +235,9 @@ describe("venue booking", () => {
     expect(await asUser(await createUser(), "select id from public.bookings where id = $1", [r.booking_id])).toEqual([]);
     expect(await asUser(customer, "select id from public.bookings where id = $1", [r.booking_id])).toHaveLength(1);
     expect(await asUser(fx.owner, "select id from public.bookings where id = $1", [r.booking_id])).toHaveLength(1);
-    // A venue's bookings are its own: platform moderators and admins don't see them either.
+    // The platform's admins and moderators see every venue's bookings.
     const moderator = await createUser("Mod", { admin: true });
-    expect(await asUser(moderator, "select id from public.bookings where id = $1", [r.booking_id])).toEqual([]);
+    expect(await asUser(moderator, "select id from public.bookings where id = $1", [r.booking_id])).toHaveLength(1);
     // Another venue's owner cannot edit this venue either.
     expect(
       await errorOf(rpc(other.owner, "upsert_venue_field", {
@@ -245,6 +245,40 @@ describe("venue booking", () => {
         p_is_covered: true, p_has_lights: true, p_price_per_hour: 1,
       })),
     ).toBe("forbidden");
+  });
+
+  it("lets the platform's admins and moderators handle any venue's bookings like its staff, but not its settings", async () => {
+    const v = await createVenue();
+    const customer = await createUser();
+    const moderator = await createUser("Mod");
+    await admin("insert into public.user_roles (user_id, role) values ($1, 'moderator')", [moderator]);
+    // Confirm a request once its deposit arrived.
+    const first = await book(customer, v.field, localTime(5, 15));
+    await rpc(customer, "report_booking_deposit", { p_booking_id: first.booking_id, p_reference: "from 0771" });
+    await rpc(moderator, "decide_booking", { p_booking_id: first.booking_id, p_approve: true });
+    expect((await admin("select status, deposit_status from public.bookings where id = $1", [first.booking_id]))[0]).toEqual({ status: "confirmed", deposit_status: "received" });
+    // Cancel as the venue would: past the customer's deadline, and the deposit is owed back.
+    await rpc(moderator, "cancel_booking", { p_booking_id: first.booking_id, p_reason: "Pitch closed for repairs" });
+    expect((await admin("select status, deposit_status from public.bookings where id = $1", [first.booking_id]))[0]).toEqual({ status: "cancelled", deposit_status: "refund_due" });
+    await rpc(moderator, "mark_deposit_refunded", { p_booking_id: first.booking_id });
+    // Add a walk-in booking.
+    const manual = await rpc<string>(moderator, "create_manual_booking", {
+      p_field_id: v.field, p_start_local: localTime(6, 18), p_duration_minutes: 60, p_kind: "manual", p_customer_name: "Walk-in",
+    });
+    expect(manual).toBeTruthy();
+    // The venue's settings stay its own.
+    expect(
+      await errorOf(rpc(moderator, "upsert_venue_field", {
+        p_venue_id: v.venue, p_field_id: null, p_name: "Extra", p_surface: "indoor", p_formats: "{}",
+        p_is_covered: true, p_has_lights: true, p_price_per_hour: 1,
+      })),
+    ).toBe("forbidden");
+    expect(await errorOf(rpc(moderator, "set_venue_deposit_instructions", { p_venue_id: v.venue, p_instructions: "Elsewhere" }))).toBe("forbidden");
+    // Someone with no role still can't.
+    const stranger = await createUser();
+    const second = await book(customer, v.field, localTime(7, 15));
+    expect(await errorOf(rpc(stranger, "decide_booking", { p_booking_id: second.booking_id, p_approve: true }))).toBe("forbidden");
+    expect(await errorOf(rpc(stranger, "cancel_booking", { p_booking_id: second.booking_id }))).toBe("forbidden");
   });
 
   it("applies the customer cancellation deadline while staff can still cancel", async () => {

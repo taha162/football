@@ -1355,7 +1355,7 @@
     "hidden": "Hidden",
     "contentDescription": "Search and moderate matches, teams and tournaments.",
     "cancelMatch": "Cancel match",
-    "bookingsDescription": "The 100 most recent bookings across all venues.",
+    "bookingsDescription": "The latest 100 bookings across all venues. «Handle» opens the venue's bookings with its admins' powers.",
     "venue": "Venue",
     "customer": "Customer",
     "when": "When",
@@ -1422,7 +1422,8 @@
     "callsRelayStatic": "Set (own TURN server)",
     "callsRelayNone": "Not set: calls work on most networks, but may fail between some mobile networks",
     "callsHint": "A call goes straight between the two browsers and nothing of it is stored. The relay passes the sound on when a direct path isn't possible. Setup steps are in DEPLOYMENT.md.",
-    "reportedVoice": "The reported voice message"
+    "reportedVoice": "The reported voice message",
+    "handle": "Handle"
   },
   "teams": {
     "title": "Teams",
@@ -1851,7 +1852,8 @@
     "cancellationDeadlineDeposit": "You can cancel until {hours} hours before the booking.",
     "notBookableTitle": "Not bookable yet",
     "notBookableBody": "Bookings happen on the site only. Booking opens on this page once our team has verified the venue and the venue has said how to pay the deposit.",
-    "placeTitle": "Where it is"
+    "placeTitle": "Where it is",
+    "manageBookings": "Venue bookings"
   },
   "venueForm": {
     "name": "Venue name",
@@ -1894,7 +1896,8 @@
     "role": {
       "owner": "Owner",
       "manager": "Manager",
-      "staff": "Staff"
+      "staff": "Staff",
+      "platform": "Platform team"
     },
     "verificationExplain": "Verification confirms the venue is real and run by you. Until then it is listed as contact-only.",
     "requestVerification": "Request verification",
@@ -1980,7 +1983,8 @@
     "depositMissingBody": "Every booking is confirmed by a {amount} deposit paid to you. Tell customers where to send it.",
     "depositMissingAction": "Add payment details",
     "refundsDue": "Deposits to return ({count})",
-    "held": "Held, deposit due"
+    "held": "Held, deposit due",
+    "platformNote": "You handle this venue's bookings with its admins' powers, as part of the platform team. The venue's settings (pitches, prices, hours, staff) stay with its owners."
   },
   "booking": {
     "title": "Book {name}",

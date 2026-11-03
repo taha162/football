@@ -46,8 +46,11 @@ export default async function ManageVenuePage({ params, searchParams }: PageProp
   const venue = await getVenue(id);
   if (!venue) notFound();
   const role = await myVenueRole(id, user.id);
+  // The platform's admins and moderators handle any venue's bookings like its staff
+  // (the bookings tab only; the venue's settings stay its own).
+  const moderating = !role && user.isModerator;
   // UI guard only — every action is authorized again in the database.
-  if (!role) redirect({ href: `/venues/${id}`, locale });
+  if (!role && !moderating) redirect({ href: `/venues/${id}`, locale });
   const canManage = role === "owner" || role === "manager";
   const sp = await searchParams;
   const tab: Tab = TABS.find((x) => x === sp.tab) ?? "bookings";
@@ -66,10 +69,11 @@ export default async function ManageVenuePage({ params, searchParams }: PageProp
   return (
     <Container className="flex flex-col gap-6 py-10">
       <PageHeader
-        eyebrow={t(`role.${role}`)}
+        eyebrow={role ? t(`role.${role}`) : t("role.platform")}
         title={venue.name}
         actions={<LinkButton href={`/venues/${id}`} className={buttonClass("ghost", "md")}>{t("viewPublic")}</LinkButton>}
       />
+      {moderating ? <Alert tone="info">{t("platformNote")}</Alert> : null}
       {venue.verification_status !== "verified" ? (
         <Alert tone={venue.verification_status === "rejected" ? "danger" : "info"} title={vp(`verification.${venue.verification_status}`)}>
           {venue.verification_note ?? t("verificationExplain")}

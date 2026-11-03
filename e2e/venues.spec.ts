@@ -127,6 +127,39 @@ test.describe("Journey F — venue onboarding, verification and booking", () => 
   });
 });
 
+test.describe("Journey H — the platform team handles a venue's bookings", () => {
+  test("an admin sees every booking and confirms one from the venue's bookings, without its settings", async ({ browser }) => {
+    const owner = await createAuthUser("Owner");
+    const customer = await createAuthUser("Customer");
+    const moderator = await createAuthUser("Admin", { admin: true });
+    const { venue, field, name } = await bookableVenue(owner);
+    const booked = await rpc<{ booking_id: string }>(customer.id, "request_booking", {
+      p_field_id: field,
+      p_start_local: localTime(2, 18),
+      p_duration_minutes: 60,
+    });
+    await rpc(customer.id, "report_booking_deposit", { p_booking_id: booked.booking_id, p_reference: "from 0771 222 3333" });
+
+    const ctx = await browser.newContext();
+    const page = await ctx.newPage();
+    await signIn(page, moderator);
+    await page.goto("/ar/admin/bookings");
+    const row = page.getByRole("row").filter({ hasText: name });
+    await expect(row).toBeVisible();
+    await row.getByRole("link", { name: "إدارة" }).click();
+    await page.waitForURL(new RegExp(`/ar/manage/venues/${venue}`));
+    await expect(page.getByText("تدير حجوزات هذا الملعب بنفس صلاحيات إدارته", { exact: false })).toBeVisible();
+    // The bookings only: the venue's settings stay its own.
+    await expect(page.getByRole("link", { name: "الملاعب والتسعير" })).toHaveCount(0);
+    const request = page.getByRole("listitem").filter({ hasText: "from 0771 222 3333" });
+    await request.getByRole("button", { name: "استلمت العربون" }).click();
+    await expect(page.getByText("لا توجد طلبات معلقة.")).toBeVisible();
+    const [b] = await admin<{ status: string }>("select status from public.bookings where id = $1", [booked.booking_id]);
+    expect(b.status).toBe("confirmed");
+    await ctx.close();
+  });
+});
+
 async function bookableVenue(owner: TestUser) {
   const venue = await rpc<string>(owner.id, "create_venue", { p_name: `E2E Pitch ${randomUUID().slice(0, 6)}`, p_city_id: await mosul() });
   const field = await rpc<string>(owner.id, "upsert_venue_field", {

@@ -78,6 +78,12 @@ export default async function VenuePage({ params }: PageProps<"/[locale]/venues/
               <Settings aria-hidden="true" className="size-4" />
               {t("manage")}
             </LinkButton>
+          ) : user?.isModerator ? (
+            // The platform's admins and moderators handle this venue's bookings like its staff.
+            <LinkButton href={{ pathname: `/manage/venues/${id}`, query: { tab: "bookings" } }} className={buttonClass("secondary", "md")}>
+              <Settings aria-hidden="true" className="size-4" />
+              {t("manageBookings")}
+            </LinkButton>
           ) : null}
           {bookable ? (
             <LinkButton href={`/venues/${id}/book`} className={buttonClass("primary", "md")}>
