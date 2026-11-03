@@ -119,7 +119,8 @@ export function MatchForm({
             </Select>
           )}
         </FormField>
-        {venue && venue.fields.length > 0 ? (
+        {venue && venue.fields.length === 1 ? <input type="hidden" name="field_id" value={venue.fields[0].id} /> : null}
+        {venue && venue.fields.length > 1 ? (
           <FormField name="field_id" label={t("field")}>
             {(a) => (
               <Select {...a} defaultValue={defaults.field_id ?? ""} key={venue.id}>

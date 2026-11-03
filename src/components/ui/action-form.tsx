@@ -130,6 +130,7 @@ type FieldAria = ReturnType<typeof describedBy> & { id: string; name: string };
  */
 export function FormField({
   name,
+  id: idOverride,
   label,
   hint,
   required,
@@ -137,6 +138,8 @@ export function FormField({
   children,
 }: {
   name: string;
+  /** For a form that appears more than once on a page: its own control id (labels need unique ids). */
+  id?: string;
   label: ReactNode;
   hint?: ReactNode;
   required?: boolean;
@@ -144,7 +147,7 @@ export function FormField({
   children: ((aria: FieldAria) => ReactNode) | ReactNode;
 }) {
   const error = useFieldError(name);
-  const { id } = controlProps(name);
+  const id = idOverride ?? controlProps(name).id;
   const aria = describedBy(id, error, hint);
   const wrapper = useRef<HTMLDivElement>(null);
   const isRender = typeof children === "function";

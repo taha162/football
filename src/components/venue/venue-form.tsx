@@ -1,11 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { ActionForm, FormField, Hidden, SubmitButton } from "@/components/ui/action-form";
-import { Checkbox, ChoiceChips, Input, Textarea } from "@/components/ui/field";
+import { Checkbox, ChoiceChips, Input, Select, Textarea } from "@/components/ui/field";
 import { Alert } from "@/components/ui/primitives";
 import { LocationFields, type AreaOption, type CityOption } from "@/components/forms/location-fields";
-import { FACILITIES } from "@/lib/domain/venue";
+import { MATCH_FORMATS } from "@/lib/domain/match";
+import { FACILITIES, SURFACES } from "@/lib/domain/venue";
 import { createVenueAction, updateVenueAction } from "@/server/venues/actions";
 
 export interface VenueDefaults {
@@ -33,7 +35,11 @@ export interface VenueDefaults {
 export function VenueForm({ defaults, cities, areas, canEditSettings }: { defaults: VenueDefaults; cities: CityOption[]; areas: AreaOption[]; canEditSettings: boolean }) {
   const t = useTranslations("venueForm");
   const v = useTranslations("venuePage");
+  const d = useTranslations("venueDashboard");
   const editing = Boolean(defaults.id);
+  // A new venue says whether it has one court or several. One court is filled in here;
+  // several are added afterwards, each with its name (customers then pick one).
+  const [courts, setCourts] = useState<"one" | "several">("one");
   return (
     <ActionForm action={editing ? updateVenueAction : createVenueAction} className="gap-6">
       <Hidden values={{ venue_id: defaults.id }} />
@@ -62,6 +68,52 @@ export function VenueForm({ defaults, cities, areas, canEditSettings }: { defaul
         {(a) => <Textarea {...a} defaultValue={defaults.description ?? ""} maxLength={2000} />}
       </FormField>
       <ChoiceChips name="facilities" legend={t("facilities")} defaultValue={defaults.facilities ?? []} options={FACILITIES.map((f) => ({ value: f, label: v(`facility.${f}`) }))} />
+
+      {!editing ? (
+        <fieldset className="flex flex-col gap-4 rounded-xl border border-line p-4">
+          <div
+            onChange={(e) => {
+              const input = e.target as HTMLInputElement;
+              if (input.name === "courts") setCourts(input.value === "several" ? "several" : "one");
+            }}
+          >
+            <ChoiceChips
+              name="courts"
+              type="radio"
+              legend={t("courts")}
+              defaultValue="one"
+              options={[
+                { value: "one", label: t("courtsOne") },
+                { value: "several", label: t("courtsSeveral") },
+              ]}
+            />
+          </div>
+          {courts === "one" ? (
+            <>
+              <p className="font-display text-lg font-semibold">{t("courtDetails")}</p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField name="price_per_hour" label={d("pricePerHour")} hint={d("currencyHint")} required>
+                  {(a) => <Input {...a} inputMode="numeric" required dir="ltr" />}
+                </FormField>
+                <FormField name="surface" label={d("surface")}>
+                  {(a) => (
+                    <Select {...a} defaultValue="artificial_turf">
+                      {SURFACES.map((s) => <option key={s} value={s}>{v(`surface.${s}`)}</option>)}
+                    </Select>
+                  )}
+                </FormField>
+              </div>
+              <ChoiceChips name="formats" legend={d("formats")} defaultValue={[]} options={MATCH_FORMATS.map((f) => ({ value: f, label: f }))} />
+              <div className="flex flex-wrap gap-4">
+                <Checkbox name="is_covered" label={v("covered")} />
+                <Checkbox name="has_lights" defaultChecked label={v("lights")} />
+              </div>
+            </>
+          ) : (
+            <p className="text-sm text-muted">{t("courtsSeveralHint")}</p>
+          )}
+        </fieldset>
+      ) : null}
 
       {editing && canEditSettings ? (
         <fieldset className="flex flex-col gap-4 rounded-xl border border-line p-4">
