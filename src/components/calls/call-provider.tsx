@@ -7,7 +7,7 @@ import { publicStorageUrl } from "@/lib/storage";
 import { getBrowserClient, getRealtimeClient } from "@/lib/supabase/client";
 import type { Database, Json } from "@/lib/supabase/types";
 import { callIceServersAction } from "@/server/calls";
-import { findAudioRoute, type AudioRoute } from "./audio-route";
+import { findAudioRoute, SESSION_SPEAKER, type AudioRoute } from "./audio-route";
 import { CallScreen } from "./call-screen";
 import { playTone, vibrateRing } from "./tones";
 
@@ -159,6 +159,13 @@ function newLive(): Live {
   return live;
 }
 
+/** Safari's Audio Session API (iPhone, iPad), when there is one. */
+function audioSession(): { type: string } | null {
+  if (typeof navigator === "undefined") return null;
+  const session = (navigator as Navigator & { audioSession?: { type: string } }).audioSession;
+  return session && typeof session === "object" ? session : null;
+}
+
 function getMic(): Promise<MediaStream> {
   return navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false });
 }
@@ -222,6 +229,11 @@ function createEngine(setView: Dispatch<SetStateAction<CallView>>) {
     l.ice = null;
     l.offered = false;
     l.connectedAt = null;
+    // Back to Safari's default session once the call is over.
+    if (l.route?.kind === "session") {
+      const session = audioSession();
+      if (session) session.type = SESSION_SPEAKER;
+    }
     l.muted = false;
     l.route = null;
     l.speakerOn = true;
@@ -610,9 +622,9 @@ function createEngine(setView: Dispatch<SetStateAction<CallView>>) {
   }
 
   /**
-   * Finds whether this phone lets the page choose loudspeaker or earpiece,
-   * and starts on the loudspeaker: the screen, and its buttons, stay in view
-   * rather than against the cheek.
+   * Finds whether this phone lets the page choose loudspeaker or earpiece.
+   * Calls start on the loudspeaker (where iPhone and Android put them), so the
+   * screen and its buttons stay in view rather than against the cheek.
    */
   async function prepareRoute(gen: number) {
     if (typeof window.matchMedia !== "function" || !window.matchMedia("(pointer: coarse)").matches) return;
@@ -623,11 +635,22 @@ function createEngine(setView: Dispatch<SetStateAction<CallView>>) {
       return;
     }
     if (!current(gen)) return;
-    const route = findAudioRoute(devices, typeof HTMLMediaElement !== "undefined" && "setSinkId" in HTMLMediaElement.prototype);
+    const route = findAudioRoute(devices, {
+      audioSession: Boolean(audioSession()),
+      noEarpiece: /iPad|Macintosh/.test(navigator.userAgent),
+      setSinkId: typeof HTMLMediaElement !== "undefined" && "setSinkId" in HTMLMediaElement.prototype,
+    });
     if (!route) return;
     L().route = route;
+    L().speakerOn = true;
     patch({ speakerAvailable: true, speaker: true });
-    await applyRoute(true, gen).catch(() => false);
+    // Already the loudspeaker on iPhone and Android; elsewhere point the output there.
+    if (route.kind === "session") {
+      const session = audioSession();
+      if (session) session.type = route.speaker;
+    } else if (route.kind === "output") {
+      await applyRoute(true, gen).catch(() => false);
+    }
   }
 
   /** Points the sound at the loudspeaker (on) or the earpiece (off). */
@@ -636,26 +659,39 @@ function createEngine(setView: Dispatch<SetStateAction<CallView>>) {
     const route = l.route;
     if (!route) return false;
     const target = on ? route.speaker : route.earpiece;
-    if (route.kind === "output") {
+    if (route.kind === "session") {
+      // iPhone: a voice-call session plays on the earpiece; the default, on the loudspeaker.
+      const session = audioSession();
+      if (!session) return false;
+      session.type = target;
+    } else if (route.kind === "output") {
       if (!audioEl) return false;
-      // Called straight from the tap: iPhone allows it only right after one.
+      // Called straight from the tap: some browsers allow it only right after one.
       await (audioEl as HTMLAudioElement & { setSinkId: (id: string) => Promise<void> }).setSinkId(target);
     } else {
-      // Android: the microphone the call uses decides where its sound plays.
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { deviceId: { exact: target }, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-        video: false,
-      });
+      // Android: the sound follows the microphone, and only one microphone opens
+      // at a time, so close the current one first.
+      l.local?.getTracks().forEach((old) => old.stop());
+      const constraints = { echoCancellation: true, noiseSuppression: true, autoGainControl: true };
+      let stream: MediaStream;
+      let switched = true;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: { exact: target }, ...constraints }, video: false });
+      } catch {
+        // That microphone wouldn't open: reopen the default one, so the call keeps its sound.
+        stream = await navigator.mediaDevices.getUserMedia({ audio: constraints, video: false });
+        switched = false;
+      }
       if (!current(gen)) {
         stream.getTracks().forEach((track) => track.stop());
         return false;
       }
       const track = stream.getAudioTracks()[0];
       track.enabled = !l.muted;
-      const sender = l.pc?.getSenders().find((s) => s.track?.kind === "audio");
+      const sender = l.pc?.getSenders().find((s) => s.track === null || s.track.kind === "audio");
       if (sender) await sender.replaceTrack(track);
-      l.local?.getTracks().forEach((old) => old.stop());
       l.local = stream;
+      if (!switched) return false;
     }
     l.speakerOn = on;
     return true;
