@@ -162,6 +162,99 @@ test.describe("Voice calls", () => {
     await phone.close();
   });
 
+  test("iPhone: both sides get the speaker button, which switches Safari's audio session", async ({ browser }) => {
+    const [caller, callee] = [await createAuthUser("Caller"), await createAuthUser("Callee")];
+    const conv = await rpc<string>(caller.id, "start_direct_conversation", { p_user_id: callee.id });
+    // Two iPhones: Safari's Audio Session API, and no output list.
+    const iPhone = async () => {
+      const ctx = await browser.newContext({ isMobile: true, hasTouch: true, viewport: { width: 390, height: 844 } });
+      await ctx.addInitScript(() => {
+        Object.defineProperty(navigator, "audioSession", { value: { type: "auto" }, configurable: true });
+      });
+      return ctx.newPage();
+    };
+    const sessionType = (p: Page) => p.evaluate(() => (navigator as Navigator & { audioSession: { type: string } }).audioSession.type);
+    const [a, b] = [await iPhone(), await iPhone()];
+    await signIn(a, caller);
+    await signIn(b, callee);
+    await b.waitForLoadState("networkidle");
+    await a.goto(`/ar/messages/${conv}`);
+    await a.waitForLoadState("networkidle");
+    await a.getByRole("button", { name: "اتصال" }).click();
+    await callScreen(b, caller.name).getByRole("button", { name: "رد" }).click();
+    await expect(callScreen(a, callee.name).getByRole("status")).toHaveText(TALKING, { timeout: 30_000 });
+
+    // The person called has the button too, starting on the loudspeaker.
+    for (const [p, name] of [[a, callee.name], [b, caller.name]] as const) {
+      await expect(callScreen(p, name).getByRole("button", { name: "مكبر الصوت" })).toHaveAttribute("aria-pressed", "true");
+      expect(await sessionType(p)).toBe("auto");
+    }
+    const speaker = callScreen(b, caller.name).getByRole("button", { name: "مكبر الصوت" });
+    await speaker.click();
+    await expect(speaker).toHaveAttribute("aria-pressed", "false");
+    expect(await sessionType(b)).toBe("play-and-record");
+    await speaker.click();
+    await expect(speaker).toHaveAttribute("aria-pressed", "true");
+    expect(await sessionType(b)).toBe("auto");
+
+    // Hanging up on the earpiece puts Safari's session back.
+    await speaker.click();
+    await callScreen(b, caller.name).getByRole("button", { name: "إنهاء" }).click();
+    await expect.poll(() => sessionType(b)).toBe("auto");
+    await Promise.all([a.context().close(), b.context().close()]);
+  });
+
+  test("Android: the speaker button reopens the microphone on Speakerphone or Headset earpiece, one at a time", async ({ page, browser }) => {
+    const [caller, callee] = [await createAuthUser("Caller"), await createAuthUser("Callee")];
+    const conv = await rpc<string>(caller.id, "start_direct_conversation", { p_user_id: callee.id });
+    // An Android phone: Chrome names its microphones after where the sound plays, and opens one at a time.
+    const phone = await browser.newContext({ isMobile: true, hasTouch: true, viewport: { width: 412, height: 915 } });
+    await phone.addInitScript(() => {
+      const w = window as unknown as { __requested: string[]; __openedWhileLive: boolean };
+      w.__requested = [];
+      w.__openedWhileLive = false;
+      const devices = navigator.mediaDevices;
+      const real = devices.getUserMedia.bind(devices);
+      const tracks: MediaStreamTrack[] = [];
+      devices.getUserMedia = async (c?: MediaStreamConstraints) => {
+        if (tracks.some((t) => t.readyState === "live")) w.__openedWhileLive = true;
+        const wanted = typeof c?.audio === "object" ? (c.audio.deviceId as { exact?: string } | undefined)?.exact : undefined;
+        if (wanted) w.__requested.push(wanted);
+        const stream = await real({ audio: true, video: false });
+        tracks.push(...stream.getTracks());
+        return stream;
+      };
+      const input = (label: string, deviceId: string) => ({ kind: "audioinput", label, deviceId, groupId: "", toJSON: () => ({}) }) as MediaDeviceInfo;
+      devices.enumerateDevices = async () => [input("Speakerphone", "sp"), input("Headset earpiece", "ear")];
+    });
+    const mobile = await phone.newPage();
+    await signIn(mobile, caller);
+    await signIn(page, callee);
+    await page.waitForLoadState("networkidle");
+    await mobile.goto(`/ar/messages/${conv}`);
+    await mobile.waitForLoadState("networkidle");
+    await mobile.getByRole("button", { name: "اتصال" }).click();
+    await callScreen(page, caller.name).getByRole("button", { name: "رد" }).click();
+    const screen = callScreen(mobile, callee.name);
+    await expect(screen.getByRole("status")).toHaveText(TALKING, { timeout: 30_000 });
+
+    const speaker = screen.getByRole("button", { name: "مكبر الصوت" });
+    await expect(speaker).toHaveAttribute("aria-pressed", "true");
+    await speaker.click();
+    await expect(speaker).toHaveAttribute("aria-pressed", "false");
+    await speaker.click();
+    await expect(speaker).toHaveAttribute("aria-pressed", "true");
+    const seen = await mobile.evaluate(() => {
+      const w = window as unknown as { __requested: string[]; __openedWhileLive: boolean };
+      return { requested: w.__requested, openedWhileLive: w.__openedWhileLive };
+    });
+    expect(seen).toEqual({ requested: ["ear", "sp"], openedWhileLive: false });
+    // The call carries on.
+    await expect(screen.getByRole("status")).toHaveText(TALKING);
+    await screen.getByRole("button", { name: "إنهاء" }).click();
+    await phone.close();
+  });
+
   test("declining ends the call for the caller as no answer", async ({ page, browser }) => {
     const [caller, callee] = [await createAuthUser("Caller"), await createAuthUser("Callee")];
     const conv = await rpc<string>(caller.id, "start_direct_conversation", { p_user_id: callee.id });

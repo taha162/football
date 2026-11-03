@@ -18,6 +18,7 @@ test.describe("Journey F — venue onboarding, verification and booking", () => 
     await ownerPage.goto("/ar/manage/venues/new");
     await ownerPage.getByRole("textbox", { name: "اسم الملعب" }).fill(venueName);
     await ownerPage.getByRole("textbox", { name: "العنوان" }).fill("Al-Zuhur, near the roundabout");
+    await ownerPage.getByRole("textbox", { name: "الهاتف" }).fill("0770 555 1234");
     await ownerPage.getByRole("button", { name: "إنشاء الملعب" }).click();
     await ownerPage.waitForURL(/\/ar\/manage\/venues\/[0-9a-f-]{36}/);
     const venueId = ownerPage.url().match(/venues\/([0-9a-f-]{36})/)![1];
@@ -35,12 +36,12 @@ test.describe("Journey F — venue onboarding, verification and booking", () => 
     await ownerPage.getByRole("button", { name: "حفظ الساعات" }).click();
     await expect(ownerPage.getByText("تم الحفظ.").or(ownerPage.getByRole("status")).first()).toBeVisible();
 
-    // Not verified yet: the booking page refuses in-app bookings.
+    // Not verified yet: the booking page refuses bookings, and there is no other way to book.
     const customerCtx = await browser.newContext();
     const customerPage = await customerCtx.newPage();
     await signIn(customerPage, customer);
     await customerPage.goto(`/ar/venues/${venueId}/book`);
-    await expect(customerPage.getByText("هذا الملعب لا يستقبل الحجز في التطبيق")).toBeVisible();
+    await expect(customerPage.getByText("الحجز غير متاح بعد في هذا الملعب")).toBeVisible();
 
     await ownerPage.getByRole("button", { name: "اطلب التحقق" }).click();
     await expect(ownerPage.getByText("التحقق قيد المراجعة")).toBeVisible();
@@ -55,18 +56,23 @@ test.describe("Journey F — venue onboarding, verification and booking", () => 
     await card.getByRole("button", { name: "تحديث" }).click();
     await expect(adminPage.getByRole("listitem").filter({ hasText: venueName })).toHaveCount(0);
 
-    // The owner switches the venue to in-app booking; customers can't book
-    // until it says where the deposit goes.
+    // Verified, the venue books in the site (there is no other method to choose);
+    // customers can't book until it says where the deposit goes.
     await ownerPage.goto(`/ar/manage/venues/${venueId}?tab=profile`);
-    await ownerPage.getByRole("combobox", { name: "طريقة الحجز" }).selectOption("platform");
-    await ownerPage.getByRole("button", { name: "حفظ الملعب" }).click();
     await expect(ownerPage.getByText("التحقق قيد المراجعة")).toHaveCount(0);
+    await expect(ownerPage.getByRole("combobox", { name: "طريقة الحجز" })).toHaveCount(0);
+    await expect(ownerPage.getByText("الحجز يتم من الموقع فقط", { exact: false })).toBeVisible();
     await expect(ownerPage.getByText("لا يستطيع الزبائن الحجز حتى تضيف طريقة دفع العربون")).toBeVisible();
     await customerPage.goto(`/ar/venues/${venueId}/book`);
-    await expect(customerPage.getByText("هذا الملعب لا يستقبل الحجز في التطبيق")).toBeVisible();
+    await expect(customerPage.getByText("الحجز غير متاح بعد في هذا الملعب")).toBeVisible();
     await ownerPage.getByRole("textbox", { name: "طريقة دفع العربون" }).fill("ZainCash 0770 123 4567 (Ahmed)");
     await ownerPage.getByRole("button", { name: "حفظ طريقة الدفع" }).click();
     await expect(ownerPage.getByText("حُفظت طريقة الدفع.")).toBeVisible();
+
+    // The venue page sends people to book in the site: its phone isn't shown.
+    await customerPage.goto(`/ar/venues/${venueId}`);
+    await expect(customerPage.getByRole("link", { name: "احجز موعداً" })).toBeVisible();
+    await expect(customerPage.getByText("0770 555 1234")).toHaveCount(0);
 
     // The customer sees the deposit and where to send it, and books.
     const date = localTime(1).slice(0, 10);
@@ -118,6 +124,39 @@ test.describe("Journey F — venue onboarding, verification and booking", () => 
     await expect(customerPage.getByText(new RegExp(`تم تأكيد حجزك في ${venueName}`)).first()).toBeVisible();
 
     await Promise.all([ownerCtx.close(), customerCtx.close(), adminCtx.close()]);
+  });
+});
+
+test.describe("Journey H — the platform team handles a venue's bookings", () => {
+  test("an admin sees every booking and confirms one from the venue's bookings, without its settings", async ({ browser }) => {
+    const owner = await createAuthUser("Owner");
+    const customer = await createAuthUser("Customer");
+    const moderator = await createAuthUser("Admin", { admin: true });
+    const { venue, field, name } = await bookableVenue(owner);
+    const booked = await rpc<{ booking_id: string }>(customer.id, "request_booking", {
+      p_field_id: field,
+      p_start_local: localTime(2, 18),
+      p_duration_minutes: 60,
+    });
+    await rpc(customer.id, "report_booking_deposit", { p_booking_id: booked.booking_id, p_reference: "from 0771 222 3333" });
+
+    const ctx = await browser.newContext();
+    const page = await ctx.newPage();
+    await signIn(page, moderator);
+    await page.goto("/ar/admin/bookings");
+    const row = page.getByRole("row").filter({ hasText: name });
+    await expect(row).toBeVisible();
+    await row.getByRole("link", { name: "إدارة" }).click();
+    await page.waitForURL(new RegExp(`/ar/manage/venues/${venue}`));
+    await expect(page.getByText("تدير حجوزات هذا الملعب بنفس صلاحيات إدارته", { exact: false })).toBeVisible();
+    // The bookings only: the venue's settings stay its own.
+    await expect(page.getByRole("link", { name: "الملاعب والتسعير" })).toHaveCount(0);
+    const request = page.getByRole("listitem").filter({ hasText: "from 0771 222 3333" });
+    await request.getByRole("button", { name: "استلمت العربون" }).click();
+    await expect(page.getByText("لا توجد طلبات معلقة.")).toBeVisible();
+    const [b] = await admin<{ status: string }>("select status from public.bookings where id = $1", [booked.booking_id]);
+    expect(b.status).toBe("confirmed");
+    await ctx.close();
   });
 });
 

@@ -34,7 +34,7 @@ export async function VenueCard({ venue, role }: { venue: VenueCardData; role?: 
         </h3>
         <p className="text-xs text-muted">{[localizedName(venue.area, locale), localizedName(venue.city, locale)].filter(Boolean).join("، ")}</p>
         <div className="mt-auto flex flex-wrap items-center gap-1.5">
-          {bookable ? <Badge tone="accent">{t("bookable")}</Badge> : <Badge>{t("contactOnly")}</Badge>}
+          {bookable ? <Badge tone="accent">{t("bookable")}</Badge> : <Badge>{t("notBookableYet")}</Badge>}
           <Badge>{t("fieldCount", { count: active.length })}</Badge>
           {role ? <Badge tone="info">{t(`role.${role}`)}</Badge> : null}
         </div>

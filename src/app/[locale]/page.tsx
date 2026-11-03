@@ -420,7 +420,7 @@ function VenueRow({ venue, depositsOn, locale, t, tv, Forward }: { venue: VenueC
           <span className="truncate text-sm text-muted">{[localizedName(venue.area, locale), localizedName(venue.city, locale)].filter(Boolean).join("، ")}</span>
         </span>
         <span className="flex flex-col items-end gap-0.5 text-end text-sm">
-          <span className={cn("font-semibold", bookable ? "text-accent" : "text-ink/80")}>{bookable ? tv("bookable") : tv("contactOnly")}</span>
+          <span className={cn("font-semibold", bookable ? "text-accent" : "text-ink/80")}>{bookable ? tv("bookable") : tv("notBookableYet")}</span>
           {minPrice != null ? <span className="num text-muted">{tv("fromPrice", { price: formatMoney(minPrice, "IQD", locale) })}</span> : null}
         </span>
         <span className="match-join">

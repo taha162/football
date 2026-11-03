@@ -1355,7 +1355,7 @@
     "hidden": "Hidden",
     "contentDescription": "Search and moderate matches, teams and tournaments.",
     "cancelMatch": "Cancel match",
-    "bookingsDescription": "The 100 most recent bookings across all venues.",
+    "bookingsDescription": "The latest 100 bookings across all venues. «Handle» opens the venue's bookings with its admins' powers.",
     "venue": "Venue",
     "customer": "Customer",
     "when": "When",
@@ -1422,7 +1422,8 @@
     "callsRelayStatic": "Set (own TURN server)",
     "callsRelayNone": "Not set: calls work on most networks, but may fail between some mobile networks",
     "callsHint": "A call goes straight between the two browsers and nothing of it is stored. The relay passes the sound on when a direct path isn't possible. Setup steps are in DEPLOYMENT.md.",
-    "reportedVoice": "The reported voice message"
+    "reportedVoice": "The reported voice message",
+    "handle": "Handle"
   },
   "teams": {
     "title": "Teams",
@@ -1772,12 +1773,12 @@
     "area": "Area",
     "anyArea": "Any area",
     "format": "Format",
-    "onlyBookable": "Only venues that take bookings in the app",
+    "onlyBookable": "Only venues you can book",
     "apply": "Apply",
     "empty": "No venues found",
     "emptyBody": "Venue owners can list their pitches for free.",
     "verified": "Verified venue",
-    "bookable": "Book in app",
+    "bookable": "Bookable",
     "contactOnly": "Contact venue",
     "fieldCount": "{count, plural, one {# field} other {# fields}}",
     "fromPrice": "From {price} / hour",
@@ -1788,7 +1789,8 @@
     },
     "openingHours": "Opening hours",
     "hoursUnknown": "Opening hours not provided.",
-    "closed": "Closed"
+    "closed": "Closed",
+    "notBookableYet": "Not bookable yet"
   },
   "venuePage": {
     "hidden": "Hidden by moderators",
@@ -1847,7 +1849,11 @@
     "autoConfirm": "Requests are confirmed automatically if the slot is free.",
     "manualConfirm": "The venue confirms each request.",
     "depositPolicy": "Bookings are confirmed by a {amount} deposit, sent to the venue within {minutes} minutes of booking. If you cancel it isn't refunded; if the venue cancels it's returned.",
-    "cancellationDeadlineDeposit": "You can cancel until {hours} hours before the booking."
+    "cancellationDeadlineDeposit": "You can cancel until {hours} hours before the booking.",
+    "notBookableTitle": "Not bookable yet",
+    "notBookableBody": "Bookings happen on the site only. Booking opens on this page once our team has verified the venue and the venue has said how to pay the deposit.",
+    "placeTitle": "Where it is",
+    "manageBookings": "Venue bookings"
   },
   "venueForm": {
     "name": "Venue name",
@@ -1856,12 +1862,12 @@
     "longitude": "Longitude",
     "coordsHint": "Optional. Copy from a map app; used for directions and distance.",
     "phone": "Phone",
-    "phoneHint": "Shown publicly as the venue's business contact.",
+    "phoneHint": "Not shown to customers: bookings happen on the site, and you talk with customers in each booking's conversation.",
     "whatsapp": "WhatsApp",
     "description": "Description",
     "facilities": "Facilities",
     "bookingSettings": "Booking settings",
-    "verificationRequired": "In-app bookings are enabled only after our team verifies the venue. You can prepare the settings now.",
+    "verificationRequired": "Booking on the site opens once our team has verified the venue. You can prepare the settings now.",
     "bookingMode": "Booking mode",
     "modeContact": "Contact only (no in-app bookings)",
     "modePlatform": "Accept booking requests in the app",
@@ -1873,7 +1879,8 @@
     "autoConfirm": "Confirm requests automatically when the slot is free and no deposit is due",
     "cancellationPolicy": "Cancellation & refund policy",
     "create": "Create venue",
-    "save": "Save venue"
+    "save": "Save venue",
+    "bookingInSite": "Bookings happen on the site only: customers book from the venue page, and requests reach you under Bookings here. Only you and your staff see them."
   },
   "venueDashboard": {
     "title": "Venue dashboard",
@@ -1889,7 +1896,8 @@
     "role": {
       "owner": "Owner",
       "manager": "Manager",
-      "staff": "Staff"
+      "staff": "Staff",
+      "platform": "Platform team"
     },
     "verificationExplain": "Verification confirms the venue is real and run by you. Until then it is listed as contact-only.",
     "requestVerification": "Request verification",
@@ -1975,14 +1983,15 @@
     "depositMissingBody": "Every booking is confirmed by a {amount} deposit paid to you. Tell customers where to send it.",
     "depositMissingAction": "Add payment details",
     "refundsDue": "Deposits to return ({count})",
-    "held": "Held, deposit due"
+    "held": "Held, deposit due",
+    "platformNote": "You handle this venue's bookings with its admins' powers, as part of the platform team. The venue's settings (pitches, prices, hours, staff) stay with its owners."
   },
   "booking": {
     "title": "Book {name}",
     "description": "Pick a field, date and time. We'll check availability and the price.",
     "forMatch": "This booking will be linked to your match once requested.",
-    "notBookableTitle": "This venue isn't taking bookings in the app",
-    "notBookableBody": "Contact the venue directly using the details on its page.",
+    "notBookableTitle": "This venue can't be booked yet",
+    "notBookableBody": "Booking opens here once our team has verified the venue and the venue has said how to pay the deposit.",
     "back": "Back to venue",
     "field": "Field",
     "date": "Date",

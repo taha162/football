@@ -102,7 +102,8 @@ function parseMatch(fd: FormData) {
       visibility: str(fd, "visibility") ?? "public",
       join_policy: str(fd, "join_policy") ?? "open",
       leave_deadline_hours: str(fd, "leave_deadline_hours") ?? "6",
-      external_booking: bool(fd, "external_booking"),
+      // A listed venue is booked through the site only.
+      external_booking: bool(fd, "external_booking") && !str(fd, "venue_id"),
     });
 }
 
