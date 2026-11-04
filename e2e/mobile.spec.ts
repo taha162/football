@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { createAuthUser, createMatchFor, expect, signIn, test } from "./fixtures";
+import { createAuthUser, createMatchFor, expect, mosul, rpc, signIn, test } from "./fixtures";
 
 test.describe("Mobile (Arabic, RTL)", () => {
   test("a player signs in, finds and joins a match on a phone in Arabic", async ({ page }) => {
@@ -40,6 +40,38 @@ test.describe("Mobile (Arabic, RTL)", () => {
     // No horizontal overflow on a phone-sized viewport.
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow).toBeLessThanOrEqual(0);
+  });
+
+  test("venues are searched by name only and shown two to a row", async ({ page }) => {
+    const owner = await createAuthUser("Owner");
+    const tag = randomUUID().slice(0, 6);
+    for (const name of [`ملعب الندى ${tag}`, `ملعب الفجر ${tag}`, `ساحة الأمل ${tag}`]) {
+      await rpc(owner.id, "create_venue", { p_name: name, p_city_id: await mosul() });
+    }
+    await page.goto("/ar/venues");
+    // Only the name: no city, area, format or "bookable" filters.
+    const search = page.getByRole("search");
+    await expect(search.getByRole("searchbox", { name: "اسم الملعب" })).toBeVisible();
+    await expect(search.getByRole("combobox")).toHaveCount(0);
+    await expect(search.getByRole("checkbox")).toHaveCount(0);
+
+    await search.getByRole("searchbox").fill(`ملعب ${tag}`);
+    await search.getByRole("button", { name: "ابحث" }).click();
+    await expect(page.getByText(`لا يوجد ملعب باسم «ملعب ${tag}»`)).toBeVisible();
+    await search.getByRole("searchbox").fill(tag);
+    await search.getByRole("button", { name: "ابحث" }).click();
+    const cards = page.getByTestId("venue-grid").getByRole("article");
+    await expect(cards).toHaveCount(3);
+
+    // Two to a row: the first two side by side, the third below them. (Layout
+    // positions, not on-screen boxes: the cards slide in as they appear.)
+    const [a, b, c] = await cards.evaluateAll((els) =>
+      (els as HTMLElement[]).map((e) => ({ x: e.offsetLeft, y: e.offsetTop, width: e.offsetWidth, height: e.offsetHeight })),
+    );
+    expect(a.y).toBe(b.y);
+    expect(Math.abs(a.x - b.x)).toBeGreaterThan(a.width / 2);
+    expect(a.width).toBeLessThan(page.viewportSize()!.width / 2);
+    expect(c.y).toBeGreaterThanOrEqual(a.y + a.height);
   });
 
   test("public pages fit the phone viewport", async ({ page }) => {

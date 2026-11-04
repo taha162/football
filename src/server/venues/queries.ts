@@ -30,7 +30,8 @@ export const getDepositSettings = cache(async () => {
   return { amount, holdMinutes: setting("booking.deposit_hold_minutes", 60), on: amount > 0 };
 });
 
-export async function listVenues(opts: { q?: string; city?: string; area?: string; format?: string; bookable?: boolean; page: number }) {
+/** Venues by name (the only search), verified ones first; `bookable` keeps those taking bookings now. */
+export async function listVenues(opts: { q?: string; bookable?: boolean; page: number }) {
   const supabase = await createClient();
   const size = 18;
   let query = supabase
@@ -41,15 +42,12 @@ export async function listVenues(opts: { q?: string; city?: string; area?: strin
     .order("name")
     .range((opts.page - 1) * size, opts.page * size);
   if (opts.q) query = query.ilike("name", `%${opts.q.replace(/[%_\\]/g, "")}%`);
-  if (opts.city) query = query.eq("city_id", opts.city);
-  if (opts.area) query = query.eq("area_id", opts.area);
   if (opts.bookable) {
     query = query.eq("booking_mode", "platform").eq("verification_status", "verified");
     if ((await getDepositSettings()).on) query = query.not("deposit_instructions", "is", null);
   }
   const { data } = await query;
-  let rows = (data ?? []) as unknown as VenueCardData[];
-  if (opts.format) rows = rows.filter((v) => v.fields.some((f) => f.is_active && f.formats.includes(opts.format!)));
+  const rows = (data ?? []) as unknown as VenueCardData[];
   return { items: rows.slice(0, size), hasMore: rows.length > size };
 }
 
@@ -77,7 +75,6 @@ export async function myVenueRole(venueId: string, userId: string) {
   return data?.role ?? null;
 }
 
-/** Busy intervals per field for a local date (no customer details). */
 /**
  * The start times ("HH:MM") a field can be booked at on a local date for a
  * duration, by the same rules as a booking request. `null` when they couldn't
