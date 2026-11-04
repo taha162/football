@@ -212,7 +212,9 @@ export function Thread({
           }
           const hasLocation = m.location_lat != null && m.location_lng != null && !m.deleted_at;
           return (
-            <li key={m.id} className={cn("flex max-w-[85%] flex-col gap-1", mine ? "self-end items-end" : "self-start items-start")}>
+            // Your own (green) messages on the right, the others' on the left. The page is right-to-left,
+            // so "start" is the right-hand side.
+            <li key={m.id} className={cn("flex max-w-[85%] flex-col gap-1", mine ? "self-start items-start" : "self-end items-end")} data-mine={mine || undefined}>
               {/* The name opens the person's page (where «اتصال» and «مراسلة» are). */}
               {!mine ? (
                 m.sender_id ? (

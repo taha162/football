@@ -7,9 +7,9 @@ import { publicStorageUrl } from "@/lib/storage";
 import { getBrowserClient, getRealtimeClient } from "@/lib/supabase/client";
 import type { Database, Json } from "@/lib/supabase/types";
 import { callIceServersAction } from "@/server/calls";
-import { findAudioRoute, isPhone, type AudioRoute, type NoRoute } from "./audio-route";
+import { findAudioRoute, isOtherIphoneBrowser, isPhone, type AudioRoute, type NoRoute } from "./audio-route";
 import { CallScreen } from "./call-screen";
-import { playTone, vibrateRing } from "./tones";
+import { playTone, primeSound, vibrateRing } from "./tones";
 
 /**
  * Voice calls between the two members of a direct conversation.
@@ -36,7 +36,7 @@ type SignalRow = Database["public"]["Tables"]["call_signals"]["Row"];
 
 export type CallPhase = "idle" | "outgoing" | "incoming" | "connecting" | "active" | "ended";
 export type CallNote = "ended" | "noAnswer" | "busy" | "failed" | "micDenied" | "unsupported" | "blocked" | "unavailable" | "rateLimited" | "error";
-export type SpeakerNote = NoRoute | "failed";
+export type SpeakerNote = NoRoute | "failed" | "otherBrowser";
 
 export interface CallView {
   phase: CallPhase;
@@ -131,6 +131,8 @@ interface Live {
   speakerOn: boolean;
   /** iPhone: the call set Safari's audio session, to put back afterwards. */
   sessionSet: boolean;
+  /** This call already said where the switch works (iPhone browsers other than Safari). */
+  browserHinted: boolean;
   /** Bumped when a call ends, so late answers from an old call are ignored. */
   generation: number;
 }
@@ -160,6 +162,7 @@ function newLive(): Live {
     route: null,
     speakerOn: true,
     sessionSet: false,
+    browserHinted: false,
     generation: 0,
   } as unknown as Live;
   live.peerWait = new Promise((resolve) => (live.peerResolve = resolve));
@@ -258,6 +261,7 @@ function createEngine(setView: Dispatch<SetStateAction<CallView>>) {
       if (session) session.type = "auto";
     }
     l.sessionSet = false;
+    l.browserHinted = false;
     l.muted = false;
     l.route = null;
     l.speakerOn = true;
@@ -723,19 +727,25 @@ function createEngine(setView: Dispatch<SetStateAction<CallView>>) {
   function toggleSpeaker() {
     const l = L();
     const gen = l.generation;
+    // iPhone browsers other than Safari may take the switch without moving the sound: say where it works.
+    const otherIphone = isOtherIphoneBrowser(navigator.userAgent);
     void (async () => {
       if (!l.route) {
         // Not offered when the call started (or headphones since unplugged): look again.
         const found = await detectRoute();
         if (!current(gen)) return;
-        if (typeof found === "string") return speakerNote(found, gen);
+        if (typeof found === "string") return speakerNote(found === "unsupported" && otherIphone ? "otherBrowser" : found, gen);
         l.route = found;
       }
       const next = !l.speakerOn;
       const done = await applyRoute(next, gen).catch(() => false);
       if (!current(gen)) return;
-      if (done) patch({ speaker: next, speakerNote: null });
-      else speakerNote("failed", gen);
+      if (!done) return speakerNote(otherIphone ? "otherBrowser" : "failed", gen);
+      patch({ speaker: next, speakerNote: null });
+      if (otherIphone && !l.browserHinted) {
+        l.browserHinted = true;
+        speakerNote("otherBrowser", gen);
+      }
     })();
   }
 
@@ -788,6 +798,8 @@ export function CallProvider({ me, children }: { me: string | null; children: Re
 
   useEffect(() => engine.watch(me), [engine, me]);
   useEffect(() => engine.hangUpOnLeave(), [engine]);
+  // A call that comes later can only ring out loud on an iPhone if the sound was started during a tap.
+  useEffect(() => (me ? primeSound() : undefined), [me]);
 
   const busy = view.phase !== "idle" && view.phase !== "ended";
   const api = useMemo<CallApi>(() => ({ start: (c, p) => void engine.start(c, p), busy }), [engine, busy]);

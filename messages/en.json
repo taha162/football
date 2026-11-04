@@ -2261,6 +2261,7 @@
     "earpiece": "Earpiece",
     "speakerNote": {
       "unsupported": "This phone's browser doesn't let the site switch the speaker. On iPhone it needs iOS 18.4 or later, in Safari.",
+      "otherBrowser": "On iPhone, switching between speaker and earpiece works in Safari (iOS 18.4 or later). If the sound didn't move here, open the site in Safari.",
       "headset": "The sound is in the headphones connected to the phone.",
       "failed": "The phone didn't switch the speaker. Try again."
     }

@@ -42,6 +42,33 @@ test.describe("Conversations", () => {
     await other.context().close();
   });
 
+  test("your own green messages sit on the right, the other person's on the left", async ({ page, browser }) => {
+    const [me, friend] = [await createAuthUser("Me"), await createAuthUser("Friend")];
+    const conv = await rpc<string>(me.id, "start_direct_conversation", { p_user_id: friend.id });
+    await rpc(me.id, "send_message", { p_conversation_id: conv, p_body: "Sent by Me" });
+    await rpc(friend.id, "send_message", { p_conversation_id: conv, p_body: "Sent by Friend" });
+
+    const sides = async (p: typeof page, own: string, other: string) => {
+      const list = p.getByRole("list", { name: "سجل الرسائل" });
+      await expect(list.getByText(own)).toBeVisible();
+      const [box, a, b] = [await list.boundingBox(), await list.getByText(own).boundingBox(), await list.getByText(other).boundingBox()];
+      // Own bubble against the right edge (inside the list's padding), the other's against the left.
+      expect(box!.x + box!.width - (a!.x + a!.width)).toBeLessThan(40);
+      expect(b!.x - box!.x).toBeLessThan(40);
+      // Own is the green one.
+      const colour = (text: string) => list.getByText(text).evaluate((el) => getComputedStyle(el).backgroundColor);
+      expect(await colour(own)).not.toBe(await colour(other));
+    };
+    await signIn(page, me);
+    await page.goto(`/ar/messages/${conv}`);
+    await sides(page, "Sent by Me", "Sent by Friend");
+    const other = await (await browser.newContext()).newPage();
+    await signIn(other, friend);
+    await other.goto(`/ar/messages/${conv}`);
+    await sides(other, "Sent by Friend", "Sent by Me");
+    await other.context().close();
+  });
+
   test("the sender edits or deletes their message, and the other member sees it change live", async ({ page, browser }) => {
     const [sender, receiver] = [await createAuthUser("Sender"), await createAuthUser("Receiver")];
     const conv = await rpc<string>(sender.id, "start_direct_conversation", { p_user_id: receiver.id });
