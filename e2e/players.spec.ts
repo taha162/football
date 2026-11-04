@@ -40,9 +40,16 @@ test.describe("Journey A — register, onboard, discover and join", () => {
     await expect(page.getByText("أنت مسجل", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "مغادرة المباراة" })).toBeVisible();
 
-    // Confirmation also appears as a notification.
+    // Confirmation also appears as a notification. Opening the notifications
+    // reads them: the bell's count clears with no button to press, and stays cleared.
+    await expect(page.getByRole("link", { name: /^الإشعارات \(.+ غير مقروءة\)$/ })).toBeVisible();
     await page.goto("/ar/notifications");
     await expect(page.getByText(new RegExp(`تم تسجيلك في ${title}`))).toBeVisible();
+    await expect(page.getByRole("button", { name: /كمقروء/ })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "الإشعارات", exact: true })).toBeVisible();
+    await page.reload();
+    await expect(page.getByText(new RegExp(`تم تسجيلك في ${title}`))).toBeVisible();
+    await expect(page.getByRole("link", { name: "الإشعارات", exact: true })).toBeVisible();
   });
 });
 

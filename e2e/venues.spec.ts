@@ -34,8 +34,14 @@ test.describe("Journey F — venue onboarding, verification and booking", () => 
     await expect(ownerPage.getByRole("textbox", { name: "اسم الساحة" })).toHaveCount(0);
     await expect(ownerPage.getByText("فرعي")).toHaveCount(0);
 
+    // Opening hours: Saturday's, given to every day at once.
     await ownerPage.getByRole("link", { name: "ساعات العمل" }).click();
-    for (const day of DAYS) await ownerPage.getByRole("checkbox", { name: day }).check();
+    await ownerPage.getByRole("checkbox", { name: "السبت" }).check();
+    await ownerPage.getByLabel("وقت افتتاح السبت").fill("16:00");
+    await ownerPage.getByLabel("وقت إغلاق السبت").fill("00:00");
+    await ownerPage.getByRole("button", { name: "نفس ساعات السبت لكل الأيام" }).click();
+    for (const day of DAYS) await expect(ownerPage.getByRole("checkbox", { name: day })).toBeChecked();
+    await expect(ownerPage.getByLabel("وقت افتتاح الجمعة")).toHaveValue("16:00");
     await ownerPage.getByRole("button", { name: "حفظ الساعات" }).click();
     await expect(ownerPage.getByText("تم الحفظ.").or(ownerPage.getByRole("status")).first()).toBeVisible();
 
@@ -76,14 +82,23 @@ test.describe("Journey F — venue onboarding, verification and booking", () => 
     await customerPage.goto(`/ar/venues/${venueId}`);
     await expect(customerPage.getByRole("link", { name: "احجز موعداً" })).toBeVisible();
     await expect(customerPage.getByText("0770 555 1234")).toHaveCount(0);
+    // Matches aren't created from a venue's page.
+    await expect(customerPage.getByRole("link", { name: "أنشئ مباراة هنا" })).toHaveCount(0);
+    // The hours: each day with the time it opens and the time it closes.
+    const hours = customerPage.getByTestId("opening-hours");
+    await expect(hours.getByRole("columnheader")).toHaveText(["اليوم", "يفتح", "يغلق"]);
+    const saturday = hours.locator("tr", { hasText: "السبت" });
+    await expect(saturday.getByRole("cell")).toHaveText(["٤:٠٠ م", "منتصف الليل"]);
 
-    // One court: the booking page offers no court to choose.
-    await customerPage.goto(`/ar/venues/${venueId}/book`);
+    // One court: the booking page offers no court to choose, only the day's free times.
+    const date = localTime(1).slice(0, 10);
+    await customerPage.goto(`/ar/venues/${venueId}/book?date=${date}`);
     await expect(customerPage.getByRole("combobox", { name: "الساحة" })).toHaveCount(0);
+    const free = customerPage.getByTestId("free-times");
+    await free.getByRole("link", { name: "٨:٠٠ م", exact: true }).click();
+    await expect(free.getByRole("link", { name: "٨:٠٠ م", exact: true })).toHaveAttribute("aria-current", "true");
 
     // The customer sees the deposit and where to send it, and books.
-    const date = localTime(1).slice(0, 10);
-    await customerPage.goto(`/ar/venues/${venueId}/book?date=${date}&time=20:00&duration=60`);
     await expect(customerPage.getByText("العربون لتثبيت الحجز")).toBeVisible();
     await expect(customerPage.getByText(/٥٬٠٠٠/).first()).toBeVisible();
     await expect(customerPage.getByText("ZainCash 0770 123 4567 (Ahmed)")).toBeVisible();
@@ -258,13 +273,21 @@ test.describe("Journey G — overlapping booking attempts", () => {
     await firstPage.getByRole("button", { name: "احجز وأرسل العربون" }).click();
     await firstPage.waitForURL(/\/ar\/my\/bookings/);
 
-    // The overlapping 19:30 is already taken for everyone else.
+    // Back on the same time, the first customer is told it's their own booking.
+    await firstPage.goto(book("19:00"));
+    await expect(firstPage.getByText("لديك حجز في هذا الوقت على هذا الملعب.")).toBeVisible();
+
+    // The overlapping 19:30 is taken for everyone else, who is told why and isn't offered it.
     const secondCtx = await browser.newContext();
     const secondPage = await secondCtx.newPage();
     await signIn(secondPage, second);
     await secondPage.goto(book("19:30"));
-    await expect(secondPage.getByText("هذا الموعد محجوز. جرّب وقتاً أو ملعباً آخر.")).toBeVisible();
+    await expect(secondPage.getByText("الساعة ٧:٣٠ م غير متاحة")).toBeVisible();
+    await expect(secondPage.getByText(/^هذا الوقت محجوز مؤقتاً لزبون آخر حتى يرسل العربون، إلى .+ على الأكثر\./)).toBeVisible();
     await expect(secondPage.getByRole("button", { name: "احجز وأرسل العربون" })).toHaveCount(0);
+    const free = secondPage.getByTestId("free-times");
+    await expect(free.getByRole("link", { name: "٦:٠٠ م", exact: true })).toBeVisible();
+    for (const taken of ["٦:٣٠ م", "٧:٠٠ م", "٧:٣٠ م"]) await expect(free.getByRole("link", { name: taken, exact: true })).toHaveCount(0);
 
     // The deposit never arrives: the owner says so and the time is free again.
     const ownerCtx = await browser.newContext();
@@ -276,12 +299,13 @@ test.describe("Journey G — overlapping booking attempts", () => {
     await ownerPage.getByRole("dialog", { name: "لم يصل العربون؟" }).getByRole("button", { name: "لم يصل" }).click();
     await expect(ownerPage.getByText("لا توجد طلبات معلقة.")).toBeVisible();
 
-    await firstPage.reload();
+    await firstPage.goto("/ar/my/bookings");
     const row = firstPage.getByRole("listitem").filter({ hasText: name });
     await expect(row.getByText("مرفوض", { exact: true })).toBeVisible();
     await expect(row.getByText("رُفض: يقول الملعب إن العربون لم يصل.")).toBeVisible();
 
     await secondPage.goto(book("19:30"));
+    await expect(secondPage.getByTestId("free-times").getByRole("link", { name: "٧:٣٠ م", exact: true })).toHaveAttribute("aria-current", "true");
     await secondPage.getByRole("button", { name: "احجز وأرسل العربون" }).click();
     await secondPage.waitForURL(/\/ar\/my\/bookings/);
     await expect(secondPage.getByRole("heading", { name: "بانتظار عربونك" })).toBeVisible();

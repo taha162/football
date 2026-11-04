@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { createAuthUser, createMatchFor, expect, signIn, test } from "./fixtures";
+import { admin, createAuthUser, createMatchFor, expect, mosul, rpc, signIn, test } from "./fixtures";
 
 test.describe("Mobile (Arabic, RTL)", () => {
   test("a player signs in, finds and joins a match on a phone in Arabic", async ({ page }) => {
@@ -14,7 +14,11 @@ test.describe("Mobile (Arabic, RTL)", () => {
     // Bottom navigation is the primary navigation on small screens.
     const quickNav = page.getByRole("navigation", { name: "تنقل سريع" });
     await expect(quickNav).toBeVisible();
-    await expect(quickNav.getByRole("link", { name: "الملاعب" })).toBeVisible();
+    // Venues next to home, «+» books a pitch, then matches.
+    await expect(quickNav.getByRole("link")).toHaveText(["الرئيسية", "الملاعب", "احجز ملعباً", "المباريات", "الرسائل"]);
+    await quickNav.getByRole("link", { name: "احجز ملعباً" }).click();
+    await page.waitForURL(/\/ar\/venues\?bookable=1/);
+    await expect(page.getByRole("heading", { name: "احجز ملعباً" })).toBeVisible();
 
     // The account menu keeps to the essentials: no venue or tournament pages for someone who manages neither.
     await page.getByLabel(`قائمة حساب ${player.name}`).click();
@@ -40,6 +44,53 @@ test.describe("Mobile (Arabic, RTL)", () => {
     // No horizontal overflow on a phone-sized viewport.
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow).toBeLessThanOrEqual(0);
+  });
+
+  test("venues are searched by name only and shown two to a row", async ({ page }) => {
+    const owner = await createAuthUser("Owner");
+    const tag = randomUUID().slice(0, 6);
+    for (const name of [`ملعب الندى ${tag}`, `ملعب الفجر ${tag}`, `ساحة الأمل ${tag}`]) {
+      await rpc(owner.id, "create_venue", { p_name: name, p_city_id: await mosul() });
+    }
+    await page.goto("/ar/venues");
+    // Only the name: no city, area, format or "bookable" filters.
+    const search = page.getByRole("search");
+    await expect(search.getByRole("searchbox", { name: "اسم الملعب" })).toBeVisible();
+    await expect(search.getByRole("combobox")).toHaveCount(0);
+    await expect(search.getByRole("checkbox")).toHaveCount(0);
+
+    await search.getByRole("searchbox").fill(`ملعب ${tag}`);
+    await search.getByRole("button", { name: "ابحث" }).click();
+    await expect(page.getByText(`لا يوجد ملعب باسم «ملعب ${tag}»`)).toBeVisible();
+    await search.getByRole("searchbox").fill(tag);
+    await search.getByRole("button", { name: "ابحث" }).click();
+    const cards = page.getByTestId("venue-grid").getByRole("article");
+    await expect(cards).toHaveCount(3);
+
+    // Two to a row: the first two side by side, the third below them. (Layout
+    // positions, not on-screen boxes: the cards slide in as they appear.)
+    const [a, b, c] = await cards.evaluateAll((els) =>
+      (els as HTMLElement[]).map((e) => ({ x: e.offsetLeft, y: e.offsetTop, width: e.offsetWidth, height: e.offsetHeight })),
+    );
+    expect(a.y).toBe(b.y);
+    expect(Math.abs(a.x - b.x)).toBeGreaterThan(a.width / 2);
+    expect(a.width).toBeLessThan(page.viewportSize()!.width / 2);
+    expect(c.y).toBeGreaterThanOrEqual(a.y + a.height);
+
+    // Booking («+» in the bottom bar): only venues taking bookings, each opening its booking page.
+    // (Another owner: creating venues is limited per person per day.)
+    const owner2 = await createAuthUser("Owner");
+    const bookable = await rpc<string>(owner2.id, "create_venue", { p_name: `ملعب الحجز ${tag}`, p_city_id: await mosul() });
+    await rpc(owner2.id, "upsert_venue_field", {
+      p_venue_id: bookable, p_field_id: null, p_name: "ساحة 1", p_surface: "artificial_turf", p_formats: "{5v5}",
+      p_is_covered: false, p_has_lights: true, p_price_per_hour: 30_000,
+    });
+    await admin("update public.venues set verification_status = 'verified' where id = $1", [bookable]);
+    await rpc(owner2.id, "set_venue_deposit_instructions", { p_venue_id: bookable, p_instructions: "Cash at the desk" });
+    await page.goto(`/ar/venues?bookable=1&q=${encodeURIComponent(tag)}`);
+    await expect(page.getByRole("heading", { name: "احجز ملعباً" })).toBeVisible();
+    await expect(cards).toHaveCount(1);
+    await expect(cards.getByRole("link", { name: `ملعب الحجز ${tag}` })).toHaveAttribute("href", `/ar/venues/${bookable}/book`);
   });
 
   test("public pages fit the phone viewport", async ({ page }) => {

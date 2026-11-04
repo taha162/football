@@ -1,6 +1,9 @@
 import type { Page } from "@playwright/test";
 import { createAuthUser, expect, rpc, signIn, test } from "./fixtures";
 
+const IPHONE_UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.4 Mobile/15E148 Safari/604.1";
+const ANDROID_UA = "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36";
+
 /** The call screen (a dialog named after the other person). */
 const callScreen = (page: Page, name: string) => page.getByRole("dialog", { name });
 const TALKING = /^[٠-٩]+:[٠-٩]{2}$/;
@@ -113,12 +116,12 @@ test.describe("Voice calls", () => {
     await other.context().close();
   });
 
-  test("on a phone that allows it, the speaker button switches between loudspeaker and earpiece", async ({ page, browser }) => {
+  test("iPhone (Safari 18.4+): the speaker button moves the call between Speaker and Receiver", async ({ page, browser }) => {
     const [caller, callee] = [await createAuthUser("Caller"), await createAuthUser("Callee")];
     const conv = await rpc<string>(caller.id, "start_direct_conversation", { p_user_id: callee.id });
 
-    // A phone listing the two outputs an iPhone shows during a call (Receiver and Speaker).
-    const phone = await browser.newContext({ isMobile: true, hasTouch: true, viewport: { width: 390, height: 844 } });
+    // An iPhone listing the two outputs Safari shows during a call (Receiver and Speaker).
+    const phone = await browser.newContext({ userAgent: IPHONE_UA, isMobile: true, hasTouch: true, viewport: { width: 390, height: 844 } });
     await phone.addInitScript(() => {
       const w = window as unknown as { __sinks: string[] };
       w.__sinks = [];
@@ -144,17 +147,19 @@ test.describe("Voice calls", () => {
     const screen = callScreen(mobile, callee.name);
     await expect(screen.getByRole("status")).toHaveText(TALKING, { timeout: 30_000 });
 
-    // The call starts on the loudspeaker; the button moves it to the earpiece and back.
+    // The call starts on the loudspeaker (Safari's own choice: nothing to set); the
+    // button points the call's audio at the Receiver (the earpiece) and back.
     const speaker = screen.getByRole("button", { name: "مكبر الصوت" });
     await expect(speaker).toHaveAttribute("aria-pressed", "true");
-    const sinks = () => mobile.evaluate(() => (window as unknown as { __sinks: string[] }).__sinks.at(-1));
-    expect(await sinks()).toBe("speaker");
+    const sinks = () => mobile.evaluate(() => (window as unknown as { __sinks: string[] }).__sinks);
+    expect(await sinks()).toEqual([]);
     await speaker.click();
     await expect(speaker).toHaveAttribute("aria-pressed", "false");
-    expect(await sinks()).toBe("receiver");
+    await expect(screen.getByText("سماعة الأذن", { exact: true })).toBeVisible();
+    expect(await sinks()).toEqual(["receiver"]);
     await speaker.click();
     await expect(speaker).toHaveAttribute("aria-pressed", "true");
-    expect(await sinks()).toBe("speaker");
+    expect(await sinks()).toEqual(["receiver", "speaker"]);
 
     // A laptop offers no such choice: no button there.
     await expect(callScreen(page, caller.name).getByRole("button", { name: "مكبر الصوت" })).toHaveCount(0);
@@ -162,14 +167,17 @@ test.describe("Voice calls", () => {
     await phone.close();
   });
 
-  test("iPhone: both sides get the speaker button, which switches Safari's audio session", async ({ browser }) => {
+  test("iPhone before 18.4: both sides get the speaker button, which says the browser won't move the sound", async ({ browser }) => {
     const [caller, callee] = [await createAuthUser("Caller"), await createAuthUser("Callee")];
     const conv = await rpc<string>(caller.id, "start_direct_conversation", { p_user_id: callee.id });
-    // Two iPhones: Safari's Audio Session API, and no output list.
+    // Two iPhones: Safari's Audio Session API, and no list of outputs.
     const iPhone = async () => {
-      const ctx = await browser.newContext({ isMobile: true, hasTouch: true, viewport: { width: 390, height: 844 } });
+      const ctx = await browser.newContext({ userAgent: IPHONE_UA, isMobile: true, hasTouch: true, viewport: { width: 390, height: 844 } });
       await ctx.addInitScript(() => {
         Object.defineProperty(navigator, "audioSession", { value: { type: "auto" }, configurable: true });
+        const devices = navigator.mediaDevices;
+        const real = devices.enumerateDevices.bind(devices);
+        devices.enumerateDevices = async () => (await real()).filter((d) => d.kind === "audioinput");
       });
       return ctx.newPage();
     };
@@ -184,22 +192,20 @@ test.describe("Voice calls", () => {
     await callScreen(b, caller.name).getByRole("button", { name: "رد" }).click();
     await expect(callScreen(a, callee.name).getByRole("status")).toHaveText(TALKING, { timeout: 30_000 });
 
-    // The person called has the button too, starting on the loudspeaker.
+    // Both the caller and the person called have the button, on the loudspeaker,
+    // with Safari's session held as a call's for the whole call.
     for (const [p, name] of [[a, callee.name], [b, caller.name]] as const) {
       await expect(callScreen(p, name).getByRole("button", { name: "مكبر الصوت" })).toHaveAttribute("aria-pressed", "true");
-      expect(await sessionType(p)).toBe("auto");
+      expect(await sessionType(p)).toBe("play-and-record");
     }
-    const speaker = callScreen(b, caller.name).getByRole("button", { name: "مكبر الصوت" });
-    await speaker.click();
-    await expect(speaker).toHaveAttribute("aria-pressed", "false");
-    expect(await sessionType(b)).toBe("play-and-record");
-    await speaker.click();
-    await expect(speaker).toHaveAttribute("aria-pressed", "true");
-    expect(await sessionType(b)).toBe("auto");
+    // Pressing it says why the sound can't move, instead of doing nothing.
+    const screen = callScreen(b, caller.name);
+    await screen.getByRole("button", { name: "مكبر الصوت" }).click();
+    await expect(screen.getByTestId("speaker-note")).toHaveText(/متصفح هذا الهاتف لا يسمح للموقع بتبديل السماعة/);
+    await expect(screen.getByRole("button", { name: "مكبر الصوت" })).toHaveAttribute("aria-pressed", "true");
 
-    // Hanging up on the earpiece puts Safari's session back.
-    await speaker.click();
-    await callScreen(b, caller.name).getByRole("button", { name: "إنهاء" }).click();
+    // Hanging up puts Safari's session back.
+    await screen.getByRole("button", { name: "إنهاء" }).click();
     await expect.poll(() => sessionType(b)).toBe("auto");
     await Promise.all([a.context().close(), b.context().close()]);
   });
@@ -208,7 +214,7 @@ test.describe("Voice calls", () => {
     const [caller, callee] = [await createAuthUser("Caller"), await createAuthUser("Callee")];
     const conv = await rpc<string>(caller.id, "start_direct_conversation", { p_user_id: callee.id });
     // An Android phone: Chrome names its microphones after where the sound plays, and opens one at a time.
-    const phone = await browser.newContext({ isMobile: true, hasTouch: true, viewport: { width: 412, height: 915 } });
+    const phone = await browser.newContext({ userAgent: ANDROID_UA, isMobile: true, hasTouch: true, viewport: { width: 412, height: 915 } });
     await phone.addInitScript(() => {
       const w = window as unknown as { __requested: string[]; __openedWhileLive: boolean };
       w.__requested = [];

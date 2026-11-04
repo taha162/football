@@ -10,9 +10,12 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
 import { getBrowserClient, getRealtimeClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/cn";
 import { formatDuration } from "@/lib/duration";
-import { markConversationReadAction } from "@/server/messages";
+import { editMessage, markConversationReadAction } from "@/server/messages";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/field";
 import { Composer } from "./composer";
 import { LocationCard } from "./location-card";
+import { MessageMenu } from "./message-menu";
 import { VoiceNote } from "./voice-note";
 
 export interface ThreadMessage {
@@ -21,6 +24,7 @@ export interface ThreadMessage {
   body: string;
   created_at: string;
   deleted_at: string | null;
+  edited_at?: string | null;
   image_path?: string | null;
   /** Short-lived signed link to the picture, when there is one. */
   image_url?: string | null;
@@ -35,10 +39,27 @@ export interface ThreadMessage {
   call_seconds?: number | null;
 }
 
+/** When a message last changed: sent, edited or deleted. */
+const changedAt = (m: ThreadMessage) => Math.max(Date.parse(m.created_at), Date.parse(m.edited_at ?? "") || 0, Date.parse(m.deleted_at ?? "") || 0);
+
+/** A deleted message keeps nothing of what it carried. */
+const erased = (m: ThreadMessage, at: string): ThreadMessage => ({
+  ...m,
+  deleted_at: at,
+  body: "",
+  image_path: null,
+  image_url: null,
+  location_lat: null,
+  location_lng: null,
+  voice_path: null,
+  voice_url: null,
+});
+
 /**
- * Message thread. Initial history is server-rendered; new messages arrive via
- * Supabase Realtime (postgres_changes on `messages`, filtered by RLS so only
- * members receive them). Without realtime, the page still works by reloading.
+ * Message thread. Initial history is server-rendered; new messages, edits and
+ * deletions arrive via Supabase Realtime (postgres_changes on `messages`,
+ * filtered by RLS so only members receive them). Without realtime, the page
+ * still works by reloading. The sender can edit or delete their messages.
  */
 export function Thread({
   conversationId,
@@ -57,17 +78,28 @@ export function Thread({
 }) {
   const t = useTranslations("messages");
   const locale = useLocale();
+  const errors = useTranslations("errors");
   const [messages, setMessages] = useState(initial);
   const [prevInitial, setPrevInitial] = useState(initial);
+  // The message being edited, its new text, and how saving went.
+  const [editing, setEditing] = useState<number | null>(null);
+  const [draft, setDraft] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
   const list = useRef<HTMLOListElement>(null);
   const opened = useRef(false);
 
   // Server re-render (e.g. after sending) brings fresh history: merge by id
-  // so realtime-delivered messages aren't lost (derived-state pattern).
+  // so realtime-delivered messages aren't lost, keeping whichever copy of a
+  // message changed last (derived-state pattern).
   if (initial !== prevInitial) {
     setPrevInitial(initial);
     setMessages((prev) => {
-      const byId = new Map([...initial, ...prev].map((m) => [m.id, m]));
+      const byId = new Map(prev.map((m) => [m.id, m]));
+      for (const m of initial) {
+        const have = byId.get(m.id);
+        if (!have || changedAt(m) > changedAt(have)) byId.set(m.id, m);
+      }
       return [...byId.values()].sort((a, b) => a.id - b.id);
     });
   }
@@ -99,6 +131,21 @@ export function Thread({
             void markConversationReadAction(conversationId);
           },
         )
+        // An edit or a deletion: the new text, or «رسالة محذوفة».
+        .on(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "messages", filter: `conversation_id=eq.${conversationId}` },
+          (payload) => {
+            const msg = payload.new as ThreadMessage;
+            setMessages((prev) =>
+              prev.map((m) => {
+                if (m.id !== msg.id) return m;
+                if (msg.deleted_at) return erased(m, msg.deleted_at);
+                return { ...m, body: msg.body, edited_at: msg.edited_at ?? m.edited_at };
+              }),
+            );
+          },
+        )
         .subscribe();
     });
     return () => {
@@ -117,6 +164,30 @@ export function Thread({
   }, [messages.length]);
 
   const fmt = new Intl.DateTimeFormat(locale === "ar" ? "ar-IQ" : "en-GB", { timeZone, hour: "numeric", minute: "2-digit", day: "numeric", month: "short" });
+
+  const startEdit = (m: ThreadMessage) => {
+    setEditing(m.id);
+    setDraft(m.body);
+    setEditError(null);
+  };
+  const saveEdit = async (m: ThreadMessage) => {
+    const text = draft.trim();
+    if (text === m.body) {
+      setEditing(null);
+      return;
+    }
+    setSaving(true);
+    setEditError(null);
+    const res = await editMessage(m.id, text);
+    setSaving(false);
+    if (!res.ok) {
+      setEditError(errors.has(res.error) ? errors(res.error) : errors("generic"));
+      return;
+    }
+    const at = new Date().toISOString();
+    setMessages((prev) => prev.map((x) => (x.id === m.id ? { ...x, body: text, edited_at: at } : x)));
+    setEditing(null);
+  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -160,14 +231,50 @@ export function Thread({
               ) : null}
               {hasLocation ? <LocationCard lat={m.location_lat!} lng={m.location_lng!} accuracy={m.location_accuracy ?? null} /> : null}
               {m.voice_path && !m.deleted_at ? <VoiceNote src={m.voice_url ?? null} seconds={m.voice_seconds ?? 1} mine={mine} /> : null}
-              {m.deleted_at || m.body ? (
+              {editing === m.id ? (
+                <form
+                  className="flex w-72 max-w-full flex-col gap-2"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    void saveEdit(m);
+                  }}
+                >
+                  <Textarea
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") setEditing(null);
+                    }}
+                    maxLength={2000}
+                    required
+                    autoFocus
+                    aria-label={t("editLabel")}
+                    dir="auto"
+                    className="min-h-20"
+                  />
+                  {editError ? <p role="alert" className="text-xs text-danger">{editError}</p> : null}
+                  <div className="flex justify-end gap-2">
+                    <Button variant="ghost" size="sm" onClick={() => setEditing(null)}>{t("cancel")}</Button>
+                    <Button type="submit" size="sm" disabled={saving || !draft.trim()}>{t("save")}</Button>
+                  </div>
+                </form>
+              ) : m.deleted_at || m.body ? (
                 <div className={cn("whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2 text-sm", mine ? "bg-accent text-accent-ink" : "bg-surface-3 text-ink", m.deleted_at && "italic opacity-60")} dir="auto">
                   {m.deleted_at ? t("deleted") : m.body}
                 </div>
               ) : null}
               <div className="flex items-center gap-1">
                 {time}
+                {m.edited_at && !m.deleted_at ? <span className="text-[11px] text-faint">· {t("edited")}</span> : null}
                 {!mine && !m.deleted_at ? <ReportButton targetType="message" targetId={String(m.id)} compact /> : null}
+                {mine && !m.deleted_at && editing !== m.id ? (
+                  <MessageMenu
+                    messageId={m.id}
+                    canEdit={Boolean(m.body)}
+                    onEdit={() => startEdit(m)}
+                    onDeleted={() => setMessages((prev) => prev.map((x) => (x.id === m.id ? erased(x, new Date().toISOString()) : x)))}
+                  />
+                ) : null}
               </div>
             </li>
           );

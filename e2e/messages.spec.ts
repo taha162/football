@@ -42,6 +42,61 @@ test.describe("Conversations", () => {
     await other.context().close();
   });
 
+  test("the sender edits or deletes their message, and the other member sees it change live", async ({ page, browser }) => {
+    const [sender, receiver] = [await createAuthUser("Sender"), await createAuthUser("Receiver")];
+    const conv = await rpc<string>(sender.id, "start_direct_conversation", { p_user_id: receiver.id });
+    await rpc(sender.id, "send_message", { p_conversation_id: conv, p_body: "Kick-off at 8" });
+    await rpc(sender.id, "send_message", { p_conversation_id: conv, p_body: "Wrong chat, sorry" });
+
+    await signIn(page, sender);
+    await page.goto(`/ar/messages/${conv}`);
+    await page.waitForLoadState("networkidle");
+    const other = await (await browser.newContext()).newPage();
+    await signIn(other, receiver);
+    await other.goto(`/ar/messages/${conv}`);
+    await other.waitForLoadState("networkidle");
+    const theirs = other.getByRole("list", { name: "سجل الرسائل" });
+    await expect(theirs.getByText("Kick-off at 8")).toBeVisible();
+    // Only the sender has the options; the other member can report instead.
+    await expect(theirs.getByRole("button", { name: "خيارات الرسالة" })).toHaveCount(0);
+
+    // Edit: the text is corrected in place and marked «معدّلة».
+    const mine = page.getByRole("list", { name: "سجل الرسائل" });
+    const first = mine.getByRole("listitem").filter({ hasText: "Kick-off at 8" });
+    await first.getByRole("button", { name: "خيارات الرسالة" }).click();
+    await page.getByRole("dialog", { name: "خيارات الرسالة" }).getByRole("button", { name: "تعديل" }).click();
+    const box = page.getByRole("textbox", { name: "نص الرسالة" });
+    await expect(box).toHaveValue("Kick-off at 8");
+    await box.fill("Kick-off at 9");
+    await page.getByRole("button", { name: "حفظ" }).click();
+    const edited = mine.getByRole("listitem").filter({ hasText: "Kick-off at 9" });
+    await expect(edited).toContainText("معدّلة");
+    // The other member sees the edit without reloading.
+    await expect(theirs.getByRole("listitem").filter({ hasText: "Kick-off at 9" })).toContainText("معدّلة");
+    await expect(theirs.getByText("Kick-off at 8")).toHaveCount(0);
+
+    // Delete: asked first, then «رسالة محذوفة» for both.
+    await mine.getByRole("listitem").filter({ hasText: "Wrong chat, sorry" }).getByRole("button", { name: "خيارات الرسالة" }).click();
+    await page.getByRole("dialog", { name: "خيارات الرسالة" }).getByRole("button", { name: "حذف" }).click();
+    const confirm = page.getByRole("dialog", { name: "حذف الرسالة؟" });
+    await confirm.getByRole("button", { name: "حذف" }).click();
+    await expect(mine.getByText("Wrong chat, sorry")).toHaveCount(0);
+    await expect(mine.getByText("رسالة محذوفة")).toBeVisible();
+    await expect(theirs.getByText("Wrong chat, sorry")).toHaveCount(0);
+    await expect(theirs.getByText("رسالة محذوفة")).toBeVisible();
+
+    // The conversations list says so too.
+    await other.goto("/ar/messages");
+    await expect(other.getByText("رسالة محذوفة")).toBeVisible();
+    await expect(other.getByText("[deleted]")).toHaveCount(0);
+
+    // And it stays that way after reloading.
+    await page.reload();
+    await expect(page.getByRole("list", { name: "سجل الرسائل" }).getByRole("listitem").filter({ hasText: "Kick-off at 9" })).toContainText("معدّلة");
+    await expect(page.getByText("رسالة محذوفة")).toBeVisible();
+    await other.context().close();
+  });
+
   test.describe("location", () => {
     test.use({ geolocation: { latitude: 36.3456, longitude: 43.1234, accuracy: 12 }, permissions: ["geolocation"] });
 

@@ -91,7 +91,6 @@ export default async function VenuePage({ params }: PageProps<"/[locale]/venues/
               {t("book")}
             </LinkButton>
           ) : null}
-          <LinkButton href={{ pathname: "/matches/new", query: { venue: id } }} className={buttonClass("outline", "md")}>{t("createMatchHere")}</LinkButton>
         </div>
       </div>
 
@@ -196,7 +195,7 @@ export default async function VenuePage({ params }: PageProps<"/[locale]/venues/
           <Card>
             <CardBody className="flex flex-col gap-3">
               <h2 className="font-display text-lg font-semibold">{t("hours")}</h2>
-              <OpeningHours hours={venue.hours ?? []} />
+              <OpeningHours hours={venue.hours ?? []} timeZone={venue.city?.timezone ?? "Asia/Baghdad"} />
             </CardBody>
           </Card>
           {venue.facilities.length > 0 ? (

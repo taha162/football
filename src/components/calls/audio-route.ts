@@ -1,62 +1,71 @@
 /**
  * Loudspeaker or earpiece during a call, where the browser lets a page choose:
  *
- * - iPhone (Safari 16.4+): the Audio Session API. While the microphone is on,
- *   Safari plays a call on the loudspeaker ("auto"); a voice-call session
- *   ("play-and-record") plays it on the earpiece.
- * - Android (Chrome): no outputs to choose, but its microphones include
+ * - iPhone (Safari 18.4 and later): once the microphone is on, Safari lists
+ *   the phone's outputs, "Speaker" and "Receiver" (the earpiece). The call's
+ *   <audio> element is pointed at one with setSinkId, which Safari allows only
+ *   straight after a tap. Safari plays a call on the loudspeaker unless the
+ *   page picks the receiver. (navigator.audioSession can't move the sound;
+ *   "play-and-record" only keeps the call's audio session steady.)
+ * - Android (Chrome): it lists no outputs, but its microphones include
  *   "Speakerphone" and "Headset earpiece", and the sound follows the
- *   microphone the call uses. Android opens one microphone at a time, so the
- *   current one is closed before the other opens.
- * - Elsewhere, browsers that list the phone's outputs ("Receiver",
- *   "Speaker") point the call's <audio> element at one with setSinkId.
+ *   microphone the call uses. Calls start on the loudspeaker.
+ * - Any other browser that lists "Speaker" and "Receiver" outputs: as on iPhone.
  *
- * With headphones or Bluetooth connected the sound stays where the phone
- * sends it, an iPad has no earpiece, and other browsers offer no choice: then
- * there is no route and the call shows no speaker button.
+ * With headphones or Bluetooth connected the sound stays there. Where none of
+ * this is offered (an iPhone before 18.4, some in-app browsers) the page can't
+ * move the sound, and the call screen says so when its button is pressed.
  */
 export interface AudioRoute {
-  /** "session": iPhone's audio session type; "input": the microphone (Android); "output": the <audio> element's output. */
-  kind: "session" | "input" | "output";
+  /** "input": switch the microphone (Android); "output": the <audio> element's output (iPhone). */
+  kind: "input" | "output";
   speaker: string;
   earpiece: string;
 }
 
+/** Why there's no choice: headphones are connected, or the browser offers none. */
+export type NoRoute = "headset" | "unsupported";
+
 export interface RouteAbilities {
-  /** navigator.audioSession (Safari 16.4+). */
-  audioSession: boolean;
-  /** iPads (and Macs) have no earpiece. */
-  noEarpiece: boolean;
   /** HTMLMediaElement.prototype.setSinkId. */
   setSinkId: boolean;
 }
 
 type Device = Pick<MediaDeviceInfo, "kind" | "label" | "deviceId">;
 
-const HEADSET = /head(set|phone)|bluetooth|airpods|wired|hands-?free|سماعات|بلوتوث/i;
-const SPEAKER = /speaker|مكبر/i;
-const EARPIECE = /receiver|earpiece|handset|iphone|السماعة|المستقبل|سماعة الأذن/i;
+const HEADSET = /head(set|phone)|bluetooth|airpods|wired|hands-?free|usb|سماعات|سماعة (ال)?رأس|بلوتوث/i;
+const SPEAKER = /speaker|مكبر|haut-parleur|altavoz|lautsprecher|alto-falante/i;
+const EARPIECE = /receiver|earpiece|handset|iphone|سماعة|المستقبل|écouteur|auricular|hörer/i;
+/** A phone's own loudspeaker or earpiece, named on its own (a computer's outputs carry makes and ports). */
+const BUILT_IN = /^(speaker|receiver|iphone|مكبر الصوت|سماعة الأذن|haut-parleur|écouteur|altavoz|auricular|lautsprecher|hörer|alto-falante)$/i;
 
-export const SESSION_SPEAKER = "auto";
-export const SESSION_EARPIECE = "play-and-record";
-
-export function findAudioRoute(devices: Device[], can: RouteAbilities): AudioRoute | null {
+export function findAudioRoute(devices: Device[], can: RouteAbilities): AudioRoute | NoRoute {
   const audio = devices.filter((d) => (d.kind === "audiooutput" || d.kind === "audioinput") && d.deviceId);
   // Headphones are the person's choice: leave the sound there.
-  if (audio.some((d) => HEADSET.test(d.label) && !/earpiece/i.test(d.label))) return null;
+  if (audio.some((d) => HEADSET.test(d.label) && !/earpiece/i.test(d.label))) return "headset";
 
-  if (can.audioSession && !can.noEarpiece) return { kind: "session", speaker: SESSION_SPEAKER, earpiece: SESSION_EARPIECE };
-
+  // Android: the sound follows the microphone.
   const inputs = audio.filter((d) => d.kind === "audioinput");
   const speakerphone = inputs.find((d) => /speakerphone/i.test(d.label));
-  const headsetEarpiece = inputs.find((d) => /earpiece/i.test(d.label) && !/speaker/i.test(d.label));
-  if (speakerphone && headsetEarpiece) return { kind: "input", speaker: speakerphone.deviceId, earpiece: headsetEarpiece.deviceId };
+  const earpieceMic = inputs.find((d) => /earpiece/i.test(d.label) && !/speaker/i.test(d.label));
+  if (speakerphone && earpieceMic) return { kind: "input", speaker: speakerphone.deviceId, earpiece: earpieceMic.deviceId };
 
+  // iPhone, and any browser listing the phone's two outputs.
   if (can.setSinkId) {
-    const outputs = audio.filter((d) => d.kind === "audiooutput");
-    const speaker = outputs.find((d) => SPEAKER.test(d.label));
-    const earpiece = outputs.find((d) => d !== speaker && EARPIECE.test(d.label) && !SPEAKER.test(d.label));
+    const outputs = audio.filter((d) => d.kind === "audiooutput" && d.deviceId !== "default" && d.label);
+    let speaker = outputs.find((d) => SPEAKER.test(d.label));
+    let earpiece = outputs.find((d) => d !== speaker && EARPIECE.test(d.label) && !SPEAKER.test(d.label));
+    // Labels in a language not listed above: of a phone's two built-in outputs, one is recognised, so the other is the other one.
+    if (outputs.length === 2 && outputs.some((d) => BUILT_IN.test(d.label.trim()))) {
+      if (speaker && !earpiece) earpiece = outputs.find((d) => d !== speaker);
+      else if (earpiece && !speaker) speaker = outputs.find((d) => d !== earpiece);
+    }
     if (speaker && earpiece) return { kind: "output", speaker: speaker.deviceId, earpiece: earpiece.deviceId };
   }
-  return null;
+  return "unsupported";
+}
+
+/** A phone (not a tablet or a computer): the only place a call has an earpiece to switch to. */
+export function isPhone(userAgent: string, coarsePointer: boolean): boolean {
+  return coarsePointer && (/iPhone|iPod/.test(userAgent) || (/Android/.test(userAgent) && /Mobile/.test(userAgent)));
 }

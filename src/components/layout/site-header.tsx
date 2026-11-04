@@ -7,6 +7,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { buttonClass } from "@/components/ui/button";
 import { HeaderFrame } from "./header-frame";
 import { Logo } from "./logo";
+import { CountLink } from "./count-link";
 import { NavLinks } from "./nav-links";
 import { UserMenu } from "./user-menu";
 import { LinkButton } from "@/components/ui/link-button";
@@ -73,32 +74,5 @@ export async function SiteHeader({ user }: { user: CurrentUser | null }) {
         </div>
       </div>
     </HeaderFrame>
-  );
-}
-
-async function CountLink({
-  href,
-  label,
-  count,
-  children,
-  className,
-}: {
-  href: "/messages" | "/notifications";
-  label: string;
-  count: number;
-  children: React.ReactNode;
-  className?: string;
-}) {
-  const t = await getTranslations("nav");
-  const accessible = count > 0 ? t("withUnread", { label, count }) : label;
-  return (
-    <LinkButton href={href} className={buttonClass("ghost", "sm", `relative px-2.5 ${className ?? ""}`)} aria-label={accessible}>
-      {children}
-      {count > 0 ? (
-        <span key={count} aria-hidden="true" className="badge-pop num absolute -end-0.5 -top-0.5 min-w-5 rounded-full bg-accent px-1 text-center text-[11px] font-bold leading-5 text-accent-ink">
-          {count > 99 ? "99+" : count}
-        </span>
-      ) : null}
-    </LinkButton>
   );
 }
