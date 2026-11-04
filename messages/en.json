@@ -244,6 +244,7 @@
     "account_suspended": "Your account is suspended.",
     "profile_incomplete": "Please complete your profile first.",
     "profile_missing": "Your profile could not be found.",
+    "too_many_attempts": "Too many attempts from this device or for this account. Wait a while (15 minutes to an hour), then try again.",
     "rate_limited": "You're doing that too often. Please wait a moment.",
     "invalid_credentials": "Incorrect email or password.",
     "email_not_confirmed": "Please confirm your email address first — check your inbox.",

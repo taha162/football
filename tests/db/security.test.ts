@@ -1,5 +1,7 @@
+import { randomUUID } from "node:crypto";
+import { Client } from "pg";
 import { describe, expect, it } from "vitest";
-import { admin, asUser, createMatch, createUser, errorOf, mosul, rpc } from "./helpers";
+import { admin, asUser, createMatch, createUser, DB_URL, errorOf, mosul, rpc } from "./helpers";
 
 describe("direct table access is denied (frontend bypass)", () => {
   it("anon and authenticated roles cannot write tables directly", async () => {
@@ -119,5 +121,92 @@ describe("private data isolation", () => {
     const [row] = await asUser<Record<string, unknown>>(null, "select * from public.profiles where id = $1", [user]);
     expect(Object.keys(row)).not.toContain("email");
     expect(await errorOf(asUser(user, "select email from auth.users"))).toMatch(/permission denied/);
+  });
+});
+
+describe("launch audit: the database's own guards", () => {
+  it("every table has row-level security, the API roles write nothing directly, and elevated functions pin their search path", async () => {
+    const withoutRls = await admin<{ relname: string }>(
+      "select c.relname from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'public' and c.relkind in ('r','p') and not c.relrowsecurity",
+    );
+    expect(withoutRls).toEqual([]);
+    const writable = await admin<{ table_name: string }>(
+      "select distinct table_name from information_schema.role_table_grants where grantee in ('anon','authenticated') and table_schema = 'public' and privilege_type in ('INSERT','UPDATE','DELETE','TRUNCATE')",
+    );
+    expect(writable).toEqual([]);
+    const unpinned = await admin<{ proname: string }>(
+      `select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+        where n.nspname in ('public','private') and p.prosecdef
+          and not exists (select 1 from unnest(coalesce(p.proconfig, '{}')) c where c like 'search_path=%')`,
+    );
+    expect(unpinned).toEqual([]);
+  });
+
+  it("guests can call only read-only functions; anything new must be added here on purpose", async () => {
+    const open = await admin<{ proname: string }>(
+      "select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.prokind = 'f' and has_function_privilege('anon', p.oid, 'execute') order by 1",
+    );
+    expect(open.map((r) => r.proname)).toEqual([
+      "field_busy_intervals",
+      "free_start_times",
+      "match_transition_allowed",
+      "player_reputation",
+      "player_stats",
+      "quote_booking",
+      "search_matches",
+      "tournament_transition_allowed",
+      "venue_rating",
+    ]);
+  });
+});
+
+describe("sign-in and sign-up limits (auth_throttle)", () => {
+  const asService = async <T extends Record<string, unknown>>(sql: string, params: unknown[] = []): Promise<T[]> => {
+    const c = new Client({ connectionString: DB_URL });
+    await c.connect();
+    try {
+      await c.query("begin");
+      await c.query("set local role service_role");
+      const res = await c.query<T>(sql, params);
+      await c.query("commit");
+      return res.rows;
+    } finally {
+      await c.end();
+    }
+  };
+  const throttle = async (buckets: object[], record: boolean) =>
+    (await asService<{ ok: boolean }>("select public.auth_throttle($1::jsonb, $2) as ok", [JSON.stringify(buckets), record]))[0].ok;
+
+  it("only the site's server may count attempts", async () => {
+    const bucket = [{ key: `test:${randomUUID()}`, setting: "auth.none", default: 3, window: 60 }];
+    expect(await errorOf(asUser(null, "select public.auth_throttle($1::jsonb, true)", [JSON.stringify(bucket)]))).toMatch(/permission denied/);
+    expect(await errorOf(asUser(await createUser(), "select public.auth_throttle($1::jsonb, true)", [JSON.stringify(bucket)]))).toMatch(/permission denied/);
+  });
+
+  it("allows up to the limit, then refuses; checking alone counts nothing; keys are separate", async () => {
+    const account = { key: `test:${randomUUID()}`, setting: "auth.none", default: 3, window: 60 };
+    const device = { key: `test:${randomUUID()}`, setting: "auth.none", default: 5, window: 60 };
+    for (let i = 0; i < 5; i++) expect(await throttle([account, device], false)).toBe(true);
+    expect(await throttle([account, device], true)).toBe(true);
+    expect(await throttle([account, device], true)).toBe(true);
+    expect(await throttle([account, device], true)).toBe(true);
+    // The account's three are used up, whatever the device says.
+    expect(await throttle([account, device], true)).toBe(false);
+    expect(await throttle([account], false)).toBe(false);
+    // A refusal counts nothing: the device is still at three of five.
+    const [{ n }] = await admin<{ n: string }>("select count(*) as n from private.auth_attempts where key = $1", [device.key]);
+    expect(Number(n)).toBe(3);
+    expect(await throttle([{ ...account, key: `test:${randomUUID()}` }, device], true)).toBe(true);
+  });
+
+  it("an admin's setting overrides the default limit", async () => {
+    const key = `test:${randomUUID()}`;
+    await admin("insert into public.platform_settings (key, value, is_public) values ('auth.test_limit', '1', false) on conflict (key) do update set value = '1'");
+    try {
+      expect(await throttle([{ key, setting: "auth.test_limit", default: 100, window: 60 }], true)).toBe(true);
+      expect(await throttle([{ key, setting: "auth.test_limit", default: 100, window: 60 }], true)).toBe(false);
+    } finally {
+      await admin("delete from public.platform_settings where key = 'auth.test_limit'");
+    }
   });
 });

@@ -22,6 +22,31 @@ test.describe("Account verification", () => {
     await expect(page.getByRole("checkbox")).toBeChecked();
   });
 
+  test("guessing a password: after ten wrong ones the account pauses, even for the right one", async ({ page }) => {
+    test.setTimeout(90_000);
+    const user = await createAuthUser("Guarded");
+    await page.goto("/ar/sign-in");
+    const login = page.getByRole("textbox", { name: /^البريد الإلكتروني/ });
+    const pass = page.getByRole("textbox", { name: "كلمة المرور" });
+    await login.fill(user.email);
+    for (let i = 0; i < 10; i++) {
+      await pass.fill(`wrong-password-${i}`);
+      // Each attempt's own answer (the sign-in is a POST to this page).
+      await Promise.all([
+        page.waitForResponse((r) => r.request().method() === "POST" && new URL(r.url()).pathname === "/ar/sign-in"),
+        page.getByRole("button", { name: "تسجيل الدخول" }).click(),
+      ]);
+      await expect(page.getByText("البريد الإلكتروني أو كلمة المرور غير صحيحة.")).toBeVisible();
+      // A wrong password keeps the e-mail typed, and empties only the password.
+      await expect(login).toHaveValue(user.email);
+      await expect(pass).toHaveValue("");
+    }
+    await pass.fill(PASSWORD);
+    await page.getByRole("button", { name: "تسجيل الدخول" }).click();
+    await expect(page.getByText(/^محاولات كثيرة من هذا الجهاز أو لهذا الحساب/)).toBeVisible();
+    await expect(page).toHaveURL(/\/ar\/sign-in/);
+  });
+
   test("e-mail: a user who signs in before confirming is sent to the code page, can resend and verify", async ({ page }) => {
     const email = `e2e-code-${randomUUID().slice(0, 8)}@example.test`;
     await page.goto("/ar/sign-up");

@@ -1427,6 +1427,9 @@ isOneToOne: false
 "auth_email_for_phone":
 { Args: { "p_phone": string }; Returns: string
                            },
+"auth_throttle":
+{ Args: { "p_buckets": Json,"p_record": boolean }; Returns: boolean
+                           },
 "block_user":
 { Args: { "p_user_id": string }; Returns: undefined
                            },
