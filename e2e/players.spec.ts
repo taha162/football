@@ -123,10 +123,26 @@ test.describe("Journey J — Arabic only", () => {
 });
 
 test.describe("Journey K — unauthorized access", () => {
-  test("signed-out visitors are redirected away from private pages", async ({ page }) => {
+  test("signed-out visitors are redirected away from private pages", async ({ page, request }) => {
     for (const path of ["/ar/dashboard", "/ar/admin", "/ar/manage/venues", "/ar/messages", "/ar/matches/new"]) {
       await page.goto(path);
       await expect(page).toHaveURL(/\/ar\/sign-in\?next=/);
+    }
+    // Every page that needs a signed-in person sends a visitor to sign in before anything renders,
+    // and brings them back afterwards.
+    const id = "00000000-0000-4000-8000-000000000000";
+    for (const path of [
+      "/ar/opponents", "/ar/notifications", "/ar/settings", "/ar/profile", "/ar/my/bookings", "/ar/manage/tournaments",
+      "/ar/matches/new", "/ar/teams/new", "/ar/tournaments/new", `/ar/matches/${id}/edit`, `/ar/matches/${id}/review`,
+      `/ar/teams/${id}/manage`, `/ar/tournaments/${id}/manage`, `/ar/venues/${id}/book`, `/ar/venues/${id}/review`,
+    ]) {
+      const res = await request.get(path, { maxRedirects: 0 });
+      expect(res.status(), path).toBe(307);
+      expect(res.headers().location, path).toContain(`/ar/sign-in?next=${encodeURIComponent(path.slice(3))}`);
+    }
+    // Public pages stay open.
+    for (const path of ["/ar/matches", "/ar/venues", "/ar/teams", "/ar/tournaments"]) {
+      expect((await request.get(path, { maxRedirects: 0 })).status(), path).toBe(200);
     }
   });
 

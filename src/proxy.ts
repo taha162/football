@@ -47,7 +47,7 @@ export async function proxy(request: NextRequest) {
   if (!data.user) {
     const [, locale, ...rest] = request.nextUrl.pathname.split("/");
     const path = `/${rest.join("/")}`;
-    if (PROTECTED.some((p) => path === p || path.startsWith(`${p}/`)) && routing.locales.includes(locale as "ar")) {
+    if (PROTECTED.some((p) => p.test(path)) && routing.locales.includes(locale as "ar")) {
       const url = request.nextUrl.clone();
       url.pathname = `/${locale}/sign-in`;
       url.search = `?next=${encodeURIComponent(path + request.nextUrl.search)}`;
@@ -59,7 +59,14 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 
-const PROTECTED = ["/dashboard", "/my", "/manage", "/messages", "/notifications", "/settings", "/profile", "/onboarding", "/admin"];
+/** Pages that need a signed-in person (each also checks for itself); visitors are sent to sign in before anything renders. */
+const PROTECTED = [
+  /^\/(dashboard|my|manage|messages|notifications|settings|profile|onboarding|admin|opponents)(\/|$)/,
+  /^\/(matches|teams|tournaments)\/new\/?$/,
+  /^\/matches\/[^/]+\/(edit|review)\/?$/,
+  /^\/(teams|tournaments)\/[^/]+\/manage\/?$/,
+  /^\/venues\/[^/]+\/(book|review)\/?$/,
+];
 
 export const config = {
   // Skip API routes, auth callbacks, Next internals and static files.
