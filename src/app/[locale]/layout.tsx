@@ -1,8 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { notFound } from "next/navigation";
 import { Barlow, Barlow_Condensed, Cairo } from "next/font/google";
-import { NextIntlClientProvider, hasLocale } from "next-intl";
-import { getTranslations, setRequestLocale } from "next-intl/server";
+import { hasLocale } from "next-intl";
+import { getTimeZone, getTranslations, setRequestLocale } from "next-intl/server";
 import { directionOf, routing } from "@/i18n/routing";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
@@ -10,6 +10,7 @@ import { LandingOnly } from "@/components/layout/landing-only";
 import { CallProvider } from "@/components/calls/call-provider";
 import { LiveRefresh } from "@/components/layout/live-refresh";
 import { MobileNav } from "@/components/layout/mobile-nav";
+import { IntlProvider } from "@/components/layout/intl-provider";
 import { getCurrentUser } from "@/lib/auth";
 import { getLiveCheckSeconds } from "@/server/reference";
 import { publicEnv } from "@/lib/env";
@@ -81,7 +82,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
         <script dangerouslySetInnerHTML={{ __html: INTRO_SCRIPT }} />
         {/* Every page: content rises into place at first paint (components/motion/enter-script.ts). */}
         <script dangerouslySetInnerHTML={{ __html: ENTER_SCRIPT }} />
-        <NextIntlClientProvider>
+        <IntlProvider locale={locale} timeZone={await getTimeZone()}>
           <a
             href="#main"
             className="sr-only z-50 rounded-lg bg-accent font-semibold text-accent-ink focus:not-sr-only focus:fixed focus:start-4 focus:top-4 focus:px-4 focus:py-2"
@@ -103,7 +104,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
           {user ? <LiveRefresh userId={user.id} checkSeconds={await getLiveCheckSeconds()} /> : null}
           {/* After the page content, so its effects run once the router has placed the new page. */}
           <MotionRoot />
-        </NextIntlClientProvider>
+        </IntlProvider>
       </body>
     </html>
   );
