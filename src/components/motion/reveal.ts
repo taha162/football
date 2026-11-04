@@ -1,4 +1,4 @@
-import { FILL_FRAMES, REVEALS_START, RISE_FRAMES, RISE_TIMING } from "./enter-script";
+import { FILL_FRAMES, FILL_TIMING, REVEALS_START, RISE_FRAMES, RISE_TIMING } from "./enter-script";
 import { prefersReducedMotion } from "./scroll";
 
 /** Marked content: `.reveal` elements, and every child of a `.reveal-children` element. */
@@ -8,7 +8,9 @@ const ITEMS = ".reveal, .reveal-children > *";
  * Marked content rises into place:
  * - on screen when a page arrives (a navigation, or results replacing
  *   others): straight away, one after another in reading order;
- * - below the fold: the first time it is scrolled into view.
+ * - below the fold: the first time it is scrolled into view;
+ * - back or forward to a page already seen: it is simply there, as in an app
+ *   (no entrance, nothing hidden below the fold).
  * The first page load is handled before hydration by ENTER_SCRIPT, which
  * stops watching for streamed sections once this takes over; marked content
  * inside a `.reveal` moves with it. Capacity bars inside fill up after their
@@ -22,6 +24,12 @@ export function startReveals(): () => void {
 
   const seen = new WeakSet<Element>();
   const waiting = new Map<HTMLElement, Animation>(); // hidden until scrolled to
+  // Back/forward: the page that returns within this moment was seen before.
+  let returningUntil = 0;
+  const onReturn = () => {
+    returningUntil = performance.now() + 1000;
+  };
+  window.addEventListener("popstate", onReturn);
 
   const rise = (els: HTMLElement[]) => {
     els.sort((a, b) => (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1));
@@ -31,7 +39,7 @@ export function startReveals(): () => void {
       const delay = Math.min(i, RISE_TIMING.maxStagger) * RISE_TIMING.stagger;
       el.animate(RISE_FRAMES, { duration: RISE_TIMING.duration, delay, easing: RISE_TIMING.easing, fill: "backwards" });
       el.querySelectorAll(".meter-fill").forEach((bar) =>
-        bar.animate(FILL_FRAMES, { duration: 1100, delay: delay + 250, easing: RISE_TIMING.easing, fill: "backwards" }),
+        bar.animate(FILL_FRAMES, { duration: FILL_TIMING.duration, delay: delay + FILL_TIMING.after, easing: RISE_TIMING.easing, fill: "backwards" }),
       );
     });
   };
@@ -53,6 +61,7 @@ export function startReveals(): () => void {
       io.unobserve(el);
     }
     const now: HTMLElement[] = [];
+    const returning = performance.now() < returningUntil;
     document.querySelectorAll<HTMLElement>(ITEMS).forEach((el) => {
       if (seen.has(el)) return;
       seen.add(el);
@@ -60,6 +69,7 @@ export function startReveals(): () => void {
       const r = el.getBoundingClientRect();
       // Anything already showing counts as on screen, so nothing visible is ever hidden again.
       const onScreen = (r.width > 0 || r.height > 0) && r.bottom > 0 && r.top < window.innerHeight;
+      if (returning) return;
       if (!onScreen) {
         waiting.set(el, el.animate([{ opacity: 0 }], { duration: 0, fill: "forwards" }));
         io.observe(el);
@@ -92,6 +102,7 @@ export function startReveals(): () => void {
   window.addEventListener("beforeprint", showAll);
 
   return () => {
+    window.removeEventListener("popstate", onReturn);
     window.removeEventListener("beforeprint", showAll);
     mo.disconnect();
     cancelAnimationFrame(frame);

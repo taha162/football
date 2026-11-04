@@ -6,9 +6,15 @@ export const RISE_FRAMES = [
   { opacity: 0, transform: "translate3d(0, 36px, 0) scale(0.96)" },
   { opacity: 1, transform: "none" },
 ];
-export const RISE_TIMING = { duration: 900, easing: "cubic-bezier(0.16, 1, 0.3, 1)", stagger: 65, maxStagger: 9 };
+/**
+ * Quick enough that a page is settled within about three quarters of a second
+ * (the last of up to seven items starts 240 ms in), slow enough to read as a
+ * rise rather than a flicker.
+ */
+export const RISE_TIMING = { duration: 520, easing: "cubic-bezier(0.16, 1, 0.3, 1)", stagger: 40, maxStagger: 6 };
 /** Capacity bars inside rising content fill up after it. */
 export const FILL_FRAMES = [{ transform: "scaleX(0)" }, { transform: "scaleX(1)" }];
+export const FILL_TIMING = { duration: 700, after: 150 };
 /** reveal.ts fires this when it takes over from the entrance below. */
 export const REVEALS_START = "reveals:start";
 
@@ -27,4 +33,4 @@ export const REVEALS_START = "reveals:start";
  * A failsafe shows everything after 2.5 s whatever happens. Reduced motion:
  * nothing is hidden.
  */
-export const ENTER_SCRIPT = `(function(){var d=document.documentElement;try{if(matchMedia("(prefers-reduced-motion: reduce)").matches||!d.animate||!window.MutationObserver)return;}catch(e){return;}d.setAttribute("data-enter","");var F=${JSON.stringify(RISE_FRAMES)},T=${JSON.stringify(RISE_TIMING)},B=${JSON.stringify(FILL_FRAMES)};var seen=new WeakSet(),started=false,handed=false,frame=0,mo=null;function scan(){frame=0;try{var h=innerHeight,n=0,list=document.querySelectorAll(".reveal, .reveal-children > *");for(var i=0;i<list.length;i++){var el=list[i];if(seen.has(el))continue;var r=el.getBoundingClientRect();if(!(r.width||r.height))continue;seen.add(el);if(el.parentElement&&el.parentElement.closest(".reveal"))continue;if(!(r.bottom>0&&r.top<h))continue;var delay=Math.min(n++,T.maxStagger)*T.stagger;el.animate(F,{duration:T.duration,delay:delay,easing:T.easing,fill:"backwards"});var bars=el.querySelectorAll(".meter-fill");for(var j=0;j<bars.length;j++)bars[j].animate(B,{duration:1100,delay:delay+250,easing:T.easing,fill:"backwards"});}}catch(e){}}document.addEventListener(${JSON.stringify(REVEALS_START)},function(){handed=true;if(frame){cancelAnimationFrame(frame);scan();}if(mo)mo.disconnect();},{once:true});function run(){if(started)return;started=true;scan();d.removeAttribute("data-enter");if(handed)return;mo=new MutationObserver(function(){frame||(frame=requestAnimationFrame(scan));});mo.observe(document.body,{childList:true,subtree:true});}if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",run);else run();setTimeout(run,2500);})();`;
+export const ENTER_SCRIPT = `(function(){var d=document.documentElement;try{if(matchMedia("(prefers-reduced-motion: reduce)").matches||!d.animate||!window.MutationObserver)return;}catch(e){return;}d.setAttribute("data-enter","");var F=${JSON.stringify(RISE_FRAMES)},T=${JSON.stringify(RISE_TIMING)},B=${JSON.stringify(FILL_FRAMES)},BT=${JSON.stringify(FILL_TIMING)};var seen=new WeakSet(),started=false,handed=false,frame=0,mo=null;function scan(){frame=0;try{var h=innerHeight,n=0,list=document.querySelectorAll(".reveal, .reveal-children > *");for(var i=0;i<list.length;i++){var el=list[i];if(seen.has(el))continue;var r=el.getBoundingClientRect();if(!(r.width||r.height))continue;seen.add(el);if(el.parentElement&&el.parentElement.closest(".reveal"))continue;if(!(r.bottom>0&&r.top<h))continue;var delay=Math.min(n++,T.maxStagger)*T.stagger;el.animate(F,{duration:T.duration,delay:delay,easing:T.easing,fill:"backwards"});var bars=el.querySelectorAll(".meter-fill");for(var j=0;j<bars.length;j++)bars[j].animate(B,{duration:BT.duration,delay:delay+BT.after,easing:T.easing,fill:"backwards"});}}catch(e){}}document.addEventListener(${JSON.stringify(REVEALS_START)},function(){handed=true;if(frame){cancelAnimationFrame(frame);scan();}if(mo)mo.disconnect();},{once:true});function run(){if(started)return;started=true;scan();d.removeAttribute("data-enter");if(handed)return;mo=new MutationObserver(function(){frame||(frame=requestAnimationFrame(scan));});mo.observe(document.body,{childList:true,subtree:true});}if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",run);else run();setTimeout(run,2500);})();`;

@@ -154,23 +154,34 @@
      taking every animated group off-screen: pin it to the left instead. */
   right: auto;
 }
+/* The whole handover takes 200 ms. A navigation runs two (old page → loading
+   skeleton → content), one after the other: the content can only take over
+   once the first has finished, so a short first one lets it in as soon as it
+   arrives. */
+/* Named layers (header, phone navigation bar, progress line) move on the same
+   beat instead of the browser's default 250 ms. */
+::view-transition-group(*),
+::view-transition-old(*),
+::view-transition-new(*) {
+  animation-duration: 200ms;
+}
 ::view-transition-old(.page-out) {
-  animation: page-out 150ms var(--ease-in-out) both;
+  animation: page-out 120ms var(--ease-in-out) both;
 }
 ::view-transition-new(.page-in) {
-  animation: fade-in 260ms var(--ease-out) 40ms both; /* the content cascades in itself */
+  animation: fade-in 180ms var(--ease-out) 20ms both; /* the content cascades in itself */
 }
 /* Everything else (footer, background) changes on the same beat as the pages. */
 ::view-transition-old(root) {
-  animation-duration: 150ms;
+  animation-duration: 120ms;
 }
 ::view-transition-new(root) {
-  animation-duration: 350ms;
-  animation-delay: 50ms;
+  animation-duration: 180ms;
+  animation-delay: 20ms;
 }
 /* The loading skeleton hands over to the real content (src/app/[locale]/loading.tsx). */
 ::view-transition-old(.skeleton-out) {
-  animation: fade-out 180ms ease-out both;
+  animation: fade-out 150ms ease-out both;
 }
 ::view-transition-group(site-header),
 ::view-transition-group(mobile-nav) {
@@ -427,7 +438,7 @@ html[data-enter] :is(.reveal, .reveal-children > *) {
     background: var(--color-accent);
     box-shadow: 0 0 16px rgb(184 242 63 / 0.45);
     transform-origin: left center;
-    animation: draw 1100ms var(--ease-out) 350ms both;
+    animation: draw 600ms var(--ease-out) 150ms both;
   }
   [dir="rtl"] .page-title::after {
     transform-origin: right center;
