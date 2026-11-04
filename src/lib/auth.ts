@@ -68,8 +68,4 @@ export async function requireModerator(locale: Locale): Promise<CurrentUser> {
   return user;
 }
 
-/** Only allows same-site relative paths as post-auth redirect targets. */
-export function safeNext(next: unknown, fallback = "/dashboard"): string {
-  if (typeof next !== "string" || !next.startsWith("/") || next.startsWith("//") || next.includes("\\")) return fallback;
-  return next;
-}
+export { safeNext } from "./safe-next";
