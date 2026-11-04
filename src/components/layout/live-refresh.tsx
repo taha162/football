@@ -5,8 +5,6 @@ import { usePathname, useRouter } from "next/navigation";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { getBrowserClient, getRealtimeClient } from "@/lib/supabase/client";
 
-/** How often an open page checks for news when nothing has arrived live. */
-const POLL_MS = 30_000;
 /** Events close together make one refresh. */
 const SETTLE_MS = 1_200;
 /** Nobody has touched the page for this long: stop checking until they're back. */
@@ -29,16 +27,18 @@ function typing() {
  *   count catches up on the next check, so Realtime isn't asked to test every
  *   message against every visitor);
  * - they come back to the tab or the connection returns;
- * - and every 30 seconds while the tab is visible and in use, for changes that
+ * - and every `checkSeconds` (30 by default; the platform setting
+ *   live.check_seconds) while the tab is visible and in use, for changes that
  *   don't notify them (another player joining a match, a time being booked…).
  *   A page left untouched for 3 minutes stops checking until they're back.
  * A refresh waits while they're typing.
  */
-export function LiveRefresh({ userId }: { userId: string }) {
+export function LiveRefresh({ userId, checkSeconds = 30 }: { userId: string; checkSeconds?: number }) {
   const router = useRouter();
   const onMessages = /\/messages(\/|$)/.test(usePathname() ?? "");
 
   useEffect(() => {
+    const POLL_MS = checkSeconds * 1000;
     let settle: ReturnType<typeof setTimeout> | null = null;
     let last = Date.now();
     let active = Date.now();
@@ -99,7 +99,7 @@ export function LiveRefresh({ userId }: { userId: string }) {
       window.removeEventListener("online", onOnline);
       if (channel) void getBrowserClient().removeChannel(channel);
     };
-  }, [router, userId, onMessages]);
+  }, [router, userId, onMessages, checkSeconds]);
 
   return null;
 }

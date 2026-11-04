@@ -11,6 +11,7 @@ import { CallProvider } from "@/components/calls/call-provider";
 import { LiveRefresh } from "@/components/layout/live-refresh";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { getCurrentUser } from "@/lib/auth";
+import { getLiveCheckSeconds } from "@/server/reference";
 import { publicEnv } from "@/lib/env";
 import { INTRO_SCRIPT } from "@/components/stage/intro-script";
 import { ENTER_SCRIPT } from "@/components/motion/enter-script";
@@ -93,8 +94,8 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
             </LandingOnly>
             <MobileNav signedIn={Boolean(user)} />
           </CallProvider>
-          {/* Pages stay up to date without reloading: news arrives live, and open pages check every 30 seconds. */}
-          {user ? <LiveRefresh userId={user.id} /> : null}
+          {/* Pages stay up to date without reloading: news arrives live, and open pages check every so often (live.check_seconds). */}
+          {user ? <LiveRefresh userId={user.id} checkSeconds={await getLiveCheckSeconds()} /> : null}
           {/* After the page content, so its effects run once the router has placed the new page. */}
           <MotionRoot />
         </NextIntlClientProvider>
