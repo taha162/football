@@ -31,7 +31,8 @@ export default async function OnboardingPage({ params, searchParams }: PageProps
         areas={areas}
         defaults={{
           display_name: p.display_name,
-          city_id: p.city_id ?? cities[0]?.id ?? null,
+          // None assumed: the player picks their governorate.
+          city_id: p.city_id ?? null,
           area_id: p.area_id,
           bio: p.bio,
           positions: p.positions,

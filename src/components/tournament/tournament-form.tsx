@@ -34,9 +34,10 @@ export interface TournamentDefaults {
 
 export function TournamentForm({ defaults, cities, venues }: { defaults: TournamentDefaults; cities: { id: string; name_en: string; name_ar: string }[]; venues: { id: string; name: string; city_id: string }[] }) {
   const t = useTranslations("tournamentForm");
+  const f = useTranslations("forms");
   const locale = useLocale();
   const [format, setFormat] = useState(defaults.tournament_format ?? "round_robin");
-  const [city, setCity] = useState(defaults.city_id ?? cities[0]?.id);
+  const [city, setCity] = useState(defaults.city_id ?? "");
   return (
     <ActionForm action={upsertTournamentAction} successMessage={t("saved")} className="gap-6">
       <Hidden values={{ tournament_id: defaults.id }} />
@@ -46,7 +47,8 @@ export function TournamentForm({ defaults, cities, venues }: { defaults: Tournam
       <div className="grid gap-4 sm:grid-cols-2">
         <FormField name="city_id" label={t("city")} required>
           {(a) => (
-            <Select {...a} value={city} onChange={(e) => setCity(e.target.value)}>
+            <Select {...a} value={city} onChange={(e) => setCity(e.target.value)} required>
+              <option value="" disabled>{f("chooseCity")}</option>
               {cities.map((c) => <option key={c.id} value={c.id}>{locale === "ar" ? c.name_ar : c.name_en}</option>)}
             </Select>
           )}

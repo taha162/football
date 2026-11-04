@@ -40,7 +40,8 @@ export function LocationFields({
 }) {
   const t = useTranslations("forms");
   const locale = useLocale();
-  const [city, setCity] = useState(defaultCity ?? (allowAnyCity ? "" : cities[0]?.id ?? ""));
+  // No city assumed: with every governorate listed, people pick theirs (forms that know it pass it as the default).
+  const [city, setCity] = useState(defaultCity ?? "");
   const name = (r: CityOption) => (locale === "ar" ? r.name_ar : r.name_en);
   const cityAreas = areas.filter((a) => a.city_id === city).sort((a, b) => name(a).localeCompare(name(b), locale));
   return (
@@ -48,7 +49,13 @@ export function LocationFields({
       <FormField name={cityName} label={t("city")} required={required}>
         {(a) => (
           <Select {...a} value={city} onChange={(e) => setCity(e.target.value)} required={required}>
-            {allowAnyCity ? <option value="">{t("anyCity")}</option> : null}
+            {allowAnyCity ? (
+              <option value="">{t("anyCity")}</option>
+            ) : (
+              <option value="" disabled>
+                {t("chooseCity")}
+              </option>
+            )}
             {cities.map((c) => (
               <option key={c.id} value={c.id}>
                 {name(c)}

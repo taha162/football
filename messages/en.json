@@ -63,7 +63,7 @@
     "accountMenu": "Account menu for {name}"
   },
   "footer": {
-    "tagline": "A community for recreational football — starting in Mosul.",
+    "tagline": "A community for recreational football, in every governorate of Iraq.",
     "explore": "Explore",
     "legal": "Legal",
     "terms": "Terms of use",
@@ -170,6 +170,7 @@
     "city": "City",
     "area": "Area",
     "anyArea": "Any area",
+    "chooseCity": "Choose a city",
     "anyCity": "Any city"
   },
   "enums": {
@@ -2157,7 +2158,7 @@
       "kickHint": "Flick the ball"
     },
     "hero": {
-      "kicker": "Mosul. Under the lights.",
+      "kicker": "Iraq. Under the lights.",
       "line1": "Your next game",
       "line2": "starts here.",
       "subtitle": "Find your team. Join the game.",

@@ -112,6 +112,7 @@ test.describe("Account verification", () => {
     expect(shared.reply_markup).toMatchObject({ remove_keyboard: true });
     await page.waitForURL(/\/ar\/onboarding/, { timeout: 15_000 });
 
+    await page.getByRole("combobox", { name: "المدينة" }).selectOption({ label: "البصرة" });
     await page.getByText("حارس مرمى", { exact: true }).click();
     await page.getByText("متوسط", { exact: true }).click();
     await page.getByRole("button", { name: "ابدأ اللعب" }).click();
