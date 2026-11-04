@@ -7,8 +7,7 @@ import { requireUser } from "@/lib/auth";
 import { formatDateTime } from "@/lib/format";
 import { notificationArgs, notificationHref } from "@/lib/notifications";
 import { createClient } from "@/lib/supabase/server";
-import { markNotificationsReadAction } from "@/server/notifications";
-import { InlineAction } from "@/components/ui/action-form";
+import { SeenList } from "@/components/notifications/seen-list";
 import { buttonClass } from "@/components/ui/button";
 import { Container, EmptyState, PageHeader } from "@/components/ui/primitives";
 import { Pagination } from "@/components/ui/pagination";
@@ -37,42 +36,37 @@ export default async function NotificationsPage({ params, searchParams }: PagePr
     .order("created_at", { ascending: false })
     .range((page - 1) * SIZE, page * SIZE);
   const rows = (data ?? []).slice(0, SIZE);
-  const unread = rows.some((r) => !r.read_at);
+  // Everything unread is read by opening this page, on every page of the list.
+  const { data: unread } = await supabase.from("notifications").select("id").eq("user_id", user.id).is("read_at", null).limit(500);
   const fmt = (iso: string) => formatDateTime(iso, locale, "Asia/Baghdad");
 
   return (
     <Container className="max-w-3xl py-10">
       <PageHeader
         title={t("title")}
-        actions={
-          <>
-            <LinkButton href="/settings" className={buttonClass("ghost", "sm")}>{t("preferences")}</LinkButton>
-            {unread ? <InlineAction action={markNotificationsReadAction} values={{}} label={t("markAll")} /> : null}
-          </>
-        }
+        actions={<LinkButton href="/settings" className={buttonClass("ghost", "sm")}>{t("preferences")}</LinkButton>}
       />
       {rows.length === 0 ? (
         <EmptyState icon={<Bell className="size-10" />} title={t("empty")} />
       ) : (
-        <ul className="flex flex-col divide-y divide-line rounded-[var(--radius-card)] border border-line bg-surface">
+        <SeenList unreadIds={(unread ?? []).map((r) => r.id)} className="flex flex-col divide-y divide-line rounded-[var(--radius-card)] border border-line bg-surface">
           {rows.map((r) => {
             const payload = (r.payload ?? {}) as Record<string, unknown>;
             const key = n.has(r.type) ? r.type : "generic";
             return (
-              <li key={r.id} className={cn("flex items-start gap-3 p-4", !r.read_at && "bg-accent/5")}>
-                <span aria-hidden="true" className={cn("mt-2 size-2 shrink-0 rounded-full", r.read_at ? "bg-transparent" : "bg-accent")} />
+              <li key={r.id} className={cn("flex items-start gap-3 p-4", !r.read_at && "notif-new")}>
+                <span aria-hidden="true" className={cn("notif-dot mt-2 size-2 shrink-0 rounded-full", r.read_at ? "bg-transparent" : "bg-accent")} />
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
                   <Link href={notificationHref(r.type, payload)} className="text-sm hover:underline" dir="auto">
-                    {!r.read_at ? <span className="sr-only">{t("unread")}: </span> : null}
+                    {!r.read_at ? <span className="sr-only">{t("new")}: </span> : null}
                     {n(key, notificationArgs(payload, fmt))}
                   </Link>
                   <time className="text-xs text-faint" dateTime={r.created_at}>{fmt(r.created_at)}</time>
                 </div>
-                {!r.read_at ? <InlineAction action={markNotificationsReadAction} values={{ id: r.id }} label={t("markRead")} variant="ghost" /> : null}
               </li>
             );
           })}
-        </ul>
+        </SeenList>
       )}
       <div className="mt-6">
         <Pagination pathname="/notifications" query={{}} page={page} hasMore={(data ?? []).length > SIZE} />

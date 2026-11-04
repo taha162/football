@@ -484,6 +484,23 @@ html[data-enter] :is(.reveal, .reveal-children > *) {
   .badge-pop {
     animation: badge-pop var(--dur-spring) var(--ease-spring) both;
   }
+  /* Notifications: what was new keeps its mark for a moment after the page
+     has read it, then the mark fades. */
+  .notif-new {
+    background-color: color-mix(in oklab, var(--color-accent) 5%, transparent);
+  }
+  .notif-new,
+  .notif-dot {
+    transition:
+      background-color 1.2s var(--ease-out) 2.5s,
+      opacity 1.2s var(--ease-out) 2.5s;
+  }
+  [data-seen] .notif-new {
+    background-color: transparent;
+  }
+  [data-seen] .notif-dot {
+    opacity: 0;
+  }
   /* Desktop navigation: a highlight glides to the hovered item; the current
      page is underlined with a line that grows from the centre. */
   .nav-glide {

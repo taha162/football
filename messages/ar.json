@@ -527,7 +527,6 @@
     "time_blocked": "تم حجب الوقت.",
     "booking_recorded": "تم تسجيل الحجز.",
     "message_deleted": "تم حذف الرسالة.",
-    "all_read": "تم تحديد كل الإشعارات كمقروءة.",
     "tournament_saved": "تم حفظ البطولة.",
     "tournament_status_updated": "تم تحديث البطولة.",
     "registration_sent": "تم إرسال التسجيل للمنظم.",
@@ -1758,9 +1757,7 @@
   "notificationsPage": {
     "title": "الإشعارات",
     "preferences": "التفضيلات",
-    "markAll": "تحديد الكل كمقروء",
-    "markRead": "تحديد كمقروء",
-    "unread": "غير مقروء",
+    "new": "جديد",
     "empty": "لا جديد — أنت مطّلع على كل شيء."
   },
   "venues": {

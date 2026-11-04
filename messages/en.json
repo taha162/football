@@ -527,7 +527,6 @@
     "time_blocked": "Time blocked.",
     "booking_recorded": "Booking recorded.",
     "message_deleted": "Message deleted.",
-    "all_read": "All notifications marked as read.",
     "tournament_saved": "Tournament saved.",
     "tournament_status_updated": "Tournament updated.",
     "registration_sent": "Registration sent to the organizer.",
@@ -1758,9 +1757,7 @@
   "notificationsPage": {
     "title": "Notifications",
     "preferences": "Preferences",
-    "markAll": "Mark all as read",
-    "markRead": "Mark read",
-    "unread": "Unread",
+    "new": "New",
     "empty": "You're all caught up."
   },
   "venues": {
