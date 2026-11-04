@@ -87,6 +87,20 @@ export default async function ManageVenuePage({ params, searchParams }: PageProp
         </Alert>
       ) : null}
 
+      {/* Without opening hours no time can be booked. */}
+      {(venue.hours ?? []).length === 0 ? (
+        <Alert tone="warning" title={t("hoursMissingTitle")}>
+          {t("hoursMissingBody")}
+          {canManage ? (
+            <div className="mt-2">
+              <LinkButton href={`/manage/venues/${id}?tab=hours`} className={buttonClass("primary", "sm")}>
+                {t("hoursMissingAction")}
+              </LinkButton>
+            </div>
+          ) : null}
+        </Alert>
+      ) : null}
+
       {depositDetailsMissing ? (
         <Alert tone="warning" title={t("depositMissingTitle")}>
           {t("depositMissingBody", { amount: depositAmount })}

@@ -76,9 +76,29 @@ export async function myVenueRole(venueId: string, userId: string) {
 }
 
 /**
+ * The customer's booking requests still waiting for an answer, and how many
+ * are allowed at once (request_booking refuses more: too_many_pending_bookings).
+ */
+export async function pendingRequests(userId: string, now: number) {
+  const supabase = await createClient();
+  const [{ count }, { data: setting }] = await Promise.all([
+    supabase
+      .from("bookings")
+      .select("id", { count: "exact", head: true })
+      .eq("requested_by", userId)
+      .eq("status", "requested")
+      .or(`expires_at.is.null,expires_at.gt.${new Date(now).toISOString()}`),
+    supabase.from("platform_settings").select("value").eq("key", "booking.max_pending_per_user").maybeSingle(),
+  ]);
+  const max = Number(setting?.value);
+  return { count: count ?? 0, max: Number.isFinite(max) && max > 0 ? max : 5 };
+}
+
+/**
  * The start times ("HH:MM") a field can be booked at on a local date for a
  * duration, by the same rules as a booking request. `null` when they couldn't
- * be loaded, so the page says so instead of showing a day with no times.
+ * be loaded (e.g. before the database update that adds them has been run), so
+ * the page offers to type the time instead of showing a day with no times.
  */
 export async function freeStartTimes(fieldId: string, date: string, duration: number) {
   const supabase = await createClient();

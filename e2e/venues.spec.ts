@@ -35,7 +35,8 @@ test.describe("Journey F — venue onboarding, verification and booking", () => 
     await expect(ownerPage.getByText("فرعي")).toHaveCount(0);
 
     // Opening hours: Saturday's, given to every day at once.
-    await ownerPage.getByRole("link", { name: "ساعات العمل" }).click();
+    await expect(ownerPage.getByText("لا يستطيع الزبائن الحجز حتى تحدد ساعات العمل")).toBeVisible();
+    await ownerPage.getByRole("link", { name: "ساعات العمل", exact: true }).click();
     await ownerPage.getByRole("checkbox", { name: "السبت" }).check();
     await ownerPage.getByLabel("وقت افتتاح السبت").fill("16:00");
     await ownerPage.getByLabel("وقت إغلاق السبت").fill("00:00");
@@ -44,6 +45,9 @@ test.describe("Journey F — venue onboarding, verification and booking", () => 
     await expect(ownerPage.getByLabel("وقت افتتاح الجمعة")).toHaveValue("16:00");
     await ownerPage.getByRole("button", { name: "حفظ الساعات" }).click();
     await expect(ownerPage.getByText("تم الحفظ.").or(ownerPage.getByRole("status")).first()).toBeVisible();
+    // With hours set, the warning is gone.
+    await ownerPage.reload();
+    await expect(ownerPage.getByText("لا يستطيع الزبائن الحجز حتى تحدد ساعات العمل")).toHaveCount(0);
 
     // Not verified yet: the booking page refuses bookings, and there is no other way to book.
     const customerCtx = await browser.newContext();
@@ -253,6 +257,48 @@ async function bookableVenue(owner: TestUser) {
   await rpc(owner.id, "set_venue_deposit_instructions", { p_venue_id: venue, p_instructions: "Cash at the desk" });
   return { venue, field, name: v.name };
 }
+
+test.describe("Journey G2 — what stops a booking is said plainly", () => {
+  test("a venue without opening hours, and a customer with too many requests waiting, are told why", async ({ browser }) => {
+    test.setTimeout(120_000);
+    const owner = await createAuthUser("Owner");
+    const customer = await createAuthUser("Customer");
+
+    // Verified and paid for, but no opening hours: no time can be booked, and both sides are told.
+    const venue = await rpc<string>(owner.id, "create_venue", { p_name: `E2E No Hours ${randomUUID().slice(0, 6)}`, p_city_id: await mosul() });
+    await rpc(owner.id, "upsert_venue_field", {
+      p_venue_id: venue, p_field_id: null, p_name: "Field 1", p_surface: "artificial_turf", p_formats: "{5v5}",
+      p_is_covered: false, p_has_lights: true, p_price_per_hour: 30_000,
+    });
+    await admin("update public.venues set verification_status = 'verified' where id = $1", [venue]);
+    await rpc(owner.id, "set_venue_deposit_instructions", { p_venue_id: venue, p_instructions: "Cash at the desk" });
+    const customerCtx = await browser.newContext();
+    const customerPage = await customerCtx.newPage();
+    await signIn(customerPage, customer);
+    await customerPage.goto(`/ar/venues/${venue}/book`);
+    await expect(customerPage.getByText("لم يحدد الملعب ساعات عمله بعد")).toBeVisible();
+    const ownerCtx = await browser.newContext();
+    const ownerPage = await ownerCtx.newPage();
+    await signIn(ownerPage, owner);
+    await ownerPage.goto(`/ar/manage/venues/${venue}`);
+    await expect(ownerPage.getByText("لا يستطيع الزبائن الحجز حتى تحدد ساعات العمل")).toBeVisible();
+    await ownerPage.getByRole("link", { name: "حدد ساعات العمل" }).click();
+    await expect(ownerPage.getByTestId("hours-editor")).toBeVisible();
+
+    // Five requests waiting for an answer (the most allowed): said before picking a time, and no button that would fail.
+    const { venue: open } = await bookableVenue(owner);
+    const [{ id: field }] = await admin<{ id: string }>("select id from public.venue_fields where venue_id = $1", [open]);
+    for (const hour of [9, 10, 11, 12, 13]) {
+      await rpc(customer.id, "request_booking", { p_field_id: field, p_start_local: localTime(3, hour), p_duration_minutes: 60 });
+    }
+    await customerPage.goto(`/ar/venues/${open}/book?date=${localTime(4).slice(0, 10)}`);
+    await expect(customerPage.getByText(/^لديك .+ طلبات حجز لم تُحسم بعد، وهذا أقصى عدد$/).first()).toBeVisible();
+    await customerPage.getByTestId("free-times").getByRole("link", { name: "٨:٠٠ م", exact: true }).click();
+    await expect(customerPage.getByText("العربون لتثبيت الحجز")).toBeVisible();
+    await expect(customerPage.getByRole("button", { name: "احجز وأرسل العربون" })).toHaveCount(0);
+    await Promise.all([customerCtx.close(), ownerCtx.close()]);
+  });
+});
 
 test.describe("Journey G — overlapping booking attempts", () => {
   test("a time held for a deposit can't be booked twice, and is released when the deposit never comes", async ({ browser }) => {
