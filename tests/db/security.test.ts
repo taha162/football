@@ -210,3 +210,41 @@ describe("sign-in and sign-up limits (auth_throttle)", () => {
     }
   });
 });
+
+describe("public listings' fast check keeps private rows private", () => {
+  it("guests see public rows only; owners still see their own private, hidden or draft ones", async () => {
+    const owner = await createUser("Owner");
+    const city = await mosul();
+    const match = await createMatch(owner);
+    await admin("update public.matches set visibility = 'private' where id = $1", [match]);
+    const team = await rpc<string>(owner, "create_team", { p_name: `Private FC ${owner.slice(0, 4)}`, p_city_id: city });
+    await admin("update public.teams set visibility = 'private' where id = $1", [team]);
+    const venue = await rpc<string>(owner, "create_venue", { p_name: `Hidden ${owner.slice(0, 4)}`, p_city_id: city });
+    await rpc(owner, "upsert_venue_field", {
+      p_venue_id: venue, p_field_id: null, p_name: "Field 1", p_surface: "artificial_turf", p_formats: "{5v5}",
+      p_is_covered: false, p_has_lights: true, p_price_per_hour: 1000,
+    });
+    await rpc(owner, "set_venue_opening_hours", { p_venue_id: venue, p_hours: [{ weekday: 1, opens: "16:00", closes: "23:00" }] });
+    await admin("update public.venues set is_hidden = true where id = $1", [venue]);
+    const [{ id: tournament }] = await admin<{ id: string }>(
+      `insert into public.tournaments (organizer_id, name, city_id, format, tournament_format, team_capacity, registration_deadline, starts_on, ends_on, status, currency)
+       values ($1, 'Draft cup', $2, '5v5', 'round_robin', 4, now() + interval '20 days', current_date + 30, current_date + 31, 'draft', 'IQD') returning id`,
+      [owner, city],
+    );
+
+    const sees = async (actor: string | null, sql: string, id: string) => (await asUser(actor, sql, [id])).length;
+    for (const actor of [null, await createUser("Stranger")]) {
+      expect(await sees(actor, "select id from public.matches where id = $1", match)).toBe(0);
+      expect(await sees(actor, "select id from public.teams where id = $1", team)).toBe(0);
+      expect(await sees(actor, "select id from public.venues where id = $1", venue)).toBe(0);
+      expect(await sees(actor, "select id from public.venue_fields where venue_id = $1", venue)).toBe(0);
+      expect(await sees(actor, "select venue_id from public.venue_opening_hours where venue_id = $1", venue)).toBe(0);
+      expect(await sees(actor, "select id from public.tournaments where id = $1", tournament)).toBe(0);
+    }
+    expect(await sees(owner, "select id from public.matches where id = $1", match)).toBe(1);
+    expect(await sees(owner, "select id from public.teams where id = $1", team)).toBe(1);
+    expect(await sees(owner, "select id from public.venues where id = $1", venue)).toBe(1);
+    expect(await sees(owner, "select id from public.venue_fields where venue_id = $1", venue)).toBe(1);
+    expect(await sees(owner, "select id from public.tournaments where id = $1", tournament)).toBe(1);
+  });
+});
