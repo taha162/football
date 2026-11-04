@@ -83,17 +83,27 @@ export async function markConversationReadAction(conversationId: string): Promis
   await supabase.rpc("mark_conversation_read", { p_conversation_id: conversationId });
 }
 
-export async function deleteMessageAction(_: ActionState, fd: FormData): Promise<ActionState> {
-  const id = Number(fd.get("message_id"));
-  if (!Number.isSafeInteger(id)) return fail("invalid");
+/** The sender deletes their message: everyone then sees «رسالة محذوفة», and its files are removed. */
+export async function deleteMessage(messageId: number): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!Number.isSafeInteger(messageId) || messageId < 1) return { ok: false, error: "invalid" };
   const supabase = await createClient();
-  const { data: before } = await supabase.from("messages").select("*").eq("id", id).maybeSingle();
-  const { error } = await supabase.rpc("delete_message", { p_message_id: id });
-  if (error) return fail(dbErrorCode(error, "delete_message"));
+  const { data: before } = await supabase.from("messages").select("*").eq("id", messageId).maybeSingle();
+  const { error } = await supabase.rpc("delete_message", { p_message_id: messageId });
+  if (error) return { ok: false, error: dbErrorCode(error, "delete_message") };
   // The message no longer points at its files; remove them too.
   await removeMessageFiles(before);
-  revalidatePath("/[locale]/messages", "layout");
-  return ok("message_deleted");
+  return { ok: true };
+}
+
+/** The sender corrects their message's text; it's then marked «معدّلة» for everyone. */
+export async function editMessage(messageId: number, body: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!Number.isSafeInteger(messageId) || messageId < 1 || typeof body !== "string") return { ok: false, error: "invalid" };
+  const text = body.trim();
+  if (text.length < 1 || text.length > 2000) return { ok: false, error: "invalid_message" };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("edit_message", { p_message_id: messageId, p_body: text });
+  if (error) return { ok: false, error: dbErrorCode(error, "edit_message") };
+  return { ok: true };
 }
 
 export async function startDirectConversationAction(_: ActionState, fd: FormData): Promise<ActionState> {

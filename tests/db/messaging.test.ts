@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { asUser, createMatch, createUser, errorOf, mosul, notificationsOf, rpc, rpcRows } from "./helpers";
+import { admin, asUser, createMatch, createUser, errorOf, mosul, notificationsOf, rpc, rpcRows } from "./helpers";
 
 describe("conversations", () => {
   it("match chat is limited to the organizer and confirmed participants, and access ends on leaving", async () => {
@@ -59,5 +59,58 @@ describe("conversations", () => {
     const conv = await rpc<string>(captain, "entity_conversation_id", { p_kind: "team", p_entity_id: team });
     await rpc(captain, "send_message", { p_conversation_id: conv, p_body: "Training Friday" });
     expect(await asUser(outsider, "select * from public.messages where conversation_id = $1", [conv])).toEqual([]);
+  });
+});
+
+describe("editing and deleting a message", () => {
+  const messageRow = async (id: number) =>
+    (await admin<{ body: string; edited_at: Date | null; deleted_at: Date | null }>("select body, edited_at, deleted_at from public.messages where id = $1", [id]))[0];
+
+  it("lets only the sender edit the text, marks it edited, and keeps what a report saw", async () => {
+    const [a, b] = [await createUser(), await createUser()];
+    const conv = await rpc<string>(a, "start_direct_conversation", { p_user_id: b });
+    const id = Number(await rpc<string>(a, "send_message", { p_conversation_id: conv, p_body: "Kick-off at 8" }));
+
+    // A report keeps the text as it was when reported.
+    await rpc(b, "create_report", { p_target_type: "message", p_target_id: String(id), p_category: "spam" });
+
+    expect(await errorOf(rpc(b, "edit_message", { p_message_id: id, p_body: "hijacked" }))).toBe("message_not_found");
+    expect(await errorOf(rpc(a, "edit_message", { p_message_id: id, p_body: "   " }))).toBe("invalid_message");
+    expect(await errorOf(rpc(a, "edit_message", { p_message_id: id, p_body: "x".repeat(2001) }))).toBe("invalid_message");
+
+    // The same text changes nothing.
+    await rpc(a, "edit_message", { p_message_id: id, p_body: " Kick-off at 8 " });
+    expect((await messageRow(id)).edited_at).toBeNull();
+
+    await rpc(a, "edit_message", { p_message_id: id, p_body: "Kick-off at 9" });
+    const edited = await messageRow(id);
+    expect(edited.body).toBe("Kick-off at 9");
+    expect(edited.edited_at).not.toBeNull();
+    // The other member reads the edit.
+    expect(await asUser(b, "select body, edited_at is not null as edited from public.messages where id = $1", [id])).toEqual([{ body: "Kick-off at 9", edited: true }]);
+    const [report] = await admin<{ snapshot: { body?: string } }>("select snapshot from public.reports where target_type = 'message' and target_id = $1", [String(id)]);
+    expect(report.snapshot.body).toBe("Kick-off at 8");
+  });
+
+  it("can't edit a deleted message, a call's record, or once the conversation is closed to them", async () => {
+    const [a, b] = [await createUser(), await createUser()];
+    const conv = await rpc<string>(a, "start_direct_conversation", { p_user_id: b });
+    const gone = Number(await rpc<string>(a, "send_message", { p_conversation_id: conv, p_body: "oops" }));
+    await rpc(a, "delete_message", { p_message_id: gone });
+    expect(await messageRow(gone)).toMatchObject({ body: "[deleted]" });
+    expect(await errorOf(rpc(a, "edit_message", { p_message_id: gone, p_body: "back" }))).toBe("message_not_found");
+
+    const [call] = await admin<{ id: string }>(
+      "insert into public.messages (conversation_id, sender_id, body, call_outcome) values ($1, $2, '', 'missed') returning id",
+      [conv, a],
+    );
+    expect(await errorOf(rpc(a, "edit_message", { p_message_id: Number(call.id), p_body: "no call" }))).toBe("message_not_found");
+
+    const kept = Number(await rpc<string>(a, "send_message", { p_conversation_id: conv, p_body: "see you" }));
+    await rpc(b, "block_user", { p_user_id: a });
+    expect(await errorOf(rpc(a, "edit_message", { p_message_id: kept, p_body: "changed" }))).toBe("user_blocked");
+    // Deleting your own message stays possible.
+    await rpc(a, "delete_message", { p_message_id: kept });
+    expect((await messageRow(kept)).deleted_at).not.toBeNull();
   });
 });

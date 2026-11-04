@@ -569,14 +569,14 @@ isOneToOne: false
                   ]
                 },"messages": {
                   Row: {
-                    "body": string,"call_outcome": string | null,"call_seconds": number | null,"conversation_id": string,"created_at": string,"deleted_at": string | null,"id": number,"image_path": string | null,"location_accuracy": number | null,"location_lat": number | null,"location_lng": number | null,"sender_id": string | null,"voice_path": string | null,"voice_seconds": number | null
+                    "body": string,"call_outcome": string | null,"call_seconds": number | null,"conversation_id": string,"created_at": string,"deleted_at": string | null,"edited_at": string | null,"id": number,"image_path": string | null,"location_accuracy": number | null,"location_lat": number | null,"location_lng": number | null,"sender_id": string | null,"voice_path": string | null,"voice_seconds": number | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "body": string,"call_outcome"?: string | null,"call_seconds"?: number | null,"conversation_id": string,"created_at"?: string,"deleted_at"?: string | null,"id"?: never,"image_path"?: string | null,"location_accuracy"?: number | null,"location_lat"?: number | null,"location_lng"?: number | null,"sender_id"?: string | null,"voice_path"?: string | null,"voice_seconds"?: number | null
+                    "body": string,"call_outcome"?: string | null,"call_seconds"?: number | null,"conversation_id": string,"created_at"?: string,"deleted_at"?: string | null,"edited_at"?: string | null,"id"?: never,"image_path"?: string | null,"location_accuracy"?: number | null,"location_lat"?: number | null,"location_lng"?: number | null,"sender_id"?: string | null,"voice_path"?: string | null,"voice_seconds"?: number | null
                   }
                   Update: {
-                    "body"?: string,"call_outcome"?: string | null,"call_seconds"?: number | null,"conversation_id"?: string,"created_at"?: string,"deleted_at"?: string | null,"id"?: never,"image_path"?: string | null,"location_accuracy"?: number | null,"location_lat"?: number | null,"location_lng"?: number | null,"sender_id"?: string | null,"voice_path"?: string | null,"voice_seconds"?: number | null
+                    "body"?: string,"call_outcome"?: string | null,"call_seconds"?: number | null,"conversation_id"?: string,"created_at"?: string,"deleted_at"?: string | null,"edited_at"?: string | null,"id"?: never,"image_path"?: string | null,"location_accuracy"?: number | null,"location_lat"?: number | null,"location_lng"?: number | null,"sender_id"?: string | null,"voice_path"?: string | null,"voice_seconds"?: number | null
                   }
                   Relationships: [
                     {
@@ -1495,6 +1495,9 @@ isOneToOne: false
                            },
 "dispute_tournament_result":
 { Args: { "p_match_id": string,"p_reason": string }; Returns: undefined
+                           },
+"edit_message":
+{ Args: { "p_body": string,"p_message_id": number }; Returns: undefined
                            },
 "end_call":
 { Args: { "p_call_id": string,"p_reason"?: string }; Returns: string

@@ -28,6 +28,8 @@ export default async function MessagesPage({ params }: PageProps<"/[locale]/mess
     if (kind === "location") return `📍 ${t("location")}`;
     if (kind === "voice") return `🎤 ${t("voice")}`;
     if (kind === "call") return `📞 ${t("call")}`;
+    // A deleted (or moderated) message keeps only this placeholder text.
+    if (c.last_message === "[deleted]" || c.last_message === "[removed]") return t("deleted");
     if (c.last_message === "") return `📷 ${t("photo")}`;
     return c.last_message ?? t("noMessages");
   };
