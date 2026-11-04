@@ -20,12 +20,17 @@ import { PageTransition } from "@/components/motion/page-transition";
 import "../globals.css";
 
 const cairo = Cairo({ subsets: ["arabic", "latin"], variable: "--font-cairo", display: "swap" });
-const barlow = Barlow({ subsets: ["latin"], weight: ["400", "500", "600", "700"], variable: "--font-barlow", display: "swap" });
+// Arabic pages are set in Cairo only. The Latin faces aren't preloaded, so a
+// first visit on mobile data doesn't fetch ~100 KB of fonts it never shows:
+// Barlow serves English pages, and the landing stadium loads the condensed
+// face for its boards itself (stage-host.tsx).
+const barlow = Barlow({ subsets: ["latin"], weight: ["400", "500", "600", "700"], variable: "--font-barlow", display: "swap", preload: false });
 const barlowCondensed = Barlow_Condensed({
   subsets: ["latin"],
   weight: ["600", "700", "800"],
   variable: "--font-barlow-condensed",
   display: "swap",
+  preload: false,
 });
 
 export const viewport: Viewport = {
