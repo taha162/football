@@ -9,7 +9,8 @@ import { formatMoney } from "@/lib/domain/money";
 import { acceptsPlatformBookings } from "@/lib/domain/venue";
 import { formatDate, formatDateTime, formatTime, todayIn } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
-import { freeStartTimes, getDepositSettings, getVenue } from "@/server/venues/queries";
+import { getNow } from "@/lib/now";
+import { freeStartTimes, getDepositSettings, getVenue, pendingRequests } from "@/server/venues/queries";
 import { requestBookingAction } from "@/server/venues/actions";
 import { OpeningHours } from "@/components/venue/opening-hours";
 import { BringIntoView } from "@/components/venue/bring-into-view";
@@ -63,9 +64,21 @@ export default async function BookVenuePage({ params, searchParams }: PageProps<
       </Container>
     );
   }
+  // Bookings are only within opening hours: without any, no time can be booked.
+  if ((venue.hours ?? []).length === 0) {
+    return (
+      <Container className="max-w-2xl py-10">
+        <PageHeader title={t("title", { name: venue.name })} />
+        <Alert tone="info" title={t("noHoursTitle")}>{t("noHoursBody")}</Alert>
+        <LinkButton href={`/venues/${id}`} className={buttonClass("outline", "md", "mt-4")}>{t("back")}</LinkButton>
+      </Container>
+    );
+  }
 
   // The times that can really be booked, so the customer picks one rather than guessing.
-  const free = fieldId ? await freeStartTimes(fieldId, date, duration) : [];
+  const [free, pending] = await Promise.all([fieldId ? freeStartTimes(fieldId, date, duration) : [], pendingRequests(user.id, getNow())]);
+  // As many requests waiting for an answer as allowed: another would be refused, so say so first.
+  const atLimit = pending.count >= pending.max;
   let quote: Quote | null = null;
   let quoteError: string | null = null;
   if (fieldId && time) {
@@ -104,6 +117,12 @@ export default async function BookVenuePage({ params, searchParams }: PageProps<
     <Container className="max-w-3xl py-10">
       <PageHeader title={t("title", { name: venue.name })} description={fields.length > 1 ? t("description") : t("descriptionOne")} />
       {matchId ? <Alert tone="info" className="mb-4">{t("forMatch")}</Alert> : null}
+      {atLimit ? (
+        <Alert tone="warning" className="mb-4" title={t("pendingLimitTitle", { count: pending.count })}>
+          <p>{t("pendingLimitBody")}</p>
+          <Link href="/my/bookings" className="mt-1 inline-block text-accent hover:underline">{t("myBookings")}</Link>
+        </Alert>
+      ) : null}
       <div className="grid gap-6 md:grid-cols-[1fr_16rem]">
         <div className="flex flex-col gap-6">
           <Card>
@@ -138,9 +157,20 @@ export default async function BookVenuePage({ params, searchParams }: PageProps<
           </Card>
 
           <section aria-labelledby="free-title" className="flex flex-col gap-3" data-testid="free-times">
-            <h2 id="free-title" className="font-semibold">{t("freeTitle", { day })}</h2>
+            <h2 id="free-title" className="font-semibold">{free === null ? t("typeTitle", { day }) : t("freeTitle", { day })}</h2>
             {free === null ? (
-              <Alert tone="warning">{errors("generic")}</Alert>
+              // The free times couldn't be listed (the database lacks them until its update is run): type the time instead.
+              <Form action="" scroll={false} className="flex flex-wrap items-end gap-2">
+                {fieldId ? <input type="hidden" name="field" value={fieldId} /> : null}
+                <input type="hidden" name="date" value={date} />
+                <input type="hidden" name="duration" value={duration} />
+                {matchId ? <input type="hidden" name="match" value={matchId} /> : null}
+                <label className="flex flex-col gap-1 text-sm">
+                  {t("time")}
+                  <Input type="time" name="time" defaultValue={time ?? "20:00"} step={1800} dir="ltr" required />
+                </label>
+                <button type="submit" className={buttonClass("secondary", "md")}>{t("checkTime")}</button>
+              </Form>
             ) : free.length === 0 ? (
               <p className="text-sm text-muted">{t("freeNone")}</p>
             ) : (
@@ -217,14 +247,19 @@ export default async function BookVenuePage({ params, searchParams }: PageProps<
                           <p className="text-xs text-muted">{t("paymentNote")}</p>
                         </>
                       )}
-                      <ActionForm action={requestBookingAction}>
-                        <Hidden values={{ field_id: fieldId, start: `${date}T${time}`, duration, match_id: matchId }} />
-                        <label className="flex flex-col gap-1 text-sm">
-                          {t("note")}
-                          <Textarea name="note" maxLength={500} />
-                        </label>
-                        <SubmitButton size="lg">{quote.deposit_amount ? t("holdAndPay") : venue.auto_confirm_bookings ? t("bookNow") : t("sendRequest")}</SubmitButton>
-                      </ActionForm>
+                      {atLimit ? (
+                        // Refused anyway: the note at the top says why and where to look.
+                        <p className="text-sm text-warning">{t("pendingLimitTitle", { count: pending.count })}</p>
+                      ) : (
+                        <ActionForm action={requestBookingAction}>
+                          <Hidden values={{ field_id: fieldId, start: `${date}T${time}`, duration, match_id: matchId }} />
+                          <label className="flex flex-col gap-1 text-sm">
+                            {t("note")}
+                            <Textarea name="note" maxLength={500} />
+                          </label>
+                          <SubmitButton size="lg">{quote.deposit_amount ? t("holdAndPay") : venue.auto_confirm_bookings ? t("bookNow") : t("sendRequest")}</SubmitButton>
+                        </ActionForm>
+                      )}
                       <Link href="/my/bookings" className="text-sm text-accent hover:underline">{t("myBookings")}</Link>
                     </CardBody>
                   </Card>
