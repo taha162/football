@@ -21,7 +21,7 @@ export default async function AdminAuditPage({ searchParams }: PageProps<"/[loca
   return (
     <>
       <PageHeader title={t("nav.audit")} description={t("auditDescription")} />
-      <div className="overflow-x-auto rounded-xl border border-line">
+      <div className="relative overflow-x-auto rounded-xl border border-line">
         <table className="w-full text-sm">
           <thead className="bg-surface-2 text-xs text-muted">
             <tr>

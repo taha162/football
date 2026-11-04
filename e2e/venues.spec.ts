@@ -232,6 +232,25 @@ test.describe("Journey H — the platform team handles a venue's bookings", () =
     expect(b.status).toBe("confirmed");
     await ctx.close();
   });
+
+  test("on a small phone the bookings table scrolls inside its box, never the page", async ({ browser }) => {
+    const owner = await createAuthUser("Owner");
+    const customer = await createAuthUser("Customer");
+    const moderator = await createAuthUser("Admin", { admin: true });
+    const { field, name } = await bookableVenue(owner);
+    await rpc(customer.id, "request_booking", { p_field_id: field, p_start_local: localTime(2, 20), p_duration_minutes: 60 });
+
+    const ctx = await browser.newContext({ viewport: { width: 320, height: 700 } });
+    const page = await ctx.newPage();
+    await signIn(page, moderator);
+    await page.goto("/ar/admin/bookings");
+    await expect(page.getByRole("row").filter({ hasText: name })).toBeVisible();
+    // Wider than the screen, so it scrolls sideways within its own frame...
+    expect(await page.locator("main table").evaluate((t) => t.scrollWidth > t.parentElement!.clientWidth)).toBe(true);
+    // ...and nothing in it (not even the column label kept for screen readers) pushes the page wider.
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBe(0);
+    await ctx.close();
+  });
 });
 
 async function bookableVenue(owner: TestUser) {

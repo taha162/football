@@ -32,7 +32,7 @@ export default async function AdminUsersPage({ searchParams }: PageProps<"/[loca
         <Input id="admin-user-q" name="q" defaultValue={q} placeholder={t("searchUsers")} />
         <button type="submit" className={buttonClass("secondary", "md")}>{t("search")}</button>
       </Form>
-      <div className="overflow-x-auto rounded-xl border border-line">
+      <div className="relative overflow-x-auto rounded-xl border border-line">
         <table className="w-full text-sm">
           <thead className="bg-surface-2 text-xs text-muted">
             <tr>
