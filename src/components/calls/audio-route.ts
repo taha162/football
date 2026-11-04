@@ -65,6 +65,18 @@ export function findAudioRoute(devices: Device[], can: RouteAbilities): AudioRou
   return "unsupported";
 }
 
+/**
+ * An iPhone browser other than Safari: Chrome, Firefox, Edge, or an app's
+ * built-in browser (Facebook, Instagram…). Safari says "Version/… Safari/";
+ * the others name themselves or leave the version out. Telegram's and
+ * WhatsApp's in-app pages are Safari itself.
+ */
+export function isOtherIphoneBrowser(userAgent: string): boolean {
+  if (!/iPhone|iPod/.test(userAgent)) return false;
+  const safari = /Version\/\d/.test(userAgent) && /Safari\//.test(userAgent) && !/CriOS|FxiOS|EdgiOS|OPiOS|GSA\/|FBAN|FBAV|Instagram/.test(userAgent);
+  return !safari;
+}
+
 /** A phone (not a tablet or a computer): the only place a call has an earpiece to switch to. */
 export function isPhone(userAgent: string, coarsePointer: boolean): boolean {
   return coarsePointer && (/iPhone|iPod/.test(userAgent) || (/Android/.test(userAgent) && /Mobile/.test(userAgent)));

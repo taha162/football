@@ -3,6 +3,7 @@ import { createAuthUser, expect, rpc, signIn, test } from "./fixtures";
 
 const IPHONE_UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.4 Mobile/15E148 Safari/604.1";
 const ANDROID_UA = "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36";
+const IPHONE_CHROME_UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/130.0.6723.90 Mobile/15E148 Safari/604.1";
 
 /** The call screen (a dialog named after the other person). */
 const callScreen = (page: Page, name: string) => page.getByRole("dialog", { name });
@@ -163,6 +164,43 @@ test.describe("Voice calls", () => {
 
     // A laptop offers no such choice: no button there.
     await expect(callScreen(page, caller.name).getByRole("button", { name: "مكبر الصوت" })).toHaveCount(0);
+    await screen.getByRole("button", { name: "إنهاء" }).click();
+    await phone.close();
+  });
+
+  test("iPhone, a browser other than Safari: the speaker button says once that the switch works in Safari", async ({ page, browser }) => {
+    const [caller, callee] = [await createAuthUser("Caller"), await createAuthUser("Callee")];
+    const conv = await rpc<string>(caller.id, "start_direct_conversation", { p_user_id: callee.id });
+    // Chrome on an iPhone, listing the same two outputs Safari does.
+    const phone = await browser.newContext({ userAgent: IPHONE_CHROME_UA, isMobile: true, hasTouch: true, viewport: { width: 390, height: 844 } });
+    await phone.addInitScript(() => {
+      const devices = navigator.mediaDevices;
+      const real = devices.enumerateDevices.bind(devices);
+      const output = (label: string, deviceId: string) => ({ kind: "audiooutput", label, deviceId, groupId: "", toJSON: () => ({}) }) as MediaDeviceInfo;
+      devices.enumerateDevices = async () => [...(await real()).filter((d) => d.kind === "audioinput"), output("Receiver", "receiver"), output("Speaker", "speaker")];
+      HTMLMediaElement.prototype.setSinkId = () => Promise.resolve();
+    });
+    const mobile = await phone.newPage();
+    await signIn(mobile, caller);
+    await signIn(page, callee);
+    await page.waitForLoadState("networkidle");
+    await mobile.goto(`/ar/messages/${conv}`);
+    await mobile.waitForLoadState("networkidle");
+    await mobile.getByRole("button", { name: "اتصال" }).click();
+    await callScreen(page, caller.name).getByRole("button", { name: "رد" }).click();
+    const screen = callScreen(mobile, callee.name);
+    await expect(screen.getByRole("status")).toHaveText(TALKING, { timeout: 30_000 });
+
+    // The switch is tried, and the screen says where it surely works.
+    const speaker = screen.getByRole("button", { name: "مكبر الصوت" });
+    await speaker.click();
+    await expect(speaker).toHaveAttribute("aria-pressed", "false");
+    await expect(screen.getByTestId("speaker-note")).toHaveText(/يعمل تبديل السماعة في Safari/);
+    // Once per call: pressing again doesn't repeat it.
+    await expect(screen.getByTestId("speaker-note")).toHaveCount(0, { timeout: 8_000 });
+    await speaker.click();
+    await expect(speaker).toHaveAttribute("aria-pressed", "true");
+    await expect(screen.getByTestId("speaker-note")).toHaveCount(0);
     await screen.getByRole("button", { name: "إنهاء" }).click();
     await phone.close();
   });
