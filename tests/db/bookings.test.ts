@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { admin, asUser, createMatch, createUser, errorOf, localTime, mosul, notificationsOf, rpc } from "./helpers";
+import { admin, asUser, createMatch, createUser, errorOf, localTime, mosul, notificationsOf, rpc, rpcRows } from "./helpers";
 
 interface VenueFixture {
   owner: string;
@@ -471,5 +471,72 @@ describe("booking deposits", () => {
       [fx.venue],
     );
     expect(Number(count)).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe("free times, and why a time is taken", () => {
+  type Taken = { available: boolean; conflict: string | null; held_until: string | null; gap_minutes: number };
+  const quote = (user: string | null, field: string, start: string, minutes = 60) =>
+    rpc<Taken>(user, "quote_booking", { p_field_id: field, p_start_local: start, p_duration_minutes: minutes });
+  const freeTimes = async (user: string | null, field: string, day: string, minutes = 60) =>
+    (await rpcRows<{ start_local: string }>(user, "free_start_times", { p_field_id: field, p_local_date: day, p_duration_minutes: minutes })).map(
+      (r) => r.start_local,
+    );
+
+  it("lists only the start times a request would take, around a booking and the venue's gap", async () => {
+    const v = await createVenue({ buffer: 30 });
+    const day = localTime(6).slice(0, 10);
+    await rpc(v.owner, "create_manual_booking", { p_field_id: v.field, p_start_local: localTime(6, 19), p_duration_minutes: 60, p_kind: "manual" });
+    const customer = await createUser();
+    const free = await freeTimes(customer, v.field, day);
+    // 19:00-20:00 is booked and the venue keeps 30 minutes either side.
+    for (const t of ["18:00", "18:30", "19:00", "19:30", "20:00"]) expect(free).not.toContain(t);
+    for (const t of ["00:00", "01:00", "08:00", "17:30", "20:30", "23:30"]) expect(free).toContain(t);
+    // 01:30 + 60 minutes runs past the 02:00 close; 02:00-07:30 is closed.
+    for (const t of ["01:30", "02:00", "07:30"]) expect(free).not.toContain(t);
+
+    // Every half hour of the day: listed exactly when a quote says it's free.
+    for (let m = 0; m < 24 * 60; m += 30) {
+      const t = `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+      const q = await quote(customer, v.field, `${day} ${t}`).catch(() => null);
+      expect([t, Boolean(q?.available)]).toEqual([t, free.includes(t)]);
+    }
+  });
+
+  it("says what a taken time runs into", async () => {
+    const v = await createVenue({ buffer: 30 });
+    const [a, b] = [await createUser(), await createUser()];
+    await rpc(v.owner, "create_manual_booking", { p_field_id: v.field, p_start_local: localTime(6, 19), p_duration_minutes: 60, p_kind: "manual" });
+    await rpc(v.owner, "create_manual_booking", { p_field_id: v.field, p_start_local: localTime(6, 12), p_duration_minutes: 60, p_kind: "block" });
+
+    expect(await quote(b, v.field, localTime(6, 19, 30))).toMatchObject({ available: false, conflict: "booked" });
+    // 18:00-19:00 and 20:00-21:00 don't overlap 19:00-20:00, only the venue's 30 minutes around it.
+    expect(await quote(b, v.field, localTime(6, 18))).toMatchObject({ available: false, conflict: "gap", gap_minutes: 30 });
+    expect(await quote(b, v.field, localTime(6, 20))).toMatchObject({ available: false, conflict: "gap" });
+    expect(await quote(b, v.field, localTime(6, 12))).toMatchObject({ available: false, conflict: "closed" });
+    expect(await quote(b, v.field, localTime(6, 21))).toMatchObject({ available: true, conflict: null, held_until: null });
+
+    // A request waiting for its deposit: the customer's own, and someone else's until the hold ends.
+    const held = await book(a, v.field, localTime(6, 22), 60);
+    expect(await quote(a, v.field, localTime(6, 22))).toMatchObject({ available: false, conflict: "mine" });
+    const other = await quote(b, v.field, localTime(6, 22));
+    expect(other).toMatchObject({ available: false, conflict: "held" });
+    expect(new Date(other.held_until!).getTime()).toBe(new Date(held.expires_at!).getTime());
+    // Once the customer says the deposit is sent, it's held until the venue checks: no end time to give.
+    await rpc(a, "report_booking_deposit", { p_booking_id: held.booking_id, p_reference: "from 0771 000 0000" });
+    expect(await quote(b, v.field, localTime(6, 22))).toMatchObject({ available: false, conflict: "held", held_until: null });
+    // When the venue declines it, the time is free again.
+    await rpc(v.owner, "decide_booking", { p_booking_id: held.booking_id, p_approve: false });
+    expect(await quote(b, v.field, localTime(6, 22))).toMatchObject({ available: true });
+    expect(await freeTimes(b, v.field, localTime(6).slice(0, 10))).toContain("22:00");
+  });
+
+  it("refuses the same fields, venues and durations a quote does", async () => {
+    const v = await createVenue();
+    const day = localTime(3).slice(0, 10);
+    expect(await errorOf(freeTimes(null, v.field, day, 45))).toBe("invalid_duration");
+    await admin("update public.venues set is_hidden = true where id = $1", [v.venue]);
+    expect(await errorOf(freeTimes(null, v.field, day))).toBe("venue_not_found");
+    expect(await errorOf(freeTimes(null, "00000000-0000-0000-0000-000000000000", day))).toBe("field_not_found");
   });
 });

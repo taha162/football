@@ -1507,6 +1507,11 @@ isOneToOne: false
               "ends_at": string,"starts_at": string
             }[]
                            },
+"free_start_times":
+{ Args: { "p_duration_minutes": number,"p_field_id": string,"p_local_date": string }; Returns: {
+              "start_local": string,"starts_at": string
+            }[]
+                           },
 "invite_to_match":
 { Args: { "p_match_id": string,"p_user_id": string }; Returns: string
                            },
