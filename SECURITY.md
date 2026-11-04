@@ -3,7 +3,14 @@
 ## Principles
 
 1. **The database enforces the rules.** Clients, including our own Next.js server, get read access through RLS and write only through RPCs that validate everything.
-2. **No secrets in the browser.** Only `NEXT_PUBLIC_SUPABASE_URL`, the anon key, the site URL and an optional URL-restricted Mapbox token are public. `SUPABASE_SERVICE_ROLE_KEY` is imported only by `src/lib/supabase/admin.ts`, which is guarded by `server-only`. That module is used only by `/api/cron`, and the key is also used by the operator script.
+2. **No secrets in the browser.** Only `NEXT_PUBLIC_SUPABASE_URL`, the anon key, the site URL and an optional URL-restricted Mapbox token are public. `SUPABASE_SERVICE_ROLE_KEY` is imported only by `src/lib/supabase/admin.ts`, which is guarded by `server-only`; a scan of the production build finds neither it, `CRON_SECRET`, the Telegram token, nor the word `service_role` in any file sent to browsers. The server uses that client only where the caller was checked first or no person can reach it:
+   - `/api/cron` (bearer secret) and the Telegram webhook (secret header);
+   - the sign-in limits (`auth_throttle`, executable by `service_role` only) and the phone-to-address lookup at sign-in, after the limit check;
+   - the Telegram verification page, for the caller's own httpOnly ticket;
+   - conversation pictures and voice notes: uploaded after RLS shows the caller belongs to the conversation, removed only after the database accepted the deletion;
+   - moderator tools, under `requireModerator`, and only after the database accepted the action (removing a message, banning a suspended account at the auth layer); admin settings readiness checks, admins only.
+
+   The operator script (`pnpm admin:grant`) also uses the key.
 3. **No fabricated state.**
    - No payment is taken or simulated. Organizers mark payments manually, labelled "(marked)".
    - Booking and match states come from the database.
@@ -23,6 +30,7 @@
   - Organizer for match tools; captain or manager for team tools; owner or manager for venue settings; venue staff for bookings.
   - Participant for reviews and results; tournament organizer for fixtures.
   - Pages repeat the checks for UX (redirects), but they are not the guard.
+- **Pages that need an account** are listed in `src/proxy.ts`. A signed-out visitor gets a 307 to sign-in, with the return address, before anything renders. E2E (Journey K) checks fifteen of them, and that the public listings stay open.
 - **Suspension** blocks every RPC through `require_user` and is recorded in the audit log.
 - **Blocking** prevents direct messages, joining the blocker's matches and invitations.
 
@@ -31,12 +39,18 @@
 - Zod validation in server actions. Machine error codes are returned, never raw DB errors.
 - SQL lives only in migrations. RPCs use parameters and an empty `search_path`. Search input escapes `%`/`_` before `ILIKE`.
 - Uploads are checked server-side by size and magic bytes (JPEG/PNG/WebP), stored under random names, and limited by bucket MIME and size. Storage policies check path ownership.
-- `safeNext()` only allows same-site relative redirects after sign-in.
+- `safeNext()` only allows same-site relative redirects after sign-in. It parses the address the way the browser will and rejects backslashes and control characters, so `/\t/evil.example` (which a browser reads as `//evil.example`) is refused (unit tests).
 - Messages and user text render as text. React escapes them, and `dangerouslySetInnerHTML` is not used for user content.
 
 ## Abuse controls
 
 - Per-user rate limits (advisory-locked) for messages, invitations, reports, team creation and organizer limits. Values are in `platform_settings`.
+- **Sign-in, sign-up, password reset and e-mail codes are limited per device and per account** (`public.auth_throttle`, settings `auth.*`). Supabase Auth sees every request coming from our server, so its own per-IP limits can't tell attackers apart; the app counts instead.
+  - Wrong passwords: 50 per device and 10 per account in 15 minutes. Wrong codes: 10 per account in 15 minutes. Sign-ups: 20 per device an hour. Reset e-mails: 10 per device and 5 per account an hour. Code resends: 5 per account an hour. Past a limit the form says to wait; the correct password is refused too until the window passes.
+  - The device is the client IP from `x-real-ip` / `x-forwarded-for`, set by Vercel. Mobile networks in Iraq can put many people behind one address, so the device limits are generous and admins can raise them.
+  - Keys are HMAC-SHA256 of the IP or account (keyed by the service-role key), so the table holds no addresses. Rows older than a day are deleted.
+  - The limits need `SUPABASE_SERVICE_ROLE_KEY`; without it they are off and sign-in works unlimited. If the database call fails (for example before migration 0021 is run), sign-in still works and a warning is logged.
+  - DB tests: only the server may count; limits, check-only and separate keys; an admin setting overrides the default. E2E: ten wrong passwords, then the right one is refused with the waiting message.
 - Reports snapshot the reported content. Moderators can hide (and restore) matches, teams, venues, tournaments and reviews. They can remove a reported chat message: the text is erased and the report keeps a copy. They can also suspend users and resolve reports. Every action is audited and the affected owner is notified. Moderators cannot read conversations; they only see the snapshot attached to a report.
 - Contact details (phone and WhatsApp) are shown only for venues, as business contacts. Player e-mails are never exposed (DB test).
 - **Booking deposits** move between the customer and the venue directly; the platform only records them.
@@ -47,12 +61,21 @@
 ## HTTP hardening
 
 `next.config.ts` sets:
+- a `Content-Security-Policy`:
+  - scripts, styles, fonts, workers and the manifest from the site itself (plus `data:` fonts and `blob:` workers);
+  - pictures from the site, the Supabase project, and the map tiles (OpenStreetMap, Mapbox), plus `data:` and `blob:`; voice notes from the site and the Supabase project;
+  - connections to the site and the Supabase project (HTTPS and its Realtime socket);
+  - no frames, no plugins (`object-src 'none'`), forms post to the site only, `base-uri 'self'`, `frame-ancestors 'none'`;
+  - `upgrade-insecure-requests` when Supabase is on HTTPS.
+  - Scripts and styles allow `'unsafe-inline'`: Next.js inlines its bootstrap scripts, and per-request nonces would make every static page dynamic. User text is escaped by React, and an injected script still can't load code from elsewhere or send data to another site. `'unsafe-eval'` is allowed in development only.
 - `X-Content-Type-Options: nosniff`
 - `Referrer-Policy: strict-origin-when-cross-origin`
 - `X-Frame-Options: DENY`
-- a restrictive `Permissions-Policy` (geolocation self only)
-- `Strict-Transport-Security` (sent always; browsers only honour it over HTTPS)
+- `Permissions-Policy: camera=(), microphone=(self), geolocation=(self)` (voice notes and calls, sharing a location)
+- `Strict-Transport-Security` for two years with subdomains (sent always; browsers only honour it over HTTPS)
 - `poweredByHeader: false`
+
+E2E (`e2e/security.spec.ts`) checks these headers, and that a walk through the landing page, venues, matches, notifications and a live conversation reports no CSP violation.
 
 Server Action body size is capped at 6 MB.
 

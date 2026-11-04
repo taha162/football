@@ -116,7 +116,7 @@
 | --- | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL` | Production (+ Preview) | `https://<ref>.supabase.co` |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Production (+ Preview) | مفتاح anon. عام بطبيعته، والحماية عبر RLS |
-| `SUPABASE_SERVICE_ROLE_KEY` | Production فقط | **سري.** يُستخدم في `/api/cron` فقط |
+| `SUPABASE_SERVICE_ROLE_KEY` | Production فقط | **سري، ولا يصل إلى المتصفح أبداً.** تحتاجه المهام المجدولة (`/api/cron`)، وحماية الدخول من التخمين، والصور والرسائل الصوتية في المحادثات، والتحقق بتيليغرام |
 | `CRON_SECRET` | Production فقط | نص عشوائي من 32 حرفاً أو أكثر، مثل ناتج `openssl rand -hex 32`. يرسله Vercel Cron تلقائياً في ترويسة `Authorization: Bearer …` |
 | `NEXT_PUBLIC_SITE_URL` | **Production فقط** | النطاق النهائي فقط، مثل `https://malaab.example`، بدون `/ar` في آخره (إن نُسخ مع `/ar` يتجاهلها الموقع). لا تضعه في Preview حتى تبقى روابط المعاينة صحيحة |
 | `NEXT_PUBLIC_MAP_PROVIDER` | اختياري | `none` (الافتراضي) أو `mapbox` |
@@ -354,6 +354,8 @@ node scripts/load-test.mjs --base https://<موقعك> --seconds 20 --levels 10,
   - انتقل إلى خطة Pro (أو حجم أكبر) قبل الإطلاق الواسع.
   - ارفع `live.check_seconds` إن ثقلت القاعدة.
 
+**على شبكة هاتف بطيئة** (Slow 4G، أول زيارة): صفحة الملاعب نحو 443 KB، وتبدأ بالظهور بعد نحو 0.9 ثانية، ويظهر أكبر ما فيها في نحو ثانيتين. التفاصيل وكل نتائج الفحص في `AUDIT.md`.
+
 ## قائمة التحقق قبل الإطلاق
 
 - [ ] الـ migrations مطبّقة، و `/api/health` يُرجع `ok`
@@ -365,6 +367,10 @@ node scripts/load-test.mjs --base https://<موقعك> --seconds 20 --levels 10,
 - [ ] إن أردت التسجيل برقم الهاتف: بوت تيليغرام مُنشأ، ومتغيراه في Vercel، وحالته **مربوط** في الإدارة (القسم 6)
 - [ ] ملف الحجز من الموقع فقط (`…0018_bookings_in_site_only.sql`) مطبّق
 - [ ] ملفات تحديثات 4 نوفمبر (القسم 11) مطبّقة
+- [ ] `SUPABASE_SERVICE_ROLE_KEY` مضاف في Vercel لبيئة Production (القسم 2)
+- [ ] مشروع Supabase في فرانكفورت `eu-central-1` (القسم 1)، وخطته مناسبة للإطلاق الواسع (Pro أو أكبر، القسم 12)، والنسخ الاحتياطي اليومي مفعّل (قسم Backups في لوحة Supabase)
+- [ ] بعد النشر: `/robots.txt` و`/sitemap.xml` يفتحان، وفيهما عنوان موقعك الحقيقي لا `localhost`. ويُستحسن إضافة الموقع إلى Google Search Console وإرسال `sitemap.xml` إليه
+- [ ] مكالمة تجريبية بين هاتفين حقيقيين (آيفون وأندرويد)، مع تجربة زر مكبر الصوت
 - [ ] ملف المحادثات (`…0017_location_voice_calls.sql`) مطبّق، و«المكالمات الصوتية» في الإدارة تقول إن قاعدة البيانات جاهزة. ويُستحسن ضبط خادم الوصل (القسم 9)
 - [ ] مراجعة صفحات الشروط والخصوصية والسلامة من محامٍ
 - [ ] تحديد وسيلة تواصل للدعم (حذف الحساب، الاعتراضات)

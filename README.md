@@ -11,6 +11,7 @@ A community platform for recreational football: find and organize matches, build
 | [SECURITY.md](SECURITY.md) | Threat model, controls, secrets, operator procedures |
 | [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) | What is done, verified, and not yet built |
 | [DEPLOYMENT.md](DEPLOYMENT.md) | Step-by-step Vercel + Supabase deployment (Arabic) |
+| [AUDIT.md](AUDIT.md) | Launch audit: security, load, page inspection, mobile speed, what remains (Arabic) |
 
 ## Stack
 
