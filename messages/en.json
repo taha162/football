@@ -2245,6 +2245,12 @@
       "rateLimited": "You've called a lot in a short time. Wait a little, then try again.",
       "error": "Couldn't call. Try again."
     },
-    "speaker": "Speaker"
+    "speaker": "Speaker",
+    "earpiece": "Earpiece",
+    "speakerNote": {
+      "unsupported": "This phone's browser doesn't let the site switch the speaker. On iPhone it needs iOS 18.4 or later, in Safari.",
+      "headset": "The sound is in the headphones connected to the phone.",
+      "failed": "The phone didn't switch the speaker. Try again."
+    }
   }
 }

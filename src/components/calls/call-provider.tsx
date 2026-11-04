@@ -7,7 +7,7 @@ import { publicStorageUrl } from "@/lib/storage";
 import { getBrowserClient, getRealtimeClient } from "@/lib/supabase/client";
 import type { Database, Json } from "@/lib/supabase/types";
 import { callIceServersAction } from "@/server/calls";
-import { findAudioRoute, SESSION_SPEAKER, type AudioRoute } from "./audio-route";
+import { findAudioRoute, isPhone, type AudioRoute, type NoRoute } from "./audio-route";
 import { CallScreen } from "./call-screen";
 import { playTone, vibrateRing } from "./tones";
 
@@ -36,6 +36,7 @@ type SignalRow = Database["public"]["Tables"]["call_signals"]["Row"];
 
 export type CallPhase = "idle" | "outgoing" | "incoming" | "connecting" | "active" | "ended";
 export type CallNote = "ended" | "noAnswer" | "busy" | "failed" | "micDenied" | "unsupported" | "blocked" | "unavailable" | "rateLimited" | "error";
+export type SpeakerNote = NoRoute | "failed";
 
 export interface CallView {
   phase: CallPhase;
@@ -46,10 +47,12 @@ export interface CallView {
   durationAtEnd: number | null;
   note: CallNote | null;
   muted: boolean;
-  /** The phone lets the page switch between loudspeaker and earpiece (see audio-route.ts). */
+  /** A phone: the call has a speaker button, on both sides (see audio-route.ts). */
   speakerAvailable: boolean;
   /** The sound plays from the loudspeaker (rather than the earpiece). */
   speaker: boolean;
+  /** Why the last press couldn't move the sound, said for a few seconds. */
+  speakerNote: SpeakerNote | null;
   reconnecting: boolean;
   minimized: boolean;
 }
@@ -64,6 +67,7 @@ const IDLE: CallView = {
   muted: false,
   speakerAvailable: false,
   speaker: true,
+  speakerNote: null,
   reconnecting: false,
   minimized: false,
 };
@@ -125,6 +129,8 @@ interface Live {
   muted: boolean;
   route: AudioRoute | null;
   speakerOn: boolean;
+  /** iPhone: the call set Safari's audio session, to put back afterwards. */
+  sessionSet: boolean;
   /** Bumped when a call ends, so late answers from an old call are ignored. */
   generation: number;
 }
@@ -153,6 +159,7 @@ function newLive(): Live {
     muted: false,
     route: null,
     speakerOn: true,
+    sessionSet: false,
     generation: 0,
   } as unknown as Live;
   live.peerWait = new Promise((resolve) => (live.peerResolve = resolve));
@@ -164,6 +171,21 @@ function audioSession(): { type: string } | null {
   if (typeof navigator === "undefined") return null;
   const session = (navigator as Navigator & { audioSession?: { type: string } }).audioSession;
   return session && typeof session === "object" ? session : null;
+}
+
+/** Points an <audio> element at an output (Safari 18.4+ allows it only straight after a tap). */
+function sinkOf(el: HTMLAudioElement, deviceId: string): Promise<void> {
+  return (el as HTMLAudioElement & { setSinkId: (id: string) => Promise<void> }).setSinkId(deviceId);
+}
+
+/** Whether this phone lets the page choose loudspeaker or earpiece now, and how. */
+async function detectRoute(): Promise<AudioRoute | NoRoute> {
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    return findAudioRoute(devices, { setSinkId: typeof HTMLMediaElement !== "undefined" && "setSinkId" in HTMLMediaElement.prototype });
+  } catch {
+    return "unsupported";
+  }
 }
 
 function getMic(): Promise<MediaStream> {
@@ -229,11 +251,13 @@ function createEngine(setView: Dispatch<SetStateAction<CallView>>) {
     l.ice = null;
     l.offered = false;
     l.connectedAt = null;
-    // Back to Safari's default session once the call is over.
-    if (l.route?.kind === "session") {
+    // The next call starts on the loudspeaker; Safari's audio session goes back to its default.
+    if (l.route?.kind === "output" && !l.speakerOn && audioEl) void sinkOf(audioEl, l.route.speaker).catch(() => undefined);
+    if (l.sessionSet) {
       const session = audioSession();
-      if (session) session.type = SESSION_SPEAKER;
+      if (session) session.type = "auto";
     }
+    l.sessionSet = false;
     l.muted = false;
     l.route = null;
     l.speakerOn = true;
@@ -622,34 +646,30 @@ function createEngine(setView: Dispatch<SetStateAction<CallView>>) {
   }
 
   /**
-   * Finds whether this phone lets the page choose loudspeaker or earpiece.
-   * Calls start on the loudspeaker (where iPhone and Android put them), so the
-   * screen and its buttons stay in view rather than against the cheek.
+   * Every phone gets the speaker button, on both sides of the call. Calls
+   * start on the loudspeaker (where iPhone and Android put them), so the
+   * screen and its buttons stay in view rather than against the cheek. Whether
+   * the phone lets the page move the sound is found now, and again on a press
+   * if it wasn't then.
    */
   async function prepareRoute(gen: number) {
-    if (typeof window.matchMedia !== "function" || !window.matchMedia("(pointer: coarse)").matches) return;
-    let devices: MediaDeviceInfo[];
-    try {
-      devices = await navigator.mediaDevices.enumerateDevices();
-    } catch {
-      return;
+    if (typeof window.matchMedia !== "function" || !isPhone(navigator.userAgent, window.matchMedia("(pointer: coarse)").matches)) return;
+    const l = L();
+    // iPhone: keep the call's audio session steady for its whole length.
+    const session = audioSession();
+    if (session) {
+      session.type = "play-and-record";
+      l.sessionSet = true;
     }
+    l.speakerOn = true;
+    patch({ speakerAvailable: true, speaker: true, speakerNote: null });
+    const found = await detectRoute();
     if (!current(gen)) return;
-    const route = findAudioRoute(devices, {
-      audioSession: Boolean(audioSession()),
-      noEarpiece: /iPad|Macintosh/.test(navigator.userAgent),
-      setSinkId: typeof HTMLMediaElement !== "undefined" && "setSinkId" in HTMLMediaElement.prototype,
-    });
-    if (!route) return;
-    L().route = route;
-    L().speakerOn = true;
-    patch({ speakerAvailable: true, speaker: true });
-    // Already the loudspeaker on iPhone and Android; elsewhere point the output there.
-    if (route.kind === "session") {
-      const session = audioSession();
-      if (session) session.type = route.speaker;
-    } else if (route.kind === "output") {
-      await applyRoute(true, gen).catch(() => false);
+    l.route = typeof found === "string" ? null : found;
+    // A call that ended on the earpiece left its <audio> there: back to the loudspeaker (right after the tap that placed or answered this one).
+    if (l.route?.kind === "output" && audioEl) {
+      const sink = (audioEl as HTMLAudioElement & { sinkId?: string }).sinkId;
+      if (sink && sink !== l.route.speaker) await sinkOf(audioEl, l.route.speaker).catch(() => undefined);
     }
   }
 
@@ -659,15 +679,10 @@ function createEngine(setView: Dispatch<SetStateAction<CallView>>) {
     const route = l.route;
     if (!route) return false;
     const target = on ? route.speaker : route.earpiece;
-    if (route.kind === "session") {
-      // iPhone: a voice-call session plays on the earpiece; the default, on the loudspeaker.
-      const session = audioSession();
-      if (!session) return false;
-      session.type = target;
-    } else if (route.kind === "output") {
+    if (route.kind === "output") {
       if (!audioEl) return false;
-      // Called straight from the tap: some browsers allow it only right after one.
-      await (audioEl as HTMLAudioElement & { setSinkId: (id: string) => Promise<void> }).setSinkId(target);
+      // First thing on the tap: Safari allows it only straight after one.
+      await sinkOf(audioEl, target);
     } else {
       // Android: the sound follows the microphone, and only one microphone opens
       // at a time, so close the current one first.
@@ -697,16 +712,31 @@ function createEngine(setView: Dispatch<SetStateAction<CallView>>) {
     return true;
   }
 
+  /** Says for a few seconds why the sound couldn't move. */
+  function speakerNote(note: SpeakerNote, gen: number) {
+    patch({ speakerNote: note });
+    later(() => {
+      if (current(gen)) patch({ speakerNote: null });
+    }, 5000);
+  }
+
   function toggleSpeaker() {
     const l = L();
-    if (!l.route) return;
     const gen = l.generation;
-    const next = !l.speakerOn;
-    applyRoute(next, gen)
-      .then((done) => {
-        if (done && current(gen)) patch({ speaker: next });
-      })
-      .catch(() => undefined);
+    void (async () => {
+      if (!l.route) {
+        // Not offered when the call started (or headphones since unplugged): look again.
+        const found = await detectRoute();
+        if (!current(gen)) return;
+        if (typeof found === "string") return speakerNote(found, gen);
+        l.route = found;
+      }
+      const next = !l.speakerOn;
+      const done = await applyRoute(next, gen).catch(() => false);
+      if (!current(gen)) return;
+      if (done) patch({ speaker: next, speakerNote: null });
+      else speakerNote("failed", gen);
+    })();
   }
 
   function dismiss() {

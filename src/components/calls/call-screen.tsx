@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, Mic, MicOff, Phone, PhoneOff, Volume2, X } from "lucide-react";
+import { ChevronDown, Ear, Mic, MicOff, Phone, PhoneOff, Volume2, X } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Avatar } from "@/components/ui/avatar";
 import { cn } from "@/lib/cn";
@@ -160,7 +160,7 @@ export function CallScreen({
               </button>
               {view.muted ? t("unmute") : t("mute")}
             </span>
-            {/* Only where the phone lets the page choose (see audio-route.ts). */}
+            {/* On every phone, both sides; it says so when the phone won't let the page move the sound (see audio-route.ts). */}
             {view.speakerAvailable ? (
               <span className="flex flex-col items-center gap-2 text-sm text-muted">
                 <button
@@ -170,9 +170,10 @@ export function CallScreen({
                   aria-label={t("speaker")}
                   className={cn(round, "focus-visible:outline-accent", view.speaker ? "bg-ink text-bg" : "bg-surface-3 text-ink")}
                 >
-                  <Volume2 aria-hidden="true" className="size-7" />
+                  {view.speaker ? <Volume2 aria-hidden="true" className="size-7" /> : <Ear aria-hidden="true" className="size-7" />}
                 </button>
-                {t("speaker")}
+                {/* Where the sound is now. */}
+                {view.speaker ? t("speaker") : t("earpiece")}
               </span>
             ) : null}
             <span className="flex flex-col items-center gap-2 text-sm text-muted">
@@ -184,6 +185,11 @@ export function CallScreen({
           </>
         )}
       </div>
+      {view.speakerNote ? (
+        <p aria-live="polite" className="max-w-xs text-center text-xs text-muted" data-testid="speaker-note">
+          {t(`speakerNote.${view.speakerNote}`)}
+        </p>
+      ) : null}
     </div>
   );
 }
