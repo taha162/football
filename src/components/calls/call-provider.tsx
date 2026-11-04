@@ -9,7 +9,7 @@ import type { Database, Json } from "@/lib/supabase/types";
 import { callIceServersAction } from "@/server/calls";
 import { findAudioRoute, isPhone, type AudioRoute, type NoRoute } from "./audio-route";
 import { CallScreen } from "./call-screen";
-import { playTone, vibrateRing } from "./tones";
+import { playTone, primeSound, vibrateRing } from "./tones";
 
 /**
  * Voice calls between the two members of a direct conversation.
@@ -788,6 +788,8 @@ export function CallProvider({ me, children }: { me: string | null; children: Re
 
   useEffect(() => engine.watch(me), [engine, me]);
   useEffect(() => engine.hangUpOnLeave(), [engine]);
+  // A call that comes later can only ring out loud on an iPhone if the sound was started during a tap.
+  useEffect(() => (me ? primeSound() : undefined), [me]);
 
   const busy = view.phase !== "idle" && view.phase !== "ended";
   const api = useMemo<CallApi>(() => ({ start: (c, p) => void engine.start(c, p), busy }), [engine, busy]);
