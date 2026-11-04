@@ -66,10 +66,14 @@ export function ActionForm({
   const t = useTranslations("common");
   const successText = useActionMessage();
   const lastHandled = useRef<number | null>(null);
+  // What was submitted: React empties a form once its action has run (see restoreFields).
+  const submitted = useRef<FormData | null>(null);
 
   useEffect(() => {
     if (!state || lastHandled.current === state.at) return;
     lastHandled.current = state.at;
+    // After an error, keep what was typed: a wrong password mustn't wipe the e-mail, nor one mistake a whole form.
+    if (!state.ok) restoreFields(formRef.current, submitted.current);
     if (state.ok) {
       if (resetOnSuccess) formRef.current?.reset();
       onSuccess?.(state.data);
@@ -92,7 +96,10 @@ export function ActionForm({
       <form
         ref={formRef}
         action={formAction}
-        onSubmit={celebrate ? () => armCelebration(celebrate) : undefined}
+        onSubmit={(e) => {
+          submitted.current = new FormData(e.currentTarget);
+          if (celebrate) armCelebration(celebrate);
+        }}
         className={cn("flex flex-col gap-4", className)}
         id={id}
         noValidate={false}
@@ -114,6 +121,36 @@ export function ActionForm({
       </form>
     </FieldErrorsContext.Provider>
   );
+}
+
+/**
+ * Puts back what was submitted. React 19 resets a form after its action runs,
+ * whatever the answer, so without this an error would leave every field empty
+ * (or back at its old value). Passwords and files stay empty; hidden fields
+ * keep their own values.
+ */
+function restoreFields(form: HTMLFormElement | null, data: FormData | null) {
+  if (!form || !data) return;
+  const names = new Set(data.keys());
+  for (const name of names) {
+    const values = data.getAll(name).filter((v): v is string => typeof v === "string");
+    for (const el of form.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(`[name="${CSS.escape(name)}"]`)) {
+      if (el instanceof HTMLInputElement) {
+        if (el.type === "password" || el.type === "file" || el.type === "hidden") continue;
+        if (el.type === "checkbox" || el.type === "radio") el.checked = values.includes(el.value);
+        else el.value = values[0] ?? "";
+      } else if (el instanceof HTMLSelectElement) {
+        if (el.multiple) for (const o of el.options) o.selected = values.includes(o.value);
+        else if (values[0] !== undefined) el.value = values[0];
+      } else {
+        el.value = values[0] ?? "";
+      }
+    }
+  }
+  // A box that was unticked sends nothing: untick it again.
+  for (const el of form.querySelectorAll<HTMLInputElement>('input[type="checkbox"][name]')) {
+    if (!names.has(el.name)) el.checked = false;
+  }
 }
 
 export function useFieldError(name: string): string | undefined {

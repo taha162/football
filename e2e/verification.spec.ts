@@ -15,6 +15,11 @@ test.describe("Account verification", () => {
     await page.getByRole("button", { name: "إنشاء حساب" }).click();
     await expect(page.getByText("يوجد حساب بهذا البريد الإلكتروني بالفعل.")).toBeVisible();
     await expect(page).toHaveURL(/\/ar\/sign-up/);
+    // What was typed stays (only the password is cleared), so it's quick to correct.
+    await expect(page.getByRole("textbox", { name: "الاسم الظاهر" })).toHaveValue("لاعب مكرر");
+    await expect(page.getByRole("textbox", { name: "البريد الإلكتروني" })).toHaveValue(existing.email);
+    await expect(page.getByRole("textbox", { name: "كلمة المرور" })).toHaveValue("");
+    await expect(page.getByRole("checkbox")).toBeChecked();
   });
 
   test("e-mail: a user who signs in before confirming is sent to the code page, can resend and verify", async ({ page }) => {
