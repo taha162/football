@@ -27,6 +27,8 @@ import {
 } from "@/server/venues/actions";
 import { BookingRow, type BookingRowData } from "@/components/venue/booking-row";
 import { VenueForm } from "@/components/venue/venue-form";
+import { CopyHoursToAll } from "@/components/venue/copy-hours";
+import { WEEK, dayName } from "@/components/venue/opening-hours";
 import { ActionForm, FormField, Hidden, InlineAction, SubmitButton } from "@/components/ui/action-form";
 import { Avatar, StorageImage } from "@/components/ui/avatar";
 import { buttonClass } from "@/components/ui/button";
@@ -172,20 +174,41 @@ export default async function ManageVenuePage({ params, searchParams }: PageProp
             <ActionForm action={setOpeningHoursAction}>
               <Hidden values={{ venue_id: id }} />
               <p className="text-sm text-muted">{t("hoursHint")}</p>
-              <div className="flex flex-col gap-2">
-                {[6, 0, 1, 2, 3, 4, 5].map((d) => {
-                  const h = (venue.hours ?? []).find((x) => x.weekday === d);
-                  const day = new Intl.DateTimeFormat(locale === "ar" ? "ar-IQ" : "en-GB", { weekday: "long", timeZone: "UTC" }).format(new Date(Date.UTC(2024, 0, 7 + d)));
-                  return (
-                    <div key={d} className="grid grid-cols-[8rem_1fr_1fr] items-center gap-3">
-                      <Checkbox name={`open_${d}`} defaultChecked={Boolean(h)} label={day} />
-                      <Input type="time" name={`opens_${d}`} defaultValue={h?.opens.slice(0, 5) ?? "08:00"} aria-label={t("opensOn", { day })} dir="ltr" />
-                      <Input type="time" name={`closes_${d}`} defaultValue={h?.closes.slice(0, 5) ?? "00:00"} aria-label={t("closesOn", { day })} dir="ltr" />
-                    </div>
-                  );
-                })}
+              {/* Each day: open or closed, the time it opens and the time it closes. */}
+              <table className="w-full text-sm" data-testid="hours-editor">
+                <caption className="sr-only">{t("tabs.hours")}</caption>
+                <thead>
+                  <tr className="text-xs text-muted">
+                    <th scope="col" className="pb-2 text-start font-medium">{t("hoursDay")}</th>
+                    <th scope="col" className="pb-2 text-start font-medium">{t("opensAt")}</th>
+                    <th scope="col" className="pb-2 text-start font-medium">{t("closesAt")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {WEEK.map((d) => {
+                    const h = (venue.hours ?? []).find((x) => x.weekday === d);
+                    const day = dayName(d, locale);
+                    return (
+                      // A closed day's times are dimmed.
+                      <tr key={d} className="border-t border-line [&:has(input[type=checkbox]:not(:checked))_input[type=time]]:opacity-40">
+                        <th scope="row" className="py-1 pe-2 text-start font-normal">
+                          <Checkbox name={`open_${d}`} defaultChecked={Boolean(h)} label={day} />
+                        </th>
+                        <td className="py-1 pe-2">
+                          <Input type="time" name={`opens_${d}`} defaultValue={h?.opens.slice(0, 5) ?? "08:00"} aria-label={t("opensOn", { day })} dir="ltr" className="min-w-0 px-2" />
+                        </td>
+                        <td className="py-1">
+                          <Input type="time" name={`closes_${d}`} defaultValue={h?.closes.slice(0, 5) ?? "00:00"} aria-label={t("closesOn", { day })} dir="ltr" className="min-w-0 px-2" />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              <div className="flex flex-wrap gap-2">
+                <SubmitButton>{t("saveHours")}</SubmitButton>
+                <CopyHoursToAll days={WEEK} label={t("sameHours", { day: dayName(WEEK[0], locale) })} />
               </div>
-              <SubmitButton className="self-start">{t("saveHours")}</SubmitButton>
             </ActionForm>
           </CardBody>
         </Card>

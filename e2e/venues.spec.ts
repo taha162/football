@@ -34,8 +34,14 @@ test.describe("Journey F — venue onboarding, verification and booking", () => 
     await expect(ownerPage.getByRole("textbox", { name: "اسم الساحة" })).toHaveCount(0);
     await expect(ownerPage.getByText("فرعي")).toHaveCount(0);
 
+    // Opening hours: Saturday's, given to every day at once.
     await ownerPage.getByRole("link", { name: "ساعات العمل" }).click();
-    for (const day of DAYS) await ownerPage.getByRole("checkbox", { name: day }).check();
+    await ownerPage.getByRole("checkbox", { name: "السبت" }).check();
+    await ownerPage.getByLabel("وقت افتتاح السبت").fill("16:00");
+    await ownerPage.getByLabel("وقت إغلاق السبت").fill("00:00");
+    await ownerPage.getByRole("button", { name: "نفس ساعات السبت لكل الأيام" }).click();
+    for (const day of DAYS) await expect(ownerPage.getByRole("checkbox", { name: day })).toBeChecked();
+    await expect(ownerPage.getByLabel("وقت افتتاح الجمعة")).toHaveValue("16:00");
     await ownerPage.getByRole("button", { name: "حفظ الساعات" }).click();
     await expect(ownerPage.getByText("تم الحفظ.").or(ownerPage.getByRole("status")).first()).toBeVisible();
 
@@ -78,6 +84,11 @@ test.describe("Journey F — venue onboarding, verification and booking", () => 
     await expect(customerPage.getByText("0770 555 1234")).toHaveCount(0);
     // Matches aren't created from a venue's page.
     await expect(customerPage.getByRole("link", { name: "أنشئ مباراة هنا" })).toHaveCount(0);
+    // The hours: each day with the time it opens and the time it closes.
+    const hours = customerPage.getByTestId("opening-hours");
+    await expect(hours.getByRole("columnheader")).toHaveText(["اليوم", "يفتح", "يغلق"]);
+    const saturday = hours.locator("tr", { hasText: "السبت" });
+    await expect(saturday.getByRole("cell")).toHaveText(["٤:٠٠ م", "منتصف الليل"]);
 
     // One court: the booking page offers no court to choose, only the day's free times.
     const date = localTime(1).slice(0, 10);

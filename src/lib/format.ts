@@ -52,6 +52,18 @@ export function todayIn(timeZone: string, offsetDays = 0): string {
   return toLocalInputValue(new Date(Date.now() + offsetDays * 86_400_000), timeZone).slice(0, 10);
 }
 
+/** A wall-clock time ("HH:MM" or "HH:MM:SS", no date or zone) in the reader's words, e.g. "٤:٠٠ م". */
+export function formatClock(hhmm: string, locale: string) {
+  const [h, m] = hhmm.split(":").map(Number);
+  return new Intl.DateTimeFormat(intlLocale(locale), { timeZone: "UTC", hour: "numeric", minute: "2-digit" }).format(new Date(Date.UTC(2024, 0, 1, h, m)));
+}
+
+/** Today's weekday in a timezone, 0 = Sunday (as venue opening hours count them). */
+export function weekdayIn(timeZone: string): number {
+  const name = new Intl.DateTimeFormat("en-US", { timeZone, weekday: "short" }).format(new Date());
+  return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(name);
+}
+
 /** Converts a datetime-local value to the "YYYY-MM-DD HH:mm" form RPCs expect. */
 export function toRpcLocal(value: string): string {
   return value.replace("T", " ");

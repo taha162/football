@@ -235,7 +235,7 @@ export default async function BookVenuePage({ params, searchParams }: PageProps<
         </div>
         <aside className="flex flex-col gap-3">
           <h2 className="font-semibold">{t("hours")}</h2>
-          <OpeningHours hours={venue.hours ?? []} />
+          <OpeningHours hours={venue.hours ?? []} timeZone={tz} />
           <p className="text-xs text-muted">{t("noticeRule", { minutes: venue.min_notice_minutes, days: venue.max_advance_days })}</p>
           <p className="text-xs text-muted">{t(deposits.on ? "cancellationRuleDeposit" : "cancellationRule", { hours: venue.cancellation_deadline_hours })}</p>
           <p className="text-xs text-muted">{t("signedInAs", { name: user.profile.display_name })}</p>
