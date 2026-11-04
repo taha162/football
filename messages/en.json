@@ -42,7 +42,7 @@
     "teams": "Teams",
     "venues": "Venues",
     "tournaments": "Tournaments",
-    "create": "Create match",
+    "book": "Book a pitch",
     "createMatch": "Create match",
     "messages": "Messages",
     "notifications": "Notifications",
@@ -1766,6 +1766,8 @@
   "venues": {
     "title": "Venues",
     "description": "Search by the venue's name, and book your time here.",
+    "bookTitle": "Book a pitch",
+    "bookDescription": "Pick a venue, then the day and time.",
     "listVenue": "List your venue",
     "search": "Search",
     "searchPlaceholder": "Venue name",

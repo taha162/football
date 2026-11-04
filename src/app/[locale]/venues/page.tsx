@@ -22,7 +22,8 @@ export default async function VenuesPage({ params, searchParams }: PageProps<"/[
   setRequestLocale(locale);
   const sp = await searchParams;
   const t = await getTranslations("venues");
-  // The search is by the venue's name only. `bookable=1` (from "book a pitch" links) keeps the venues taking bookings.
+  // The search is by the venue's name only. `bookable=1` («+» in the bottom bar, "book a pitch" links) lists the
+  // venues taking bookings, each opening its booking page.
   const q = one(sp.q);
   const bookable = one(sp.bookable) === "1";
   const page = Math.max(1, Number(one(sp.page) ?? 1) || 1);
@@ -32,9 +33,9 @@ export default async function VenuesPage({ params, searchParams }: PageProps<"/[
   return (
     <Container className="py-10">
       <PageHeader
-        title={t("title")}
-        description={t("description")}
-        actions={<LinkButton href="/manage/venues/new" className={buttonClass("outline", "md")}>{t("listVenue")}</LinkButton>}
+        title={bookable ? t("bookTitle") : t("title")}
+        description={bookable ? t("bookDescription") : t("description")}
+        actions={bookable ? undefined : <LinkButton href="/manage/venues/new" className={buttonClass("outline", "md")}>{t("listVenue")}</LinkButton>}
       />
       <Form action="" scroll={false} role="search" className="mb-6 flex gap-2">
         {bookable ? <input type="hidden" name="bookable" value="1" /> : null}
@@ -49,7 +50,7 @@ export default async function VenuesPage({ params, searchParams }: PageProps<"/[
         <div className="flex flex-col gap-6">
           {/* Two venues a row on a phone, three on a wide screen. */}
           <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3" data-testid="venue-grid">
-            {items.map((v) => <VenueCard key={v.id} venue={v} />)}
+            {items.map((v) => <VenueCard key={v.id} venue={v} href={bookable ? `/venues/${v.id}/book` : undefined} />)}
           </div>
           <Pagination pathname="/venues" query={query} page={page} hasMore={hasMore} />
         </div>

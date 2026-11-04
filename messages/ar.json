@@ -42,7 +42,7 @@
     "teams": "الفرق",
     "venues": "الملاعب",
     "tournaments": "البطولات",
-    "create": "إنشاء مباراة",
+    "book": "احجز ملعباً",
     "createMatch": "إنشاء مباراة",
     "messages": "الرسائل",
     "notifications": "الإشعارات",
@@ -1766,6 +1766,8 @@
   "venues": {
     "title": "الملاعب",
     "description": "ابحث باسم الملعب، واحجز موعدك من الموقع.",
+    "bookTitle": "احجز ملعباً",
+    "bookDescription": "اختر الملعب، ثم اليوم والوقت.",
     "listVenue": "أضف ملعبك",
     "search": "ابحث",
     "searchPlaceholder": "اسم الملعب",

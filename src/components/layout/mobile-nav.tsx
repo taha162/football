@@ -11,14 +11,17 @@ import { LinkButton } from "@/components/ui/link-button";
  * The current tab lights a segment of the top line (globals.css: mnav-link);
  * the bar is named for view transitions, so it holds still while pages change.
  */
+const BOOK_HREF = { pathname: "/venues", query: { bookable: "1" } };
+
 export function MobileNav({ signedIn }: { signedIn: boolean }) {
   const t = useTranslations("nav");
   const pathname = usePathname();
+  // «+» in the middle books a pitch: the venues taking bookings, each opening its booking page.
   const items = [
     { href: signedIn ? "/dashboard" : "/", label: t("home"), icon: Home },
-    { href: "/matches", label: t("matches"), icon: CalendarSearch },
-    { href: "/matches/new", label: t("create"), icon: Plus, primary: true },
     { href: "/venues", label: t("venues"), icon: MapPinned },
+    { href: BOOK_HREF, label: t("book"), icon: Plus, primary: true },
+    { href: "/matches", label: t("matches"), icon: CalendarSearch },
     { href: signedIn ? "/messages" : "/sign-in", label: signedIn ? t("messages") : t("signIn"), icon: MessageCircle },
   ] as const;
   return (

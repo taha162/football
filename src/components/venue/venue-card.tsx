@@ -10,8 +10,12 @@ import { StorageImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/primitives";
 import { CardCover } from "@/components/ui/card-cover";
 
-/** A venue in a list; two sit side by side on a phone, so everything wraps to a narrow card. */
-export async function VenueCard({ venue, role }: { venue: VenueCardData; role?: string }) {
+/**
+ * A venue in a list; two sit side by side on a phone, so everything wraps to a
+ * narrow card. It opens the venue's page, or `href` (its booking page, when
+ * the list is for booking).
+ */
+export async function VenueCard({ venue, role, href = `/venues/${venue.id}` }: { venue: VenueCardData; role?: string; href?: string }) {
   const t = await getTranslations("venues");
   const locale = await getLocale();
   const active = venue.fields.filter((f) => f.is_active);
@@ -30,7 +34,7 @@ export async function VenueCard({ venue, role }: { venue: VenueCardData; role?: 
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-3 sm:gap-2 sm:p-4">
         <h3 className="flex items-start gap-1 font-display text-base font-semibold leading-snug sm:items-center sm:gap-1.5 sm:text-lg">
-          <Link href={`/venues/${venue.id}`} className="line-clamp-2 break-words focus-visible:outline-none">{venue.name}</Link>
+          <Link href={href} className="line-clamp-2 break-words focus-visible:outline-none">{venue.name}</Link>
           {venue.verification_status === "verified" ? <BadgeCheck aria-label={t("verified")} className="mt-1 size-4 shrink-0 text-accent sm:mt-0" /> : null}
         </h3>
         <p className="truncate text-xs text-muted">{[localizedName(venue.area, locale), localizedName(venue.city, locale)].filter(Boolean).join("، ")}</p>
@@ -41,7 +45,7 @@ export async function VenueCard({ venue, role }: { venue: VenueCardData; role?: 
         </div>
         {minPrice != null ? <p className="num text-xs sm:text-sm">{t("fromPrice", { price: formatMoney(minPrice, "IQD", locale) })}</p> : null}
       </div>
-      <CardCover href={`/venues/${venue.id}`} />
+      <CardCover href={href} />
     </article>
   );
 }
