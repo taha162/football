@@ -91,7 +91,6 @@ export default async function VenuePage({ params }: PageProps<"/[locale]/venues/
               {t("book")}
             </LinkButton>
           ) : null}
-          <LinkButton href={{ pathname: "/matches/new", query: { venue: id } }} className={buttonClass("outline", "md")}>{t("createMatchHere")}</LinkButton>
         </div>
       </div>
 

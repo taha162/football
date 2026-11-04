@@ -1802,7 +1802,6 @@
     },
     "manage": "Manage venue",
     "book": "Book a slot",
-    "createMatchHere": "Create a match here",
     "contactTitle": "Bookings are arranged directly with this venue",
     "contactBody": "This venue doesn't take bookings through the app. Contact it using the details on this page — the platform cannot confirm availability for it.",
     "fields": "Courts & prices",

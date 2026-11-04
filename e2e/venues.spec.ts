@@ -76,6 +76,8 @@ test.describe("Journey F — venue onboarding, verification and booking", () => 
     await customerPage.goto(`/ar/venues/${venueId}`);
     await expect(customerPage.getByRole("link", { name: "احجز موعداً" })).toBeVisible();
     await expect(customerPage.getByText("0770 555 1234")).toHaveCount(0);
+    // Matches aren't created from a venue's page.
+    await expect(customerPage.getByRole("link", { name: "أنشئ مباراة هنا" })).toHaveCount(0);
 
     // One court: the booking page offers no court to choose, only the day's free times.
     const date = localTime(1).slice(0, 10);
