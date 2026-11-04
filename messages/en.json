@@ -2166,7 +2166,7 @@
       "secondary": "Book a pitch",
       "openNow": "{count, plural, one {# match is looking for players now} other {# matches are looking for players now}}",
       "scroll": "Scroll",
-      "coords": "36.34° N · 43.13° E"
+      "coords": "33.00° N · 44.00° E"
     },
     "matches": {
       "chapter": "Find your game",
