@@ -179,8 +179,22 @@ export function StageHost({ markers, labels, children }: { markers: MarkerSpec[]
     };
 
     /* ---- engine ----------------------------------------------------------- */
-    const fontsReady = Promise.race([document.fonts?.ready ?? Promise.resolve(), new Promise((r) => setTimeout(r, 1500))]);
     const cssVar = (name: string) => getComputedStyle(html).getPropertyValue(name).trim();
+    const arabicFont = cssVar("--font-cairo") || "system-ui, sans-serif";
+    const latinFont = cssVar("--font-barlow-condensed") || "system-ui, sans-serif";
+    // The boards' Latin lines ("AL-MALAB", "IRAQ") use the condensed face, which
+    // no other Arabic page needs, so it isn't preloaded: fetch the three weights
+    // the boards draw with while the engine downloads. Only the face itself:
+    // its local fallback (Arial) is missing on many phones and would end the
+    // wait early.
+    const latinFace = latinFont.split(",")[0].trim();
+    const latinFaces = document.fonts
+      ? ["600 46px", "700 58px", "800 58px"].map((size) => document.fonts.load(`${size} ${latinFace}`, "AL-MALAB IRAQ").catch(() => []))
+      : [];
+    const fontsReady = Promise.race([
+      Promise.all([document.fonts?.ready ?? Promise.resolve(), ...latinFaces]),
+      new Promise((r) => setTimeout(r, 1500)),
+    ]);
     Promise.all([import("./engine"), fontsReady])
       .then(async ([{ Stage }]) => {
         if (disposed || !canvasRef.current) return;
@@ -190,10 +204,7 @@ export function StageHost({ markers, labels, children }: { markers: MarkerSpec[]
           rtl,
           reducedMotion: reduced,
           gpu: probe.gpu,
-          fonts: {
-            arabic: cssVar("--font-cairo") || "system-ui, sans-serif",
-            latin: cssVar("--font-barlow-condensed") || "system-ui, sans-serif",
-          },
+          fonts: { arabic: arabicFont, latin: latinFont },
           markers,
           events: {
             onIntro: (phase) => {

@@ -27,9 +27,11 @@ export default async function TeamsPage({ params, searchParams }: PageProps<"/[l
   const sp = await searchParams;
   const t = await getTranslations("teams");
   const e = await getTranslations("enums");
+  const f = await getTranslations("forms");
   const user = await getCurrentUser();
   const [cities, areas] = await Promise.all([getCities(), getAreas()]);
-  const city = isUuid(one(sp.city)) ?? user?.profile.city_id ?? undefined;
+  // The person's own city unless they chose one, or «كل المدن» (an empty choice).
+  const city = isUuid(one(sp.city)) ?? (sp.city === "" ? undefined : (user?.profile.city_id ?? undefined));
   const format = MATCH_FORMATS.find((f) => f === one(sp.format));
   const skill = SKILL_LEVELS.find((s) => s === one(sp.skill));
   const page = Math.max(1, Number(one(sp.page) ?? 1) || 1);
@@ -56,6 +58,7 @@ export default async function TeamsPage({ params, searchParams }: PageProps<"/[l
         <label className="flex flex-col gap-1 text-sm">
           {t("city")}
           <Select name="city" defaultValue={city ?? ""}>
+            <option value="">{f("anyCity")}</option>
             {cities.map((c) => (
               <option key={c.id} value={c.id}>{localizedName(c, locale)}</option>
             ))}

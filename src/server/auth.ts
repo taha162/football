@@ -13,6 +13,7 @@ import { clearPendingEmail, getPendingEmail, setPendingEmail } from "@/lib/pendi
 import { looksLikePhone, normalizePhone } from "@/lib/phone";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { allowed, buckets, count } from "@/lib/throttle";
 
 const email = z.string().trim().toLowerCase().email("invalid_email").max(254);
 const password = z.string().min(8, "password_too_short").max(72, "password_too_long");
@@ -39,25 +40,36 @@ export async function signInAction(_: ActionState, fd: FormData): Promise<Action
   const pass = z.string().min(1, "required").safeParse(fd.get("password"));
   if (!pass.success) return fail("validation", { password: "required" });
 
-  let address: string;
+  let address: string | null = null;
+  let account: string;
   if (looksLikePhone(login)) {
-    // Phone sign-in (accounts verified with Telegram): map the number to its auth address.
     const phone = normalizePhone(login);
-    const admin = createAdminClient();
     if (!phone) return fail("validation", { email: "invalid_phone" });
-    const { data } = admin ? await admin.rpc("auth_email_for_phone", { p_phone: phone }) : { data: null };
-    if (!data) return fail("invalid_credentials");
-    address = data as string;
+    account = phone;
   } else {
     const parsed = email.safeParse(login);
     if (!parsed.success) return fail("validation", { email: "invalid_email" });
-    address = parsed.data;
+    account = address = parsed.data;
+  }
+  // Too many wrong passwords from this device or on this account: stop guessing for a while.
+  const limits = await buckets(["signinDevice"], [["signinAccount", account]]);
+  if (!(await allowed(limits))) return fail("too_many_attempts");
+  if (!address) {
+    // Phone sign-in (accounts verified with Telegram): map the number to its auth address.
+    const admin = createAdminClient();
+    const { data } = admin ? await admin.rpc("auth_email_for_phone", { p_phone: account }) : { data: null };
+    if (!data) {
+      await count(limits);
+      return fail("invalid_credentials");
+    }
+    address = data as string;
   }
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signInWithPassword({ email: address, password: pass.data });
   if (error) {
     const code = authErrorCode(error);
+    if (code === "invalid_credentials") await count(limits);
     if (code === "email_not_confirmed") {
       await setPendingEmail(address);
       redirect({ href: "/verify-email", locale: await currentLocale() });
@@ -85,6 +97,7 @@ export async function signUpAction(_: ActionState, fd: FormData): Promise<Action
       accept_terms: fd.get("accept_terms") ?? undefined,
     });
   if (!parsed.success) return fail("validation", zodFieldErrors(parsed.error));
+  if (!(await count(await buckets(["signupDevice"])))) return fail("too_many_attempts");
   const locale = await currentLocale();
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
@@ -114,9 +127,15 @@ export async function verifyEmailCodeAction(_: ActionState, fd: FormData): Promi
   if (!address) return fail("verification_missing");
   const token = String(fd.get("code") ?? "").replace(/\s/g, "");
   if (!/^[0-9]{6,10}$/.test(token)) return fail("validation", { code: "invalid_code" });
+  // Guessing codes: limited per account and per device.
+  const limits = await buckets(["signinDevice"], [["codeAccount", address]]);
+  if (!(await allowed(limits))) return fail("too_many_attempts");
   const supabase = await createClient();
   const { error } = await supabase.auth.verifyOtp({ email: address, token, type: "email" });
-  if (error) return fail(error.status === 429 ? "rate_limited" : "invalid_code");
+  if (error) {
+    if (error.status !== 429) await count(limits);
+    return fail(error.status === 429 ? "rate_limited" : "invalid_code");
+  }
   await clearPendingEmail();
   redirect({ href: "/onboarding", locale: await currentLocale() });
   return ok();
@@ -125,6 +144,7 @@ export async function verifyEmailCodeAction(_: ActionState, fd: FormData): Promi
 export async function resendEmailCodeAction(): Promise<ActionState> {
   const address = await getPendingEmail();
   if (!address) return fail("verification_missing");
+  if (!(await count(await buckets([], [["resendAccount", address]])))) return fail("too_many_attempts");
   const locale = await currentLocale();
   const supabase = await createClient();
   const { error } = await supabase.auth.resend({
@@ -140,6 +160,8 @@ export async function resendEmailCodeAction(): Promise<ActionState> {
 export async function forgotPasswordAction(_: ActionState, fd: FormData): Promise<ActionState> {
   const parsed = email.safeParse(fd.get("email"));
   if (!parsed.success) return fail("validation", { email: "invalid_email" });
+  // Reset e-mails: limited per device and per address, so nobody's inbox can be flooded.
+  if (!(await count(await buckets(["resetDevice"], [["resetAccount", parsed.data]])))) return fail("too_many_attempts");
   const locale = await currentLocale();
   const supabase = await createClient();
   const { error } = await supabase.auth.resetPasswordForEmail(parsed.data, {

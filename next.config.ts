@@ -19,7 +19,41 @@ if (process.env.VERCEL) {
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/+$/, "");
 const storageHost = supabaseUrl ? new URL(supabaseUrl) : null;
 
+const isDev = process.env.NODE_ENV === "development";
+const supabaseOrigin = storageHost?.origin ?? "";
+const supabaseSocket = storageHost ? `${storageHost.protocol === "https:" ? "wss" : "ws"}://${storageHost.host}` : "";
+
+/**
+ * Where the browser may load from. Scripts and styles stay on the site
+ * (inline ones too: the page's first-paint scripts and React's style
+ * attributes); data, live updates, pictures and voice notes come from
+ * Supabase; map pictures from OpenStreetMap and Mapbox. Nothing may frame
+ * the site, and forms post only to it. Without nonces, so pages can stay
+ * static (see node_modules/next/dist/docs/01-app/02-guides/content-security-policy.md).
+ */
+const contentSecurityPolicy = [
+  "default-src 'self'",
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
+  "style-src 'self' 'unsafe-inline'",
+  `img-src 'self' data: blob: ${supabaseOrigin} https://tile.openstreetmap.org https://api.mapbox.com`,
+  `media-src 'self' blob: ${supabaseOrigin}`,
+  "font-src 'self' data:",
+  `connect-src 'self' ${supabaseOrigin} ${supabaseSocket}${isDev ? " ws: wss:" : ""}`,
+  "worker-src 'self' blob:",
+  "manifest-src 'self'",
+  "frame-src 'none'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+  // Only where everything is served over https (not the local development stack).
+  ...(storageHost?.protocol === "https:" ? ["upgrade-insecure-requests"] : []),
+]
+  .map((d) => d.replace(/\s+/g, " ").trim())
+  .join("; ");
+
 const securityHeaders = [
+  { key: "Content-Security-Policy", value: contentSecurityPolicy },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },

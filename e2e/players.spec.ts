@@ -1,4 +1,5 @@
-import { createAuthUser, createMatchFor, emailedCode, expect, signIn, test } from "./fixtures";
+import { randomUUID } from "node:crypto";
+import { admin, createAuthUser, createMatchFor, emailedCode, expect, signIn, test } from "./fixtures";
 
 test.describe("Journey A — register, onboard, discover and join", () => {
   test("a new user registers, completes onboarding, finds a match and joins it", async ({ page }) => {
@@ -24,6 +25,11 @@ test.describe("Journey A — register, onboard, discover and join", () => {
     await page.getByRole("button", { name: "تأكيد" }).click();
     await page.waitForURL(/\/ar\/onboarding/);
     await expect(page.getByRole("heading", { name: "جهّز ملفك كلاعب" })).toBeVisible();
+    // Every governorate is listed and none is assumed: the player picks theirs.
+    const city = page.getByRole("combobox", { name: "المدينة" });
+    await expect(city).toHaveValue("");
+    await expect(city.locator("option")).toHaveCount(20);
+    await city.selectOption({ label: "الموصل" });
     await page.getByText("حارس مرمى", { exact: true }).click();
     await page.getByText("متوسط", { exact: true }).click();
     await page.getByRole("button", { name: "ابدأ اللعب" }).click();
@@ -117,10 +123,26 @@ test.describe("Journey J — Arabic only", () => {
 });
 
 test.describe("Journey K — unauthorized access", () => {
-  test("signed-out visitors are redirected away from private pages", async ({ page }) => {
+  test("signed-out visitors are redirected away from private pages", async ({ page, request }) => {
     for (const path of ["/ar/dashboard", "/ar/admin", "/ar/manage/venues", "/ar/messages", "/ar/matches/new"]) {
       await page.goto(path);
       await expect(page).toHaveURL(/\/ar\/sign-in\?next=/);
+    }
+    // Every page that needs a signed-in person sends a visitor to sign in before anything renders,
+    // and brings them back afterwards.
+    const id = "00000000-0000-4000-8000-000000000000";
+    for (const path of [
+      "/ar/opponents", "/ar/notifications", "/ar/settings", "/ar/profile", "/ar/my/bookings", "/ar/manage/tournaments",
+      "/ar/matches/new", "/ar/teams/new", "/ar/tournaments/new", `/ar/matches/${id}/edit`, `/ar/matches/${id}/review`,
+      `/ar/teams/${id}/manage`, `/ar/tournaments/${id}/manage`, `/ar/venues/${id}/book`, `/ar/venues/${id}/review`,
+    ]) {
+      const res = await request.get(path, { maxRedirects: 0 });
+      expect(res.status(), path).toBe(307);
+      expect(res.headers().location, path).toContain(`/ar/sign-in?next=${encodeURIComponent(path.slice(3))}`);
+    }
+    // Public pages stay open.
+    for (const path of ["/ar/matches", "/ar/venues", "/ar/teams", "/ar/tournaments"]) {
+      expect((await request.get(path, { maxRedirects: 0 })).status(), path).toBe(200);
     }
   });
 
@@ -148,5 +170,29 @@ test.describe("Journey K — unauthorized access", () => {
     expect(await notifications.json()).toEqual([]);
     const join = await request.post(`${url}/rest/v1/rpc/join_match`, { headers, data: { p_match_id: "00000000-0000-0000-0000-000000000000" } });
     expect([401, 403]).toContain(join.status());
+  });
+});
+
+test.describe("Journey L — every governorate", () => {
+  test("a player sees their own city's matches first, and «أي مدينة» shows the rest of Iraq", async ({ page }) => {
+    const organizer = await createAuthUser("Org");
+    const player = await createAuthUser("Player");
+    const tag = randomUUID().slice(0, 6);
+    const [{ id: baghdad }] = await admin<{ id: string }>("select id from public.cities where slug = 'baghdad'");
+    await createMatchFor(organizer, { p_title: `مباراة الموصل ${tag}` });
+    await createMatchFor(organizer, { p_title: `مباراة بغداد ${tag}`, p_city_id: baghdad });
+
+    // The player lives in Mosul (fixtures): their city's matches first.
+    await signIn(page, player);
+    await page.goto(`/ar/matches?q=${tag}`);
+    await expect(page.locator("article", { hasText: `مباراة الموصل ${tag}` })).toBeVisible();
+    await expect(page.locator("article", { hasText: `مباراة بغداد ${tag}` })).toHaveCount(0);
+
+    // «أي مدينة»: every governorate.
+    await page.goto(`/ar/matches?q=${tag}&city=`);
+    await expect(page.locator("article", { hasText: `مباراة الموصل ${tag}` })).toBeVisible();
+    await expect(page.locator("article", { hasText: `مباراة بغداد ${tag}` })).toBeVisible();
+    // The filter says so.
+    expect(await page.locator('select[name="city"]').evaluate((el: HTMLSelectElement) => el.selectedOptions[0]?.textContent)).toBe("أي مدينة");
   });
 });

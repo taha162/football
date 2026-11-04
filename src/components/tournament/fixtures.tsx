@@ -48,7 +48,7 @@ export async function StandingsTable({
   const t = await getTranslations("tournament");
   const rows = computeStandings(teamIds, fixtures, rules, order);
   return (
-    <div className="overflow-x-auto rounded-xl border border-line">
+    <div className="relative overflow-x-auto rounded-xl border border-line">
       <table className="num w-full text-sm">
         <thead className="bg-surface-2 text-xs text-muted">
           <tr>

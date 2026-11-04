@@ -52,12 +52,15 @@ export default async function MatchesPage({ params, searchParams }: PageProps<"/
   setRequestLocale(locale);
   const t = await getTranslations("discovery");
   const e = await getTranslations("enums");
+  const f = await getTranslations("forms");
   const raw = Object.fromEntries(Object.entries(await searchParams).map(([k, v]) => [k, Array.isArray(v) ? v[0] : v]));
   const parsed = querySchema.safeParse(raw);
   const q = parsed.success ? parsed.data : {};
   const user = await getCurrentUser();
   const [cities, areas] = await Promise.all([getCities(), getAreas()]);
-  const city = q.city ?? user?.profile.city_id ?? undefined;
+  // The person's own city unless they chose one, or «كل المدن» (an empty choice).
+  const allCities = raw.city === "";
+  const city = q.city ?? (allCities ? undefined : (user?.profile.city_id ?? undefined));
 
   const search: MatchSearch = {
     city,
@@ -123,6 +126,7 @@ export default async function MatchesPage({ params, searchParams }: PageProps<"/
               <label className="flex flex-col gap-1 text-sm">
                 {t("city")}
                 <Select name="city" defaultValue={city ?? ""}>
+                  <option value="">{f("anyCity")}</option>
                   {cities.map((c) => (
                     <option key={c.id} value={c.id}>{localizedName(c, locale)}</option>
                   ))}

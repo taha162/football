@@ -63,7 +63,7 @@
     "accountMenu": "Account menu for {name}"
   },
   "footer": {
-    "tagline": "A community for recreational football — starting in Mosul.",
+    "tagline": "A community for recreational football, in every governorate of Iraq.",
     "explore": "Explore",
     "legal": "Legal",
     "terms": "Terms of use",
@@ -170,6 +170,7 @@
     "city": "City",
     "area": "Area",
     "anyArea": "Any area",
+    "chooseCity": "Choose a city",
     "anyCity": "Any city"
   },
   "enums": {
@@ -244,6 +245,7 @@
     "account_suspended": "Your account is suspended.",
     "profile_incomplete": "Please complete your profile first.",
     "profile_missing": "Your profile could not be found.",
+    "too_many_attempts": "Too many attempts from this device or for this account. Wait a while (15 minutes to an hour), then try again.",
     "rate_limited": "You're doing that too often. Please wait a moment.",
     "invalid_credentials": "Incorrect email or password.",
     "email_not_confirmed": "Please confirm your email address first — check your inbox.",
@@ -2156,7 +2158,7 @@
       "kickHint": "Flick the ball"
     },
     "hero": {
-      "kicker": "Mosul. Under the lights.",
+      "kicker": "Iraq. Under the lights.",
       "line1": "Your next game",
       "line2": "starts here.",
       "subtitle": "Find your team. Join the game.",
@@ -2164,7 +2166,7 @@
       "secondary": "Book a pitch",
       "openNow": "{count, plural, one {# match is looking for players now} other {# matches are looking for players now}}",
       "scroll": "Scroll",
-      "coords": "36.34° N · 43.13° E"
+      "coords": "33.00° N · 44.00° E"
     },
     "matches": {
       "chapter": "Find your game",

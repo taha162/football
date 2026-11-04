@@ -6,6 +6,14 @@ import type { Tables } from "@/lib/supabase/types";
 export type City = Tables<"cities">;
 export type Area = Tables<"areas">;
 
+/** How often open pages check for news, in seconds (platform setting live.check_seconds, 15 to 300). */
+export const getLiveCheckSeconds = cache(async (): Promise<number> => {
+  const supabase = await createClient();
+  const { data } = await supabase.from("platform_settings").select("value").eq("key", "live.check_seconds").maybeSingle();
+  const n = Number(data?.value);
+  return Number.isFinite(n) ? Math.min(300, Math.max(15, Math.round(n))) : 30;
+});
+
 export const getCities = cache(async (): Promise<City[]> => {
   const supabase = await createClient();
   const { data } = await supabase.from("cities").select("*").eq("is_active", true).order("sort_order");

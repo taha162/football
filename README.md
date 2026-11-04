@@ -1,6 +1,6 @@
 # Al-Malab · الملعب
 
-A community platform for recreational football: find and organize matches, build teams, find opponents, book pitches, run tournaments, and keep the community safe. The first market is **Mosul** (Asia/Baghdad, Iraqi dinar). Other cities can be added in the admin area. The interface is fully bilingual: **Arabic (RTL, default)** and **English (LTR)**.
+A community platform for recreational football: find and organize matches, build teams, find opponents, book pitches, run tournaments, and keep the community safe. It covers every governorate of Iraq (Asia/Baghdad, Iraqi dinar); it started in **Mosul**, whose areas are listed, and administrators add other cities' areas in the admin area. The interface is fully bilingual: **Arabic (RTL, default)** and **English (LTR)**.
 
 | Document | Contents |
 | --- | --- |
@@ -11,6 +11,7 @@ A community platform for recreational football: find and organize matches, build
 | [SECURITY.md](SECURITY.md) | Threat model, controls, secrets, operator procedures |
 | [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) | What is done, verified, and not yet built |
 | [DEPLOYMENT.md](DEPLOYMENT.md) | Step-by-step Vercel + Supabase deployment (Arabic) |
+| [AUDIT.md](AUDIT.md) | Launch audit: security, load, page inspection, mobile speed, what remains (Arabic) |
 
 ## Stack
 

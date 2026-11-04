@@ -24,7 +24,9 @@ export default async function AdminBookingsPage() {
   return (
     <>
       <PageHeader title={t("nav.bookings")} description={t("bookingsDescription")} />
-      <div className="overflow-x-auto rounded-xl border border-line">
+      {/* relative: the screen-reader label in the last heading is positioned absolutely; without it the label
+          escapes the scrolling frame and widens the whole page on a phone. */}
+      <div className="relative overflow-x-auto rounded-xl border border-line">
         <table className="w-full text-sm">
           <thead className="bg-surface-2 text-xs text-muted">
             <tr>

@@ -332,9 +332,9 @@ export function buildWorld(o: WorldOptions): World {
     { text: "·", kind: "dot" },
     { text: "الملعب", kind: "display" },
     { text: "·", kind: "dot" },
-    { text: "الموصل", kind: "body" },
+    { text: "العراق", kind: "body" },
     { text: "·", kind: "dot" },
-    { text: "MOSUL", kind: "body" },
+    { text: "IRAQ", kind: "body" },
     { text: "·", kind: "dot" },
   ];
   const tournamentItems: BoardItem[] = [

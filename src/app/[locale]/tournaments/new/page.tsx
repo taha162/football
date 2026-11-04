@@ -22,7 +22,7 @@ export default async function NewTournamentPage({ params }: PageProps<"/[locale]
         cities={cities}
         venues={venues}
         defaults={{
-          city_id: user.profile.city_id ?? cities[0]?.id,
+          city_id: user.profile.city_id ?? undefined,
           deadline: toLocalInputValue(new Date(getNow() + 7 * 86_400_000), tz).slice(0, 10) + "T23:00",
           starts_on: todayIn(tz, 10),
           ends_on: todayIn(tz, 24),

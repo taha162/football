@@ -43,6 +43,15 @@ export function ProfileForm({
       <FormField name="display_name" label={t("displayName")} hint={t("displayNameHint")} required>
         {(a) => <Input {...a} defaultValue={defaults.display_name} required minLength={2} maxLength={40} autoComplete="nickname" />}
       </FormField>
+      {/* The city decides which matches, teams and venues people see first, so it's asked up front (none is assumed). */}
+      <LocationFields
+        cities={cities}
+        areas={areas}
+        defaultCity={defaults.city_id}
+        defaultArea={defaults.area_id}
+        areaLabel={t("publicArea")}
+        areaHint={t("publicAreaHint")}
+      />
       <ChoiceChips
         name="positions"
         legend={t("positions")}
@@ -58,14 +67,6 @@ export function ProfileForm({
       />
       {/* Optional details, folded so the form stays short. */}
       <MoreOptions label={t("moreOptions")}>
-        <LocationFields
-          cities={cities}
-          areas={areas}
-          defaultCity={defaults.city_id}
-          defaultArea={defaults.area_id}
-          areaLabel={t("publicArea")}
-          areaHint={t("publicAreaHint")}
-        />
         <ChoiceChips
           name="preferred_formats"
           legend={t("formats")}

@@ -101,7 +101,7 @@ export async function ResultPanel({
             <summary className="cursor-pointer text-sm font-medium">{t("events")}</summary>
             <ActionForm action={setEventsAction} className="mt-3">
               <Hidden values={{ match_id: match.id }} />
-              <div className="overflow-x-auto">
+              <div className="relative overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="text-xs text-muted">
