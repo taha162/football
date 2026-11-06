@@ -20,6 +20,7 @@ export default async function AdminBookingsPage() {
     .from("bookings")
     .select("id, status, kind, starts_at, price_total, currency, created_at, venue:venues(id, name, city:cities(timezone)), requester:profiles!bookings_requested_by_fkey(id, display_name)")
     .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
     .limit(100);
   return (
     <>

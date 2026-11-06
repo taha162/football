@@ -24,6 +24,7 @@ export default async function MyBookingsPage({ params, searchParams }: PageProps
     .select("*, field:venue_fields(name), venue:venues(id, name, deposit_instructions, address, latitude, longitude, area:areas(name_ar), city:cities(timezone, name_ar))")
     .eq("requested_by", user.id)
     .order("starts_at", { ascending: false })
+    .order("id", { ascending: false })
     .limit(100);
   const now = getNow();
   // A hold past its time is released the moment anyone books that field, or by

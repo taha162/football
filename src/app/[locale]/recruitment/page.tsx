@@ -32,6 +32,7 @@ export default async function RecruitmentPage({ params, searchParams }: PageProp
     .eq("status", "open")
     .gt("expires_at", new Date().toISOString())
     .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
     .limit(50);
   if (position) query = query.or(`positions.cs.{${position}},positions.eq.{}`);
   const { data } = await query;

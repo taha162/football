@@ -34,6 +34,8 @@ export default async function NotificationsPage({ params, searchParams }: PagePr
     .select("*")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
+    // Same-instant notifications keep one order, so none repeats or goes missing between pages.
+    .order("id", { ascending: false })
     .range((page - 1) * SIZE, page * SIZE);
   const rows = (data ?? []).slice(0, SIZE);
   // Everything unread is read by opening this page, on every page of the list.
