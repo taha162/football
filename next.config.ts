@@ -89,6 +89,10 @@ const nextConfig: NextConfig = {
     turbopackFileSystemCacheForDev: false,
   },
   images: {
+    // Uploaded files get a new random name each time (src/lib/storage.ts), so an
+    // address always shows the same picture: optimized copies can be kept a month
+    // (Next's default is 4 hours) without ever showing an outdated one.
+    minimumCacheTTL: 2_678_400,
     remotePatterns: storageHost
       ? [
           {

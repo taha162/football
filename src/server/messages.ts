@@ -8,7 +8,7 @@ import { dbErrorCode, fail, ok, str, uuid, type ActionState } from "@/lib/action
 import { readPoint } from "@/lib/geo";
 import { logger } from "@/lib/log";
 import { MESSAGE_IMAGES, MESSAGE_VOICE, removeMessageFiles } from "@/lib/message-files";
-import { inspectAudio, inspectImage, randomFileName } from "@/lib/storage";
+import { inspectAudio, inspectImage, randomFileName, UPLOAD_CACHE_SECONDS } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -52,7 +52,7 @@ export async function sendMessageAction(_: ActionState, fd: FormData): Promise<A
     if (!admin) return fail("generic");
     const bucket = image ? MESSAGE_IMAGES : MESSAGE_VOICE;
     const path = `${conv.data}/${randomFileName(file.ext)}`;
-    const { error: uploadError } = await admin.storage.from(bucket).upload(path, file.bytes, { contentType: file.mime, upsert: false });
+    const { error: uploadError } = await admin.storage.from(bucket).upload(path, file.bytes, { cacheControl: UPLOAD_CACHE_SECONDS, contentType: file.mime, upsert: false });
     if (uploadError) {
       logger.error("message_file_upload_failed", { bucket, message: uploadError.message.slice(0, 120) });
       return fail("upload_failed");

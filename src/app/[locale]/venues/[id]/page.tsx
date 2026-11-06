@@ -55,7 +55,9 @@ export default async function VenuePage({ params }: PageProps<"/[locale]/venues/
     <Container className="py-8">
       {venue.is_hidden ? <Alert tone="warning" className="mb-4" title={t("hidden")}>{venue.hidden_reason}</Alert> : null}
       <div className="reveal relative mb-6 aspect-[21/8] overflow-hidden rounded-[var(--radius-card)] border border-line bg-surface-3">
-        {cover ? <StorageImage src={cover} alt={venue.name} fill priority sizes="100vw" className="object-cover" fallback={<div className="pitch-lines size-full" />} /> : <div className="pitch-lines size-full" />}
+        {/* The cover is the page's largest element (its LCP). On a slow phone connection it shares the line with the
+            page's scripts; preloaded at high priority, it no longer finishes behind them (measured: PERFORMANCE.md, item 6). */}
+        {cover ? <StorageImage src={cover} alt={venue.name} fill preload fetchPriority="high" sizes="100vw" className="object-cover" fallback={<div className="pitch-lines size-full" />} /> : <div className="pitch-lines size-full" />}
       </div>
       <div className="reveal-children mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="flex flex-col gap-2">

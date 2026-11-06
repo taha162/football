@@ -921,9 +921,11 @@ dialog[open]::backdrop {
 html[data-stage="live"] .stage-canvas {
   opacity: 1;
 }
-/* Still image wherever WebGL is missing or lost (vector, drawn from real pitch dimensions). */
+/* Still image wherever WebGL is missing or lost (vector, drawn from real pitch dimensions).
+   Referenced by a relative path, so the build gives it a content-hashed name served
+   with a year-long immutable cache (public/ files are revalidated on every visit). */
 .stage-fallback {
-  background: #050806 url("/media/landing/pitch-night.svg") 62% 55% / cover no-repeat;
+  background: #050806 url("../assets/landing/pitch-night.svg") 62% 55% / cover no-repeat;
   transition: opacity var(--dur-slow) var(--ease-in-out);
 }
 [dir="rtl"] .stage-fallback {
