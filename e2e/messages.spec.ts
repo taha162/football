@@ -1,4 +1,4 @@
-import { createAuthUser, expect, rpc, signIn, test } from "./fixtures";
+import { admin, createAuthUser, expect, rpc, signIn, test } from "./fixtures";
 
 // A 2×2 PNG: the page shrinks it to a JPEG before sending, as it does phone photos.
 const PNG = Buffer.from(
@@ -67,6 +67,52 @@ test.describe("Conversations", () => {
     await other.goto(`/ar/messages/${conv}`);
     await sides(other, "Sent by Friend", "Sent by Me");
     await other.context().close();
+  });
+
+  test("a text message is in the conversation the moment it is sent, and comes back to the box if it can't be sent", async ({ page }) => {
+    const [me, friend] = [await createAuthUser("Quick"), await createAuthUser("Friend")];
+    const conv = await rpc<string>(me.id, "start_direct_conversation", { p_user_id: friend.id });
+    await signIn(page, me);
+    await page.goto(`/ar/messages/${conv}`);
+    await page.waitForLoadState("networkidle");
+    const list = page.getByRole("list", { name: "سجل الرسائل" });
+    const box = page.locator("#message-body");
+    const send = page.getByRole("button", { name: "إرسال", exact: true });
+    // What the send does to the server: held back, or lost on the way.
+    let sending: "slow" | "lost" = "slow";
+    await page.route(
+      (url) => url.pathname === `/ar/messages/${conv}`,
+      async (route) => {
+        if (route.request().method() !== "POST" || !route.request().headers()["next-action"]) return route.continue();
+        if (sending === "lost") return route.abort("internetdisconnected");
+        await new Promise((r) => setTimeout(r, 1500));
+        await route.continue();
+      },
+    );
+
+    // The message shows at once, marked as on its way, and the box is free for the next one.
+    await box.fill("On my way");
+    await send.click();
+    await expect(list.locator("li[data-pending]", { hasText: "On my way" })).toBeVisible({ timeout: 1000 });
+    await expect(list.getByText("جارٍ الإرسال…")).toBeVisible();
+    await expect(box).toHaveValue("");
+    await box.fill("Next one");
+    // Sent: a single copy, no longer marked; what was written meanwhile is still in the box.
+    await expect(list.locator("li:not([data-pending])", { hasText: "On my way" })).toBeVisible();
+    await expect(list.locator("li", { hasText: "On my way" })).toHaveCount(1);
+    await expect(list.getByText("جارٍ الإرسال…")).toHaveCount(0);
+    await expect(box).toHaveValue("Next one");
+
+    // Lost on the way: the message is taken back, its text returns to the box, and the page says so.
+    sending = "lost";
+    await box.fill("Lost words");
+    await send.click();
+    await expect(page.getByText("حدث خطأ ما. يرجى المحاولة مرة أخرى.")).toBeVisible();
+    await expect(list.locator("li", { hasText: "Lost words" })).toHaveCount(0);
+    await expect(box).toHaveValue("Lost words");
+    // Only the message that was sent is stored.
+    const stored = await admin<{ body: string }>("select body from public.messages where conversation_id = $1 order by id", [conv]);
+    expect(stored.map((m) => m.body)).toEqual(["On my way"]);
   });
 
   test("the sender edits or deletes their message, and the other member sees it change live", async ({ page, browser }) => {

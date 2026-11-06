@@ -26,6 +26,7 @@ export function LocationFields({
   cityName = "city_id",
   areaName = "area_id",
   allowAnyCity = false,
+  onCityChange,
 }: {
   cities: CityOption[];
   areas: AreaOption[];
@@ -37,6 +38,8 @@ export function LocationFields({
   cityName?: string;
   areaName?: string;
   allowAnyCity?: boolean;
+  /** Told when the person picks another city (a form showing that city's venues). */
+  onCityChange?: (city: string) => void;
 }) {
   const t = useTranslations("forms");
   const locale = useLocale();
@@ -48,7 +51,15 @@ export function LocationFields({
     <div className="grid gap-4 sm:grid-cols-2">
       <FormField name={cityName} label={t("city")} required={required}>
         {(a) => (
-          <Select {...a} value={city} onChange={(e) => setCity(e.target.value)} required={required}>
+          <Select
+            {...a}
+            value={city}
+            onChange={(e) => {
+              setCity(e.target.value);
+              onCityChange?.(e.target.value);
+            }}
+            required={required}
+          >
             {allowAnyCity ? (
               <option value="">{t("anyCity")}</option>
             ) : (

@@ -10,6 +10,7 @@ import { LocationFields, type AreaOption, type CityOption } from "@/components/f
 import { defaultRosterSize, MATCH_FORMATS, POSITIONS, SKILL_LEVELS, type MatchFormat } from "@/lib/domain/match";
 import { formatMoney, parseMoneyInput, splitCost } from "@/lib/domain/money";
 import { createMatchAction, updateMatchAction } from "@/server/matches/actions";
+import { useCityVenues } from "@/components/forms/use-city-venues";
 
 export interface VenueOption {
   id: string;
@@ -84,7 +85,9 @@ export function MatchForm({
     const p = paying ? Number(paying) : total;
     return c == null ? null : splitCost(c, p > 0 ? p : total);
   }, [cost, paying, total]);
-  const venue = venues.find((v) => v.id === venueId);
+  // The venue must be in the match's city (the database refuses any other): the list follows the city chosen below.
+  const cityVenues = useCityVenues(defaults.city_id ?? "", venues);
+  const venue = cityVenues.venues.find((v) => v.id === venueId);
 
   return (
     <ActionForm action={mode === "create" ? createMatchAction : updateMatchAction} className="gap-6">
@@ -111,9 +114,9 @@ export function MatchForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <FormField name="venue_id" label={t("venue")} hint={t("venueHint")}>
           {(a) => (
-            <Select {...a} value={venueId} onChange={(ev) => setVenueId(ev.target.value)}>
+            <Select {...a} value={venueId} onChange={(ev) => setVenueId(ev.target.value)} aria-busy={cityVenues.pending || undefined}>
               <option value="">{t("noVenue")}</option>
-              {venues.map((v) => (
+              {cityVenues.venues.map((v) => (
                 <option key={v.id} value={v.id}>{v.name}</option>
               ))}
             </Select>
@@ -201,7 +204,16 @@ export function MatchForm({
           {(a) => <Textarea {...a} defaultValue={defaults.description ?? ""} maxLength={2000} />}
         </FormField>
         {mode === "create" ? (
-          <LocationFields cities={cities} areas={areas} defaultCity={defaults.city_id} defaultArea={defaults.area_id} />
+          <LocationFields
+            cities={cities}
+            areas={areas}
+            defaultCity={defaults.city_id}
+            defaultArea={defaults.area_id}
+            onCityChange={(city) => {
+              cityVenues.chooseCity(city);
+              setVenueId("");
+            }}
+          />
         ) : (
           <FormField name="area_id" label={t("area")}>
             {(a) => (

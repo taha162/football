@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useOptimistic, useRef, useState } from "react";
 import { Phone, PhoneIncoming, PhoneMissed } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
@@ -37,6 +37,17 @@ export interface ThreadMessage {
   voice_url?: string | null;
   call_outcome?: string | null;
   call_seconds?: number | null;
+}
+
+/**
+ * A text message on its way: in the conversation at once, until its sent copy
+ * arrives. If sending fails it is simply gone again (the text goes back to
+ * the box). `after` is the newest message there was when it left.
+ */
+interface PendingMessage {
+  key: number;
+  body: string;
+  after: number;
 }
 
 /** When a message last changed: sent, edited or deleted. */
@@ -88,6 +99,9 @@ export function Thread({
   const [editError, setEditError] = useState<string | null>(null);
   const list = useRef<HTMLOListElement>(null);
   const opened = useRef(false);
+  const pendingKey = useRef(0);
+  // Held only while sending is under way, then dropped: by then the sent copy is in `messages`.
+  const [pending, addPending] = useOptimistic<PendingMessage[], PendingMessage>([], (queue, p) => [...queue, p]);
 
   // Server re-render (e.g. after sending) brings fresh history: merge by id
   // so realtime-delivered messages aren't lost, keeping whichever copy of a
@@ -154,6 +168,17 @@ export function Thread({
     };
   }, [conversationId]);
 
+  // A message on its way gives way to its sent copy, which can arrive (live)
+  // before sending has finished: the next of mine with the same text, newer
+  // than anything there was when it left. Each copy stands for one message.
+  const taken = new Set<number>();
+  const waiting = pending.filter((p) => {
+    const copy = messages.find((m) => !taken.has(m.id) && m.sender_id === me && m.id > p.after && m.body === p.body);
+    if (copy) taken.add(copy.id);
+    return !copy;
+  });
+  const shown = messages.length + waiting.length;
+
   // The newest message is at the bottom: open there, then glide down to each
   // new one. Only the list scrolls, so the composer stays where it is.
   useEffect(() => {
@@ -161,7 +186,7 @@ export function Thread({
     if (!el) return;
     el.scrollTo({ top: el.scrollHeight, behavior: opened.current && !prefersReducedMotion() ? "smooth" : "auto" });
     opened.current = true;
-  }, [messages.length]);
+  }, [shown]);
 
   const fmt = new Intl.DateTimeFormat(locale === "ar" ? "ar-IQ" : "en-GB", { timeZone, hour: "numeric", minute: "2-digit", day: "numeric", month: "short" });
 
@@ -192,7 +217,7 @@ export function Thread({
   return (
     <div className="flex flex-col gap-4">
       <ol ref={list} className="flex max-h-[60vh] min-h-64 flex-col gap-3 overflow-y-auto rounded-[var(--radius-card)] border border-line bg-surface p-4" aria-live="polite" aria-label={t("history")}>
-        {messages.length === 0 ? <li className="m-auto text-sm text-muted">{t("noMessages")}</li> : null}
+        {shown === 0 ? <li className="m-auto text-sm text-muted">{t("noMessages")}</li> : null}
         {messages.map((m) => {
           const mine = m.sender_id === me;
           const time = <time className="text-[11px] text-faint" dateTime={m.created_at}>{fmt.format(new Date(m.created_at))}</time>;
@@ -281,11 +306,23 @@ export function Thread({
             </li>
           );
         })}
+        {/* Hidden from screen readers: they hear the message once, when it has been sent (the list is live). */}
+        {waiting.map((p) => (
+          <li key={`pending-${p.key}`} className="flex max-w-[85%] flex-col items-start gap-1 self-start" data-pending="" aria-hidden="true">
+            <div className="whitespace-pre-wrap break-words rounded-2xl bg-accent px-3.5 py-2 text-sm text-accent-ink opacity-70" dir="auto">
+              {p.body}
+            </div>
+            <span className="text-[11px] text-faint">{t("sending")}</span>
+          </li>
+        ))}
       </ol>
       {locked ? (
         <p className="text-sm text-muted">{t("lockedNote")}</p>
       ) : (
-        <Composer conversationId={conversationId} />
+        <Composer
+          conversationId={conversationId}
+          onSending={(body) => addPending({ key: ++pendingKey.current, body, after: messages.reduce((max, m) => Math.max(max, m.id), 0) })}
+        />
       )}
     </div>
   );

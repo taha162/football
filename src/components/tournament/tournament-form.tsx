@@ -6,6 +6,8 @@ import { ActionForm, FormField, Hidden, SubmitButton } from "@/components/ui/act
 import { Input, Select, Textarea } from "@/components/ui/field";
 import { MATCH_FORMATS } from "@/lib/domain/match";
 import { upsertTournamentAction } from "@/server/tournaments/actions";
+import { useCityVenues } from "@/components/forms/use-city-venues";
+import type { VenueOption } from "@/components/match/match-form";
 
 export interface TournamentDefaults {
   id?: string;
@@ -32,12 +34,13 @@ export interface TournamentDefaults {
   locked?: boolean;
 }
 
-export function TournamentForm({ defaults, cities, venues }: { defaults: TournamentDefaults; cities: { id: string; name_en: string; name_ar: string }[]; venues: { id: string; name: string; city_id: string }[] }) {
+export function TournamentForm({ defaults, cities, venues }: { defaults: TournamentDefaults; cities: { id: string; name_en: string; name_ar: string }[]; venues: VenueOption[] }) {
   const t = useTranslations("tournamentForm");
   const f = useTranslations("forms");
   const locale = useLocale();
   const [format, setFormat] = useState(defaults.tournament_format ?? "round_robin");
-  const [city, setCity] = useState(defaults.city_id ?? "");
+  // The venues of the chosen city: the page sends the first city's, another city's are fetched when picked.
+  const { city, venues: cityVenues, pending: venuesLoading, chooseCity } = useCityVenues(defaults.city_id ?? "", venues);
   return (
     <ActionForm action={upsertTournamentAction} successMessage={t("saved")} className="gap-6">
       <Hidden values={{ tournament_id: defaults.id }} />
@@ -47,7 +50,7 @@ export function TournamentForm({ defaults, cities, venues }: { defaults: Tournam
       <div className="grid gap-4 sm:grid-cols-2">
         <FormField name="city_id" label={t("city")} required>
           {(a) => (
-            <Select {...a} value={city} onChange={(e) => setCity(e.target.value)} required>
+            <Select {...a} value={city} onChange={(e) => chooseCity(e.target.value)} required>
               <option value="" disabled>{f("chooseCity")}</option>
               {cities.map((c) => <option key={c.id} value={c.id}>{locale === "ar" ? c.name_ar : c.name_en}</option>)}
             </Select>
@@ -55,9 +58,9 @@ export function TournamentForm({ defaults, cities, venues }: { defaults: Tournam
         </FormField>
         <FormField name="venue_id" label={t("venue")}>
           {(a) => (
-            <Select {...a} defaultValue={defaults.venue_id ?? ""}>
+            <Select {...a} defaultValue={defaults.venue_id ?? ""} aria-busy={venuesLoading || undefined}>
               <option value="">{t("noVenue")}</option>
-              {venues.filter((v) => v.city_id === city).map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
+              {cityVenues.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
             </Select>
           )}
         </FormField>

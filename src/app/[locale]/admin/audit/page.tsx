@@ -16,6 +16,7 @@ export default async function AdminAuditPage({ searchParams }: PageProps<"/[loca
     .from("audit_logs")
     .select("*, actor:profiles!audit_logs_actor_id_fkey(display_name)")
     .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
     .range((page - 1) * 50, page * 50);
   const rows = (data ?? []).slice(0, 50);
   return (

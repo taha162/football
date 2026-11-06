@@ -2,7 +2,10 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { Pause, Play, RotateCcw, SkipForward, Volume2, VolumeX } from "lucide-react";
-import { useRouter } from "@/i18n/navigation";
+import { useLocale } from "next-intl";
+import { getPathname, useRouter } from "@/i18n/navigation";
+import type { Locale } from "@/i18n/routing";
+import { announceNavigation } from "@/components/motion/nav-progress";
 import type { MarkerSpec, PositionKey, Stage } from "./engine";
 
 export interface StageLabels {
@@ -69,6 +72,7 @@ function releaseRoot() {
  */
 export function StageHost({ markers, labels, children }: { markers: MarkerSpec[]; labels: StageLabels; children: ReactNode }) {
   const router = useRouter();
+  const locale = useLocale() as Locale;
   const root = useRef<HTMLDivElement>(null);
   const scenesRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -175,7 +179,10 @@ export function StageHost({ markers, labels, children }: { markers: MarkerSpec[]
     };
     const onCanvasClick = (e: MouseEvent) => {
       const hit = stage?.markerAt(e.clientX, e.clientY);
-      if (hit) router.push(`/recruitment?position=${hit}`);
+      if (!hit) return;
+      const href = `/recruitment?position=${hit}`;
+      announceNavigation(getPathname({ href, locale }));
+      router.push(href);
     };
 
     /* ---- engine ----------------------------------------------------------- */

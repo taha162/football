@@ -20,8 +20,10 @@ export default async function NewMatchPage({ params, searchParams }: PageProps<"
   const user = await requireOnboardedUser(locale as Locale, "/matches/new");
   const sp = await searchParams;
   const t = await getTranslations("matchForm");
-  const [cities, areas, venues, teams] = await Promise.all([getCities(), getAreas(), venueOptions(), managedTeams(user.id)]);
+  const [cities, areas, ownCityVenues, teams] = await Promise.all([getCities(), getAreas(), venueOptions(user.profile.city_id), managedTeams(user.id)]);
   const city = cities.find((c) => c.id === user.profile.city_id) ?? cities[0];
+  // The form starts on the person's city (another city's venues load when it is picked); without one, on the first.
+  const venues = city?.id === user.profile.city_id ? ownCityVenues : await venueOptions(city?.id);
   const tz = city?.timezone ?? "Asia/Baghdad";
   const tomorrow = toLocalInputValue(new Date(getNow() + 86_400_000), tz).slice(0, 10) + "T20:00";
   const teamId = typeof sp.team === "string" ? sp.team : undefined;

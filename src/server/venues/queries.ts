@@ -40,6 +40,8 @@ export async function listVenues(opts: { q?: string; bookable?: boolean; page: n
     .eq("is_hidden", false)
     .order("verification_status", { ascending: false })
     .order("name")
+    // Ties (same name) in a fixed order, so no venue repeats or goes missing between pages; the index follows this order.
+    .order("id")
     .range((opts.page - 1) * size, opts.page * size);
   if (opts.q) query = query.ilike("name", `%${opts.q.replace(/[%_\\]/g, "")}%`);
   if (opts.bookable) {

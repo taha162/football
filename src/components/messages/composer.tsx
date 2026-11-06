@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ImagePlus, Loader2, MapPin, Mic, SendHorizontal, Trash2, X } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { ActionForm, Hidden, SubmitButton, useErrorText } from "@/components/ui/action-form";
+import { ActionForm, Hidden, SubmitButton, useErrorText, type FormAction } from "@/components/ui/action-form";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/field";
 import { Alert } from "@/components/ui/primitives";
@@ -57,20 +57,56 @@ type Mode = "text" | "location" | "voice";
  * What the member writes or sends: text with an optional picture, their
  * current location, or a voice note. Location and voice open their own
  * panel in place of the text box, each with its own send and cancel.
+ * `onSending` puts a text message in the conversation the moment it is sent
+ * (the thread takes it back if sending fails).
  */
-export function Composer({ conversationId }: { conversationId: string }) {
+export function Composer({ conversationId, onSending }: { conversationId: string; onSending?: (body: string) => void }) {
   const [mode, setMode] = useState<Mode>("text");
   const back = () => setMode("text");
   if (mode === "location") return <LocationPanel conversationId={conversationId} onDone={back} />;
   if (mode === "voice") return <VoiceRecorder conversationId={conversationId} onDone={back} />;
-  return <TextComposer conversationId={conversationId} onMode={setMode} />;
+  return <TextComposer conversationId={conversationId} onMode={setMode} onSending={onSending} />;
 }
 
-/** Text and/or one picture. The picture is previewed, and can be removed before sending. */
-function TextComposer({ conversationId, onMode }: { conversationId: string; onMode: (mode: Mode) => void }) {
+/**
+ * Text and/or one picture. The picture is previewed, and can be removed before
+ * sending. Text alone leaves the box at once, so the next message can be
+ * written while it is on its way; if it can't be sent, it comes back to the
+ * box with the reason. A picture waits for its upload, as before.
+ */
+function TextComposer({ conversationId, onMode, onSending }: { conversationId: string; onMode: (mode: Mode) => void; onSending?: (body: string) => void }) {
   const t = useTranslations("messages");
   const fileInput = useRef<HTMLInputElement>(null);
+  const box = useRef<HTMLTextAreaElement>(null);
+  // Written while a message was on its way. React empties the form once sending
+  // ends, whatever the answer: this is put back afterwards.
+  const typed = useRef("");
   const [preview, setPreview] = useState<string | null>(null);
+
+  const send: FormAction = async (prev, fd) => {
+    const body = String(fd.get("body") ?? "").trim();
+    const image = fd.get("image");
+    const textOnly = Boolean(onSending) && body !== "" && !(image instanceof File && image.size > 0);
+    if (textOnly) {
+      onSending!(body);
+      if (box.current) box.current.value = "";
+    }
+    try {
+      return await sendMessageAction(prev, fd);
+    } catch {
+      // No answer at all (the connection dropped): taken back like any refusal, not a broken page.
+      return { ok: false, error: "generic", at: Date.now() };
+    } finally {
+      typed.current = textOnly ? (box.current?.value ?? "") : "";
+    }
+  };
+  /** Puts back what was written while sending, after what the form itself restored (a refused message's text). */
+  const keepTyped = () => {
+    const draft = typed.current;
+    typed.current = "";
+    if (!draft || !box.current) return;
+    box.current.value = box.current.value ? `${box.current.value}\n${draft}` : draft;
+  };
 
   const clear = () => {
     if (fileInput.current) fileInput.current.value = "";
@@ -82,7 +118,17 @@ function TextComposer({ conversationId, onMode }: { conversationId: string; onMo
 
   const tool = "flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-line text-muted transition-colors hover:text-ink";
   return (
-    <ActionForm action={sendMessageAction} resetOnSuccess hideSuccess onSuccess={clear} className="gap-2">
+    <ActionForm
+      action={send}
+      resetOnSuccess
+      hideSuccess
+      onSuccess={() => {
+        clear();
+        keepTyped();
+      }}
+      onError={keepTyped}
+      className="gap-2"
+    >
       <Hidden values={{ conversation_id: conversationId }} />
       {preview ? (
         <div className="relative w-fit">
@@ -94,7 +140,7 @@ function TextComposer({ conversationId, onMode }: { conversationId: string; onMo
         </div>
       ) : null}
       <label htmlFor="message-body" className="sr-only">{t("write")}</label>
-      <Textarea id="message-body" name="body" required={!preview} maxLength={2000} placeholder={t("placeholder")} className="min-h-20" dir="auto" />
+      <Textarea ref={box} id="message-body" name="body" required={!preview} maxLength={2000} placeholder={t("placeholder")} className="min-h-20" dir="auto" />
       {/* Send on the right, the picture/location/voice tools on the left. */}
       <div className="flex items-center justify-between gap-2">
         <SubmitButton>{t("send")}</SubmitButton>

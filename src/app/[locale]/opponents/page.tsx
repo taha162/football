@@ -10,7 +10,7 @@ import { formatMoney } from "@/lib/domain/money";
 import { formatDateTime, toLocalInputValue } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 import { getAreas, localizedName } from "@/server/reference";
-import { managedTeams, venueOptions } from "@/server/options";
+import { managedTeams, venueNames } from "@/server/options";
 import {
   closeOpponentRequestAction,
   createOpponentRequestAction,
@@ -39,7 +39,7 @@ export default async function OpponentsPage({ params, searchParams }: PageProps<
   const t = await getTranslations("opponents");
   const e = await getTranslations("enums");
   const supabase = await createClient();
-  const [teams, areas, venues] = await Promise.all([managedTeams(user.id), getAreas(), venueOptions()]);
+  const [teams, areas, venues] = await Promise.all([managedTeams(user.id), getAreas(), venueNames()]);
   const teamIds = teams.map((tm) => tm.id);
   const preferredTeam = typeof sp.team === "string" && teamIds.includes(sp.team) ? sp.team : teamIds[0];
   const target = typeof sp.target === "string" && /^[0-9a-f-]{36}$/.test(sp.target) ? sp.target : null;

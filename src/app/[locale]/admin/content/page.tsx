@@ -21,15 +21,15 @@ export default async function AdminContentPage({ searchParams }: PageProps<"/[lo
   const supabase = await createClient();
   let rows: { id: string; name: string; created_at: string; is_hidden: boolean; status?: string }[] = [];
   if (kind === "match") {
-    let query = supabase.from("matches").select("id, title, created_at, is_hidden, status").order("created_at", { ascending: false }).limit(50);
+    let query = supabase.from("matches").select("id, title, created_at, is_hidden, status").order("created_at", { ascending: false }).order("id", { ascending: false }).limit(50);
     if (q) query = query.ilike("title", `%${q}%`);
     rows = ((await query).data ?? []).map((m) => ({ id: m.id, name: m.title, created_at: m.created_at, is_hidden: m.is_hidden, status: m.status }));
   } else if (kind === "team") {
-    let query = supabase.from("teams").select("id, name, created_at, is_hidden").order("created_at", { ascending: false }).limit(50);
+    let query = supabase.from("teams").select("id, name, created_at, is_hidden").order("created_at", { ascending: false }).order("id", { ascending: false }).limit(50);
     if (q) query = query.ilike("name", `%${q}%`);
     rows = (await query).data ?? [];
   } else {
-    let query = supabase.from("tournaments").select("id, name, created_at, is_hidden, status").order("created_at", { ascending: false }).limit(50);
+    let query = supabase.from("tournaments").select("id, name, created_at, is_hidden, status").order("created_at", { ascending: false }).order("id", { ascending: false }).limit(50);
     if (q) query = query.ilike("name", `%${q}%`);
     rows = (await query).data ?? [];
   }

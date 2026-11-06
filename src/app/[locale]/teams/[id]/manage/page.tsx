@@ -9,7 +9,7 @@ import { formatDate } from "@/lib/format";
 import { publicStorageUrl } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 import { getAreas, getCities } from "@/server/reference";
-import { venueOptions } from "@/server/options";
+import { venueNames } from "@/server/options";
 import { getTeam, getTeamMembers } from "@/server/teams/queries";
 import {
   archiveTeamAction,
@@ -36,9 +36,8 @@ export default async function ManageTeamPage({ params, searchParams }: PageProps
   const { locale, id } = await params;
   setRequestLocale(locale);
   const user = await requireOnboardedUser(locale as Locale, `/teams/${id}/manage`);
-  const team = await getTeam(id);
+  const [team, members] = await Promise.all([getTeam(id), getTeamMembers(id)]);
   if (!team) notFound();
-  const members = await getTeamMembers(id);
   const me = members.find((m) => m.user_id === user.id);
   // UI guard only; every action is authorized again by the database.
   if (!me || me.role === "player") redirect({ href: `/teams/${id}`, locale });
@@ -51,7 +50,7 @@ export default async function ManageTeamPage({ params, searchParams }: PageProps
   const [cities, areas, venues, { data: requests }, { data: invitations }, { data: recruitment }] = await Promise.all([
     getCities(),
     getAreas(),
-    venueOptions(),
+    venueNames(team.city_id),
     supabase.from("team_join_requests").select("*, profile:profiles!team_join_requests_user_id_fkey(id, display_name, avatar_path, positions, skill_level)").eq("team_id", id).eq("status", "pending").order("created_at"),
     supabase.from("team_invitations").select("id, invitee:profiles!team_invitations_invitee_id_fkey(id, display_name)").eq("team_id", id).eq("status", "pending"),
     supabase.from("team_recruitment").select("*").eq("team_id", id).order("created_at", { ascending: false }).limit(20),
@@ -219,7 +218,7 @@ export default async function ManageTeamPage({ params, searchParams }: PageProps
         <TeamForm
           cities={cities}
           areas={areas}
-          venues={venues.filter((v) => v.city_id === team.city_id)}
+          venues={venues}
           defaults={{
             id,
             name: team.name,

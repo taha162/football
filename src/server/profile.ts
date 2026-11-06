@@ -9,7 +9,7 @@ import { bool, dbErrorCode, fail, ok, str, strs, uuid, zodFieldErrors, type Acti
 import { getCurrentUser, safeNext } from "@/lib/auth";
 import { MATCH_FORMATS, POSITIONS, SKILL_LEVELS } from "@/lib/domain/match";
 import { logger } from "@/lib/log";
-import { inspectImage, isPubliclyServed, randomFileName } from "@/lib/storage";
+import { inspectImage, isPubliclyServed, randomFileName, UPLOAD_CACHE_SECONDS } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 
 const TIMES = [
@@ -77,7 +77,7 @@ export async function uploadAvatarAction(_: ActionState, fd: FormData): Promise<
   const supabase = await createClient();
   const path = `${user.id}/${randomFileName(img.ext)}`;
   // Storage policies only allow writing into the caller's own folder.
-  const { error: upErr } = await supabase.storage.from("avatars").upload(path, img.bytes, { contentType: img.mime, upsert: false });
+  const { error: upErr } = await supabase.storage.from("avatars").upload(path, img.bytes, { cacheControl: UPLOAD_CACHE_SECONDS, contentType: img.mime, upsert: false });
   if (upErr) return fail("upload_failed");
   if (!(await isPubliclyServed("avatars", path))) {
     await supabase.storage.from("avatars").remove([path]);

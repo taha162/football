@@ -27,7 +27,7 @@ export default async function ManageTournamentPage({ params }: PageProps<"/[loca
   if (tournament.organizer_id !== user.id) redirect({ href: `/tournaments/${id}`, locale });
   const t = await getTranslations("tournamentManage");
   const tt = await getTranslations("tournament");
-  const [teams, fixtures, cities, venues] = await Promise.all([getTournamentTeams(id), getFixtures(id) as Promise<Fixture[]>, getCities(), venueOptions()]);
+  const [teams, fixtures, cities, venues] = await Promise.all([getTournamentTeams(id), getFixtures(id) as Promise<Fixture[]>, getCities(), venueOptions(tournament.city_id)]);
   const tz = tournament.city?.timezone ?? "Asia/Baghdad";
   const names = Object.fromEntries(teams.map((x) => [x.team_id, x.team?.name ?? "—"]));
   const approved = teams.filter((x) => x.status === "approved").length;

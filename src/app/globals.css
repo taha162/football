@@ -154,10 +154,9 @@
      taking every animated group off-screen: pin it to the left instead. */
   right: auto;
 }
-/* The whole handover takes 200 ms. A navigation runs two (old page → loading
-   skeleton → content), one after the other: the content can only take over
-   once the first has finished, so a short first one lets it in as soon as it
-   arrives. */
+/* The whole handover takes 200 ms, once per navigation: the current page stays
+   until the next one is ready, then hands over to it (a page that took over a
+   second hands over to it from its skeleton; nav-progress.tsx). */
 /* Named layers (header, phone navigation bar, progress line) move on the same
    beat instead of the browser's default 250 ms. */
 ::view-transition-group(*),
@@ -178,10 +177,6 @@
 ::view-transition-new(root) {
   animation-duration: 180ms;
   animation-delay: 20ms;
-}
-/* The loading skeleton hands over to the real content (src/app/[locale]/loading.tsx). */
-::view-transition-old(.skeleton-out) {
-  animation: fade-out 150ms ease-out both;
 }
 ::view-transition-group(site-header),
 ::view-transition-group(mobile-nav) {
@@ -212,11 +207,6 @@ html[data-ua-transition]::view-transition-new(*) {
    waits invisible, so it never shows, vanishes and then animates in. */
 html[data-enter] :is(.reveal, .reveal-children > *) {
   opacity: 0;
-}
-@keyframes fade-out {
-  to {
-    opacity: 0;
-  }
 }
 
 /* ---- Navigation progress -------------------------------------------------
@@ -266,6 +256,36 @@ html[data-enter] :is(.reveal, .reveal-children > *) {
   to {
     transform: scaleX(0.94);
   }
+}
+
+/* ---- Slow pages: the skeleton --------------------------------------------
+   Only when a page takes over a second; a quicker one never flashes it. On a
+   first visit the streamed stand-in waits that second out invisible
+   (src/app/[locale]/layout.tsx). Moving between pages, the current page stays
+   up until then (src/components/motion/nav-progress.tsx); the skeleton then
+   fills the window between the header and the phone navigation bar, wherever
+   the page was scrolled to, while the page steps aside: hidden but holding its
+   place, so nothing on screen shifts, and the page transition does not bring
+   it back over the skeleton. */
+.page-fallback {
+  animation: fade-in 150ms ease-out 1s both;
+}
+.nav-skeleton {
+  position: fixed;
+  inset: 0;
+  z-index: 30; /* under the header and the phone navigation bar */
+  padding-top: 4rem; /* the header's height */
+  overflow: hidden;
+  background: var(--color-bg);
+}
+.nav-skeleton:not([data-state="slow"]) {
+  display: none;
+}
+.nav-skeleton[data-state="slow"] {
+  animation: fade-in 150ms ease-out both;
+}
+#main[data-nav-slow] > * {
+  visibility: hidden;
 }
 
 @layer components {
@@ -921,9 +941,11 @@ dialog[open]::backdrop {
 html[data-stage="live"] .stage-canvas {
   opacity: 1;
 }
-/* Still image wherever WebGL is missing or lost (vector, drawn from real pitch dimensions). */
+/* Still image wherever WebGL is missing or lost (vector, drawn from real pitch dimensions).
+   Referenced by a relative path, so the build gives it a content-hashed name served
+   with a year-long immutable cache (public/ files are revalidated on every visit). */
 .stage-fallback {
-  background: #050806 url("/media/landing/pitch-night.svg") 62% 55% / cover no-repeat;
+  background: #050806 url("../assets/landing/pitch-night.svg") 62% 55% / cover no-repeat;
   transition: opacity var(--dur-slow) var(--ease-in-out);
 }
 [dir="rtl"] .stage-fallback {

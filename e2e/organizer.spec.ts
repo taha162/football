@@ -1,4 +1,5 @@
-import { createAuthUser, expect, rpc, signIn, test } from "./fixtures";
+import { randomUUID } from "node:crypto";
+import { admin, createAuthUser, expect, mosul, rpc, signIn, test } from "./fixtures";
 
 test.describe("Journey B — organizer creates and manages a match", () => {
   test("creates a match with cost sharing, receives a player and manages the roster", async ({ page }) => {
@@ -37,5 +38,38 @@ test.describe("Journey B — organizer creates and manages a match", () => {
     await dialog.getByRole("textbox").fill("Changed plans");
     await dialog.getByRole("button", { name: "إزالة" }).click();
     await expect(page.getByRole("listitem").filter({ hasText: player.name })).toHaveCount(0);
+  });
+});
+
+test.describe("Venue choice in the match form", () => {
+  test("lists the chosen city's venues only, and follows a change of city", async ({ page }) => {
+    const owner = await createAuthUser("Owner");
+    const tag = randomUUID().slice(0, 6);
+    const [{ id: baghdad }] = await admin<{ id: string }>("select id from public.cities where slug = 'baghdad'");
+    await rpc(owner.id, "create_venue", { p_name: `Mosul Pitch ${tag}`, p_city_id: await mosul() });
+    await rpc(owner.id, "create_venue", { p_name: `Baghdad Pitch ${tag}`, p_city_id: baghdad });
+
+    // The organizer lives in Mosul: the form starts there, with Mosul's venues.
+    const organizer = await createAuthUser("Organizer");
+    await signIn(page, organizer);
+    await page.goto("/ar/matches/new");
+    const venue = page.getByRole("combobox", { name: "الملعب" });
+    await expect(venue.locator("option", { hasText: `Mosul Pitch ${tag}` })).toHaveCount(1);
+    await expect(venue.locator("option", { hasText: `Baghdad Pitch ${tag}` })).toHaveCount(0);
+
+    // Another city: its venues replace the first city's (the database accepts only a venue in the match's city).
+    await page.locator("summary", { hasText: "خيارات إضافية" }).click();
+    await page.getByRole("combobox", { name: "المدينة" }).selectOption({ label: "بغداد" });
+    await expect(venue.locator("option", { hasText: `Baghdad Pitch ${tag}` })).toHaveCount(1);
+    await expect(venue.locator("option", { hasText: `Mosul Pitch ${tag}` })).toHaveCount(0);
+
+    // Picked and published: the match is at that venue.
+    await venue.selectOption({ label: `Baghdad Pitch ${tag}` });
+    const title = `City venue ${tag}`;
+    await page.getByRole("textbox", { name: "العنوان" }).fill(title);
+    await page.getByRole("button", { name: "نشر المباراة" }).click();
+    await expect(page.getByRole("heading", { name: title })).toBeVisible();
+    const [row] = await admin<{ name: string }>("select v.name from public.matches m join public.venues v on v.id = m.venue_id where m.title = $1", [title]);
+    expect(row.name).toBe(`Baghdad Pitch ${tag}`);
   });
 });

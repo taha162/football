@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { LocateFixed } from "lucide-react";
 import { useRouter, usePathname } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
+import { announceNavigation } from "@/components/motion/nav-progress";
 
 /**
  * Requests browser location only when the user asks for nearby matches.
@@ -19,12 +20,16 @@ export function NearMe() {
   const params = useSearchParams();
   const [status, setStatus] = useState<"idle" | "pending" | "denied" | "unsupported">("idle");
   const active = params.has("lat");
+  const go = (q: URLSearchParams) => {
+    announceNavigation(`${location.pathname}?${q.toString()}`); // same page, new query
+    router.push(`${pathname}?${q.toString()}`);
+  };
 
   const clear = () => {
     const q = new URLSearchParams(params);
     ["lat", "lng", "radius"].forEach((k) => q.delete(k));
     if (q.get("sort") === "distance") q.delete("sort");
-    router.push(`${pathname}?${q.toString()}`);
+    go(q);
   };
 
   const locate = () => {
@@ -39,7 +44,7 @@ export function NearMe() {
         q.set("sort", "distance");
         q.delete("page");
         setStatus("idle");
-        router.push(`${pathname}?${q.toString()}`);
+        go(q);
       },
       () => setStatus("denied"),
       { enableHighAccuracy: false, timeout: 10_000, maximumAge: 300_000 },

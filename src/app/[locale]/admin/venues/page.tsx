@@ -25,6 +25,7 @@ export default async function AdminVenuesPage({ searchParams }: PageProps<"/[loc
     .select("id, name, address, phone, created_at, verification_status, verification_note, is_hidden, city:cities(name_en, name_ar), owner:venue_staff(role, profile:profiles!venue_staff_user_id_fkey(id, display_name))")
     .eq("verification_status", status)
     .order("created_at")
+    .order("id")
     .limit(100);
   return (
     <>

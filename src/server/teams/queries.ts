@@ -29,6 +29,8 @@ export async function listTeams(opts: { q?: string; city?: string; area?: string
     .eq("is_hidden", false)
     .eq("visibility", "public")
     .order("created_at", { ascending: false })
+    // Teams created in the same instant keep a fixed order across pages (and match teams_listing_idx).
+    .order("id", { ascending: false })
     .range((opts.page - 1) * size, opts.page * size);
   if (opts.q) query = query.ilike("name", `%${opts.q.replace(/[%_\\]/g, "")}%`);
   if (opts.city) query = query.eq("city_id", opts.city);

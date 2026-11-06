@@ -22,7 +22,12 @@ export function StorageImage({
   fill?: boolean;
   className?: string;
   sizes?: string;
-  priority?: boolean;
+  /** The page's largest image (its LCP): fetched from the <head>, before the body is read. */
+  preload?: boolean;
+  /** "eager" for images in the first screen; the default, "lazy", waits until they come near. */
+  loading?: "eager" | "lazy";
+  /** "high" for the page's largest image, so it isn't left behind the page's scripts on a slow connection. */
+  fetchPriority?: "high" | "low" | "auto";
   fallback?: ReactNode;
 }) {
   const [attempt, setAttempt] = useState(0);

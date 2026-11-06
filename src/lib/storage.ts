@@ -66,6 +66,13 @@ export async function inspectAudio(file: File): Promise<{ ok: true; mime: string
   return { ok: true, mime: match.mime, ext: match.ext, bytes };
 }
 
+/**
+ * Cache-Control for uploads: a year. Every upload gets a new random name
+ * (randomFileName), so a stored address never changes content and a new picture
+ * is a new address: nothing can be served stale.
+ */
+export const UPLOAD_CACHE_SECONDS = "31536000";
+
 export function randomFileName(ext: string): string {
   return `${crypto.randomUUID()}.${ext}`;
 }

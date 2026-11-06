@@ -50,7 +50,8 @@ export default async function VenuesPage({ params, searchParams }: PageProps<"/[
         <div className="flex flex-col gap-6">
           {/* Two venues a row on a phone, three on a wide screen. */}
           <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3" data-testid="venue-grid">
-            {items.map((v) => <VenueCard key={v.id} venue={v} href={bookable ? `/venues/${v.id}/book` : undefined} />)}
+            {/* The first two rows on a phone (two cards each; a laptop shows three a row) are in the first screen. */}
+            {items.map((v, i) => <VenueCard key={v.id} venue={v} eager={i < 4} href={bookable ? `/venues/${v.id}/book` : undefined} />)}
           </div>
           <Pagination pathname="/venues" query={query} page={page} hasMore={hasMore} />
         </div>

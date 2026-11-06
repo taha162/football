@@ -36,6 +36,7 @@ export default async function AdminReportsPage({ searchParams }: PageProps<"/[lo
     .select("*, reporter:profiles!reports_reporter_id_fkey(id, display_name)")
     .eq("status", status)
     .order("created_at", { ascending: status === "open" })
+    .order("id", { ascending: status === "open" })
     .limit(100);
   const rows = data ?? [];
   // Pictures in reported messages: moderators aren't members of the conversation, so the

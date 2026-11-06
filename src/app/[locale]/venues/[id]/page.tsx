@@ -34,14 +34,14 @@ export default async function VenuePage({ params }: PageProps<"/[locale]/venues/
   const v = await getTranslations("venues");
   const user = await getCurrentUser();
   const supabase = await createClient();
-  const [{ data: matches }, { data: reviews }, { data: rating }, { data: staff }] = await Promise.all([
+  const [{ data: matches }, { data: reviews }, { data: rating }, { data: staff }, deposits] = await Promise.all([
     supabase.from("matches").select(MATCH_CARD_SELECT).eq("venue_id", id).in("status", ["open", "full", "confirmed"]).gt("starts_at", new Date().toISOString()).order("starts_at").limit(6),
     supabase.from("reviews").select("id, venue_rating, comment, created_at").eq("venue_id", id).eq("status", "published").order("created_at", { ascending: false }).limit(10),
     supabase.rpc("venue_rating", { p_venue_id: id }),
     user ? supabase.from("venue_staff").select("role").eq("venue_id", id).eq("user_id", user.id).maybeSingle() : Promise.resolve({ data: null }),
+    getDepositSettings(),
   ]);
   const tz = venue.city?.timezone ?? "Asia/Baghdad";
-  const deposits = await getDepositSettings();
   const bookable = acceptsPlatformBookings(venue, deposits.on);
   const point = venue.latitude != null && venue.longitude != null ? { lat: Number(venue.latitude), lng: Number(venue.longitude) } : null;
   const provider = getMapProvider();
@@ -55,7 +55,9 @@ export default async function VenuePage({ params }: PageProps<"/[locale]/venues/
     <Container className="py-8">
       {venue.is_hidden ? <Alert tone="warning" className="mb-4" title={t("hidden")}>{venue.hidden_reason}</Alert> : null}
       <div className="reveal relative mb-6 aspect-[21/8] overflow-hidden rounded-[var(--radius-card)] border border-line bg-surface-3">
-        {cover ? <StorageImage src={cover} alt={venue.name} fill priority sizes="100vw" className="object-cover" fallback={<div className="pitch-lines size-full" />} /> : <div className="pitch-lines size-full" />}
+        {/* The cover is the page's largest element (its LCP). On a slow phone connection it shares the line with the
+            page's scripts; preloaded at high priority, it no longer finishes behind them (measured: PERFORMANCE.md, item 6). */}
+        {cover ? <StorageImage src={cover} alt={venue.name} fill preload fetchPriority="high" sizes="100vw" className="object-cover" fallback={<div className="pitch-lines size-full" />} /> : <div className="pitch-lines size-full" />}
       </div>
       <div className="reveal-children mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="flex flex-col gap-2">

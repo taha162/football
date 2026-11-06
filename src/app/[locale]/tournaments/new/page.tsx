@@ -13,7 +13,7 @@ export default async function NewTournamentPage({ params }: PageProps<"/[locale]
   setRequestLocale(locale);
   const user = await requireOnboardedUser(locale as Locale, "/tournaments/new");
   const t = await getTranslations("tournamentForm");
-  const [cities, venues] = await Promise.all([getCities(), venueOptions()]);
+  const [cities, venues] = await Promise.all([getCities(), venueOptions(user.profile.city_id)]);
   const tz = "Asia/Baghdad";
   return (
     <Container className="max-w-3xl py-10">

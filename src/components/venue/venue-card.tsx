@@ -15,7 +15,8 @@ import { CardCover } from "@/components/ui/card-cover";
  * narrow card. It opens the venue's page, or `href` (its booking page, when
  * the list is for booking).
  */
-export async function VenueCard({ venue, role, href = `/venues/${venue.id}` }: { venue: VenueCardData; role?: string; href?: string }) {
+/** `eager`: the card is in the first screen of its list, so its picture must not wait for lazy loading. */
+export async function VenueCard({ venue, role, href = `/venues/${venue.id}`, eager = false }: { venue: VenueCardData; role?: string; href?: string; eager?: boolean }) {
   const t = await getTranslations("venues");
   const locale = await getLocale();
   const active = venue.fields.filter((f) => f.is_active);
@@ -30,7 +31,7 @@ export async function VenueCard({ venue, role, href = `/venues/${venue.id}` }: {
   return (
     <article className="reveal card-hover spotlight relative flex flex-col overflow-hidden rounded-[var(--radius-card)] border border-line bg-surface hover:border-line-strong">
       <div className="relative aspect-[16/9] bg-surface-3">
-        {cover ? <StorageImage src={cover} alt="" fill sizes="(min-width: 1024px) 33vw, 50vw" className="object-cover" fallback={placeholder} /> : placeholder}
+        {cover ? <StorageImage src={cover} alt="" fill sizes="(min-width: 1024px) 33vw, 50vw" loading={eager ? "eager" : "lazy"} className="object-cover" fallback={placeholder} /> : placeholder}
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-3 sm:gap-2 sm:p-4">
         <h3 className="flex items-start gap-1 font-display text-base font-semibold leading-snug sm:items-center sm:gap-1.5 sm:text-lg">
