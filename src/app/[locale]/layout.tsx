@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata, Viewport } from "next";
 import { notFound } from "next/navigation";
 import { Barlow, Barlow_Condensed, Cairo } from "next/font/google";
@@ -18,6 +19,8 @@ import { INTRO_SCRIPT } from "@/components/stage/intro-script";
 import { ENTER_SCRIPT } from "@/components/motion/enter-script";
 import { MotionRoot } from "@/components/motion/motion-root";
 import { PageTransition } from "@/components/motion/page-transition";
+import { Container } from "@/components/ui/primitives";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 import "../globals.css";
 
 const cairo = Cairo({ subsets: ["arabic", "latin"], variable: "--font-cairo", display: "swap" });
@@ -93,7 +96,22 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
           <CallProvider me={user?.profile.onboarded_at ? user.id : null}>
             <SiteHeader user={user} />
             <main id="main" className="flex-1 pb-24 lg:pb-12">
-              <PageTransition>{children}</PageTransition>
+              {/* A first visit streams: the header goes out at once, the page as soon as its data is in.
+                  The skeleton stands in only if that takes over a second (.page-fallback in globals.css).
+                  Moving between pages keeps the current page up instead (components/motion/nav-progress.tsx):
+                  unlike a loading.tsx, this boundary is not shown on navigation. */}
+              <Suspense
+                fallback={
+                  <Container className="page-fallback py-10" aria-busy="true">
+                    <p role="status" className="sr-only">
+                      {t("loading")}
+                    </p>
+                    <PageSkeleton />
+                  </Container>
+                }
+              >
+                <PageTransition>{children}</PageTransition>
+              </Suspense>
             </main>
             <LandingOnly>
               <SiteFooter />

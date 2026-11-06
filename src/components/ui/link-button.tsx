@@ -6,6 +6,7 @@ import { useLocale } from "next-intl";
 import { getPathname, useRouter } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { cn } from "@/lib/cn";
+import { announceNavigation } from "@/components/motion/nav-progress";
 
 export type Href = Parameters<typeof getPathname>[0]["href"];
 
@@ -43,6 +44,7 @@ export function useLinkTarget(href: Href, options: { locale?: Locale; replace?: 
       window.open(path, "_blank", "noopener");
       return;
     }
+    announceNavigation(path);
     (options.replace ? router.replace : router.push)(href, { locale, scroll: options.scroll });
   };
   return { path, prefetch, open };

@@ -25,8 +25,9 @@ export const REVEALS_START = "reveals:start";
  * order — without waiting for React to hydrate, so slow phones get the
  * entrance at first paint rather than a blank page.
  *
- * Most pages stream: the document finishes with the loading skeleton on
- * screen and React swaps the page in a moment later, still before hydrating.
+ * Most pages stream: the document finishes with the page's stand-in in place
+ * (src/app/[locale]/layout.tsx; its skeleton shows only after a second) and
+ * React swaps the page in a moment later, still before hydrating.
  * So after the first pass it keeps watching, and sections rise as they are
  * swapped in, until reveal.ts announces it has taken over.
  *

@@ -141,7 +141,7 @@ Legend: ✅ implemented and verified by automated tests · 🟡 implemented, exe
 3. **Area list** for Mosul (18 areas, ar/en) needs verification by someone local. Area coordinates are empty.
 4. **Production auth e-mail** needs a custom SMTP provider and redirect URLs configured in Supabase. Without one, Supabase's built-in mail service only sends to the project's team, about two e-mails an hour, and its messages often land in spam. DEPLOYMENT.md has the steps (own domain with Resend recommended).
 5. **Scheduled jobs:** `vercel.json` runs `/api/cron` daily (the Vercel Hobby limit). The 15-minute cadence needs the `Scheduled jobs` GitHub workflow secrets or a Vercel Pro schedule.
-6. **404 responses** return HTTP 200 with a `noindex` not-found page, because of the root loading boundary (see ARCHITECTURE.md).
+6. **404 responses** return HTTP 200 with a `noindex` not-found page, because the page streams after the layout's shell (see ARCHITECTURE.md).
 7. A React dev-mode warning ("Each child in a list should have a unique key", reported for `Select` in `LocationFields`) appears in the browser console in development. Every option list is keyed and the production build does not report it. The cause has not been identified yet.
 8. There is no CI workflow that runs the tests yet. All checks above were run locally. The owner's Vercel deployment was not inspected from here.
 
