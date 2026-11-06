@@ -34,14 +34,14 @@ export default async function VenuePage({ params }: PageProps<"/[locale]/venues/
   const v = await getTranslations("venues");
   const user = await getCurrentUser();
   const supabase = await createClient();
-  const [{ data: matches }, { data: reviews }, { data: rating }, { data: staff }] = await Promise.all([
+  const [{ data: matches }, { data: reviews }, { data: rating }, { data: staff }, deposits] = await Promise.all([
     supabase.from("matches").select(MATCH_CARD_SELECT).eq("venue_id", id).in("status", ["open", "full", "confirmed"]).gt("starts_at", new Date().toISOString()).order("starts_at").limit(6),
     supabase.from("reviews").select("id, venue_rating, comment, created_at").eq("venue_id", id).eq("status", "published").order("created_at", { ascending: false }).limit(10),
     supabase.rpc("venue_rating", { p_venue_id: id }),
     user ? supabase.from("venue_staff").select("role").eq("venue_id", id).eq("user_id", user.id).maybeSingle() : Promise.resolve({ data: null }),
+    getDepositSettings(),
   ]);
   const tz = venue.city?.timezone ?? "Asia/Baghdad";
-  const deposits = await getDepositSettings();
   const bookable = acceptsPlatformBookings(venue, deposits.on);
   const point = venue.latitude != null && venue.longitude != null ? { lat: Number(venue.latitude), lng: Number(venue.longitude) } : null;
   const provider = getMapProvider();

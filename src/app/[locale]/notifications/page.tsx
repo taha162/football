@@ -29,17 +29,19 @@ export default async function NotificationsPage({ params, searchParams }: PagePr
   const n = await getTranslations("notifications");
   const page = Math.max(1, Number((await searchParams).page) || 1);
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("notifications")
-    .select("*")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false })
-    // Same-instant notifications keep one order, so none repeats or goes missing between pages.
-    .order("id", { ascending: false })
-    .range((page - 1) * SIZE, page * SIZE);
+  const [{ data }, { data: unread }] = await Promise.all([
+    supabase
+      .from("notifications")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      // Same-instant notifications keep one order, so none repeats or goes missing between pages.
+      .order("id", { ascending: false })
+      .range((page - 1) * SIZE, page * SIZE),
+    // Everything unread is read by opening this page, on every page of the list.
+    supabase.from("notifications").select("id").eq("user_id", user.id).is("read_at", null).limit(500),
+  ]);
   const rows = (data ?? []).slice(0, SIZE);
-  // Everything unread is read by opening this page, on every page of the list.
-  const { data: unread } = await supabase.from("notifications").select("id").eq("user_id", user.id).is("read_at", null).limit(500);
   const fmt = (iso: string) => formatDateTime(iso, locale, "Asia/Baghdad");
 
   return (

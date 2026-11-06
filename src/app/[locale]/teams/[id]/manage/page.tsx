@@ -36,9 +36,8 @@ export default async function ManageTeamPage({ params, searchParams }: PageProps
   const { locale, id } = await params;
   setRequestLocale(locale);
   const user = await requireOnboardedUser(locale as Locale, `/teams/${id}/manage`);
-  const team = await getTeam(id);
+  const [team, members] = await Promise.all([getTeam(id), getTeamMembers(id)]);
   if (!team) notFound();
-  const members = await getTeamMembers(id);
   const me = members.find((m) => m.user_id === user.id);
   // UI guard only; every action is authorized again by the database.
   if (!me || me.role === "player") redirect({ href: `/teams/${id}`, locale });

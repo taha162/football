@@ -45,9 +45,9 @@ export default async function ManageVenuePage({ params, searchParams }: PageProp
   const { locale, id } = await params;
   setRequestLocale(locale);
   const user = await requireOnboardedUser(locale as Locale, `/manage/venues/${id}`);
-  const venue = await getVenue(id);
+  // Independent reads, together: one wait instead of three.
+  const [venue, role, deposits] = await Promise.all([getVenue(id), myVenueRole(id, user.id), getDepositSettings()]);
   if (!venue) notFound();
-  const role = await myVenueRole(id, user.id);
   // The platform's admins and moderators handle any venue's bookings like its staff
   // (the bookings tab only; the venue's settings stay its own).
   const moderating = !role && user.isModerator;
@@ -63,7 +63,6 @@ export default async function ManageVenuePage({ params, searchParams }: PageProp
   const fields = venue.fields ?? [];
   const supabase = await createClient();
   const visibleTabs = TABS.filter((x) => canManage || x === "bookings");
-  const deposits = await getDepositSettings();
   const depositAmount = formatMoney(deposits.amount, currency, locale);
   // Bookings need a deposit, and customers would not know where to send it.
   const depositDetailsMissing = venue.booking_mode === "platform" && deposits.on && !venue.deposit_instructions?.trim();
@@ -308,29 +307,32 @@ export default async function ManageVenuePage({ params, searchParams }: PageProp
 
   async function BookingsTab({ venueId, fields: fs, tz: zone, date }: { venueId: string; fields: typeof fields; tz: string; date: string }) {
     const nowIso = new Date(getNow()).toISOString();
-    const { data: pending } = await supabase
-      .from("bookings")
-      .select("*, field:venue_fields(name), requester:profiles!bookings_requested_by_fkey(display_name)")
-      .eq("venue_id", venueId)
-      .eq("status", "requested")
-      .gt("expires_at", nowIso)
-      .order("starts_at");
-    const { data: refunds } = await supabase
-      .from("bookings")
-      .select("*, field:venue_fields(name), requester:profiles!bookings_requested_by_fkey(display_name)")
-      .eq("venue_id", venueId)
-      .eq("deposit_status", "refund_due")
-      .order("starts_at");
     const from = new Date(`${date}T00:00:00Z`);
-    const { data: dayRows } = await supabase
-      .from("bookings")
-      .select("*, field:venue_fields(name), requester:profiles!bookings_requested_by_fkey(display_name)")
-      .eq("venue_id", venueId)
-      // Held requests occupy their time too, until the deposit arrives or the hold runs out.
-      .or(`status.in.(confirmed,completed,no_show),and(status.eq.requested,deposit_status.not.is.null,expires_at.gt."${nowIso}")`)
-      .gte("starts_at", new Date(from.getTime() - 86_400_000).toISOString())
-      .lt("starts_at", new Date(from.getTime() + 2 * 86_400_000).toISOString())
-      .order("starts_at");
+    // The three lists don't depend on each other: asked for together.
+    const [{ data: pending }, { data: refunds }, { data: dayRows }] = await Promise.all([
+      supabase
+        .from("bookings")
+        .select("*, field:venue_fields(name), requester:profiles!bookings_requested_by_fkey(display_name)")
+        .eq("venue_id", venueId)
+        .eq("status", "requested")
+        .gt("expires_at", nowIso)
+        .order("starts_at"),
+      supabase
+        .from("bookings")
+        .select("*, field:venue_fields(name), requester:profiles!bookings_requested_by_fkey(display_name)")
+        .eq("venue_id", venueId)
+        .eq("deposit_status", "refund_due")
+        .order("starts_at"),
+      supabase
+        .from("bookings")
+        .select("*, field:venue_fields(name), requester:profiles!bookings_requested_by_fkey(display_name)")
+        .eq("venue_id", venueId)
+        // Held requests occupy their time too, until the deposit arrives or the hold runs out.
+        .or(`status.in.(confirmed,completed,no_show),and(status.eq.requested,deposit_status.not.is.null,expires_at.gt."${nowIso}")`)
+        .gte("starts_at", new Date(from.getTime() - 86_400_000).toISOString())
+        .lt("starts_at", new Date(from.getTime() + 2 * 86_400_000).toISOString())
+        .order("starts_at"),
+    ]);
     const sameDay = (dayRows ?? []).filter((b) => new Intl.DateTimeFormat("en-CA", { timeZone: zone }).format(new Date(b.starts_at)) === date);
     const ids = [...(pending ?? []), ...sameDay, ...(refunds ?? [])].map((b) => b.id);
     const { data: convs } = ids.length ? await supabase.from("conversations").select("id, booking_id").in("booking_id", ids) : { data: [] };

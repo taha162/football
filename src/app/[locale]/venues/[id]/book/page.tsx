@@ -41,7 +41,7 @@ export default async function BookVenuePage({ params, searchParams }: PageProps<
   const { locale, id } = await params;
   setRequestLocale(locale);
   const user = await requireOnboardedUser(locale as Locale, `/venues/${id}/book`);
-  const venue = await getVenue(id);
+  const [venue, deposits] = await Promise.all([getVenue(id), getDepositSettings()]);
   if (!venue) notFound();
   const t = await getTranslations("booking");
   const errors = await getTranslations("errors");
@@ -54,7 +54,6 @@ export default async function BookVenuePage({ params, searchParams }: PageProps<
   const duration = DURATIONS.includes(Number(sp.duration)) ? Number(sp.duration) : 60;
   const matchId = typeof sp.match === "string" && /^[0-9a-f-]{36}$/.test(sp.match) ? sp.match : undefined;
 
-  const deposits = await getDepositSettings();
   if (!acceptsPlatformBookings(venue, deposits.on)) {
     return (
       <Container className="max-w-2xl py-10">
