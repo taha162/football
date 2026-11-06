@@ -46,6 +46,7 @@ export function ActionForm({
   resetOnSuccess = false,
   hideSuccess = false,
   onSuccess,
+  onError,
   id,
   celebrate,
 }: {
@@ -56,6 +57,8 @@ export function ActionForm({
   resetOnSuccess?: boolean;
   hideSuccess?: boolean;
   onSuccess?: (data: unknown) => void;
+  /** After a refusal, once what was submitted is back in the fields. */
+  onError?: (error: string) => void;
   id?: string;
   /** Key of the <Celebration> that confirms this action's success (see components/motion/celebrate.tsx). */
   celebrate?: string;
@@ -73,7 +76,10 @@ export function ActionForm({
     if (!state || lastHandled.current === state.at) return;
     lastHandled.current = state.at;
     // After an error, keep what was typed: a wrong password mustn't wipe the e-mail, nor one mistake a whole form.
-    if (!state.ok) restoreFields(formRef.current, submitted.current);
+    if (!state.ok) {
+      restoreFields(formRef.current, submitted.current);
+      onError?.(state.error);
+    }
     if (state.ok) {
       if (resetOnSuccess) formRef.current?.reset();
       onSuccess?.(state.data);
@@ -86,7 +92,7 @@ export function ActionForm({
         shake(field);
       }
     }
-  }, [state, resetOnSuccess, onSuccess]);
+  }, [state, resetOnSuccess, onSuccess, onError]);
 
   const fieldErrors = state && !state.ok ? (state.fieldErrors ?? {}) : {};
   const translatedFieldErrors = Object.fromEntries(Object.entries(fieldErrors).map(([k, v]) => [k, text.field(v)]));

@@ -1750,6 +1750,7 @@
     "recording": "Recording",
     "sendVoice": "Send voice message",
     "sendingVoice": "Sending…",
+    "sending": "Sending…",
     "discardRecording": "Delete recording",
     "recordLimit": "That's the limit: two minutes.",
     "micDenied": "The microphone isn't allowed. Allow it in your browser settings, then try again.",
