@@ -19,7 +19,7 @@ export default async function EditMatchPage({ params }: PageProps<"/[locale]/mat
   // UI guard only; update_match re-checks authorization in the database.
   if (match.organizer_id !== user.id && match.match_type !== "team_vs_team") redirect({ href: `/matches/${id}`, locale });
   const t = await getTranslations("matchForm");
-  const [cities, areas, venues] = await Promise.all([getCities(), getAreas(), venueOptions()]);
+  const [cities, areas, venues] = await Promise.all([getCities(), getAreas(), venueOptions(match.city_id)]);
   const tz = match.city?.timezone ?? "Asia/Baghdad";
   return (
     <Container className="max-w-3xl py-10">
@@ -28,7 +28,7 @@ export default async function EditMatchPage({ params }: PageProps<"/[locale]/mat
         mode="edit"
         cities={cities}
         areas={areas}
-        venues={venues.filter((v) => v.city_id === match.city_id)}
+        venues={venues}
         teams={[]}
         minStart={toLocalInputValue(new Date(), tz)}
         defaults={{
