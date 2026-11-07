@@ -991,3 +991,16 @@
 **لا يحتاج** أي ملف SQL.
 
 التعديل: «Refused security-sensitive requests are logged»
+
+### 65. تغيير كلمة المرور يحتاج دخولاً حديثاً
+**ما تغيّر:** الجلسة التي مضى على بدايتها أكثر من يوم لا تستطيع وضع كلمة مرور جديدة. رابط «نسيت كلمة المرور» يعمل دائماً لأنه يبدأ جلسة جديدة. ومن يحاول من جلسة قديمة يرى «انتهت صلاحية رابط إعادة التعيين. اطلب رابطاً جديداً.».
+
+الملفات: `supabase/config.toml` (`secure_password_change`)، `src/lib/auth-errors.ts`. اختبار وحدة.
+
+**يحتاج إعداداً في Supabase:** Authentication ← Providers ← Email ← **Secure password change**: فعّله (`DEPLOYMENT.md`، القسم 14). إعداد `config.toml` للجهاز المحلي فقط.
+
+**ما حُذف:** لا شيء.
+
+**لا يحتاج** أي ملف SQL.
+
+التعديل: «A new password needs a recent session»

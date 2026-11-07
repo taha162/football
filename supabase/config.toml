@@ -227,7 +227,8 @@ double_confirm_changes = true
 # On, to match production: sign-up asks for the e-mailed code.
 enable_confirmations = true
 # If enabled, users will need to reauthenticate or have logged in recently to change their password.
-secure_password_change = false
+# On: a session older than a day can't set a new password; the e-mailed reset link (a fresh session) can.
+secure_password_change = true
 # Controls the minimum amount of time that must pass before sending another signup confirmation or password reset email.
 max_frequency = "1s"
 # Number of characters used in the email OTP.
