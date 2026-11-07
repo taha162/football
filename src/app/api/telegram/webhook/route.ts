@@ -35,6 +35,8 @@ function reply(chatId: number, text: string, markup: object = NO_KEYBOARD) {
 export async function POST(request: NextRequest) {
   const cfg = telegramConfig();
   if (!cfg.enabled || !secretMatches(request.headers.get("x-telegram-bot-api-secret-token"), cfg.token)) {
+    // Telegram always sends the secret: a request without the right one didn't come from it.
+    if (cfg.enabled) logger.warn("telegram_webhook_rejected", { withHeader: request.headers.has("x-telegram-bot-api-secret-token") });
     return new NextResponse("unauthorized", { status: 401 });
   }
   let update: unknown;

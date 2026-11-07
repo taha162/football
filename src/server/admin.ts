@@ -14,7 +14,15 @@ type Rpc = Parameters<Awaited<ReturnType<typeof createClient>>["rpc"]>[0];
 async function run(fn: Rpc, args: Record<string, unknown>, success: string): Promise<ActionState> {
   const supabase = await createClient();
   const { error } = await supabase.rpc(fn, args as never);
-  if (error) return fail(dbErrorCode(error, fn));
+  if (error) {
+    const code = dbErrorCode(error, fn);
+    // Someone without the role tried a moderator or admin action: a security event, not just a failed form.
+    if (code === "forbidden" || code === "not_authenticated") {
+      const { data } = await supabase.auth.getUser();
+      logger.warn("admin_action_refused", { action: fn, code, by: data.user?.id ?? null });
+    }
+    return fail(code);
+  }
   revalidatePath("/[locale]/admin", "layout");
   return ok(success);
 }

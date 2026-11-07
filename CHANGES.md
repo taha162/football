@@ -974,3 +974,20 @@
 **لا يحتاج** أي ملف SQL.
 
 التعديل: «Scripts need a per-request nonce: injected script doesn't run»
+
+### 64. تسجيل المحاولات المرفوضة
+**ما تغيّر:** صار الموقع يكتب في سجلاته (Vercel ← Logs) هذه الحالات:
+- حين يبلغ أحد حداً من حدود الدخول أو التسجيل أو الرموز (`auth_limit_reached`)، مع اسم الحد فقط؛
+- حين يُطلب رابط المهام المجدولة بغير السر الصحيح (`cron_unauthorized`)؛
+- حين تصل إلى بوت تيليغرام رسالة بغير السر الصحيح (`telegram_webhook_rejected`)؛
+- حين يحاول أحد أمراً من أوامر الإدارة دون صلاحية (`admin_action_refused`)، مع اسم الأمر ورقم الحساب.
+
+لا تُكتب في السجل كلمات المرور ولا الأسرار ولا العناوين ولا البريد.
+
+الملفات: `src/app/api/cron/route.ts`، `src/app/api/telegram/webhook/route.ts`، `src/server/admin.ts`، `src/lib/throttle.ts`. اختبار وحدة: طلب المهام المجدولة بسر خاطئ يُرفض ويُسجَّل، والسر نفسه لا يظهر في السجل.
+
+**ما حُذف:** لا شيء.
+
+**لا يحتاج** أي ملف SQL.
+
+التعديل: «Refused security-sensitive requests are logged»

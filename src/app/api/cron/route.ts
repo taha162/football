@@ -21,7 +21,11 @@ function authorized(request: NextRequest): boolean {
  * (e.g. Vercel Cron or any scheduler). Idempotent.
  */
 export async function GET(request: NextRequest) {
-  if (!authorized(request)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!authorized(request)) {
+    // Someone other than the scheduler, or a scheduler with the wrong secret: worth noticing.
+    logger.warn("cron_unauthorized", { withHeader: request.headers.has("authorization") });
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
   const admin = createAdminClient();
   if (!admin) return NextResponse.json({ error: "service_role_not_configured" }, { status: 503 });
   const started = Date.now();

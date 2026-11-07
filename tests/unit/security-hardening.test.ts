@@ -1,7 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { clientIp } from "@/lib/client-ip";
 import { contentSecurityPolicy, newNonce } from "@/lib/csp";
 import { sessionCookieOptions } from "@/lib/env";
+
+vi.mock("server-only", () => ({}));
+vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => null }));
 
 const headersOf = (entries: Record<string, string>) => new Headers(entries);
 
@@ -42,5 +45,23 @@ describe("Content-Security-Policy", () => {
     const seen = new Set(Array.from({ length: 200 }, () => newNonce()));
     expect(seen.size).toBe(200);
     for (const n of seen) expect(atob(n)).toHaveLength(16);
+  });
+});
+
+describe("security events are logged", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("a call to the scheduled-jobs endpoint without the secret is refused and logged", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    vi.stubEnv("CRON_SECRET", "s".repeat(32));
+    const { GET } = await import("@/app/api/cron/route");
+    const { NextRequest } = await import("next/server");
+    const res = await GET(new NextRequest("http://localhost/api/cron", { headers: { authorization: "Bearer wrong" } }));
+    expect(res.status).toBe(401);
+    const lines = warn.mock.calls.map((c) => JSON.parse(String(c[0])));
+    expect(lines).toContainEqual(expect.objectContaining({ level: "warn", event: "cron_unauthorized", withHeader: true }));
+    // The secret itself never reaches the log.
+    expect(JSON.stringify(lines)).not.toContain("s".repeat(32));
+    vi.unstubAllEnvs();
   });
 });

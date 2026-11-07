@@ -56,7 +56,12 @@ async function ask(list: Bucket[], record: boolean): Promise<boolean> {
     logger.warn("auth_throttle_unavailable", { message: error.message });
     return true;
   }
-  return data !== false;
+  if (data === false) {
+    // Repeated wrong passwords, codes or sign-ups: logged with the limits' names only (no address, no account).
+    logger.warn("auth_limit_reached", { limits: list.map((b) => b.setting) });
+    return false;
+  }
+  return true;
 }
 
 /** Whether the attempt may go ahead, without counting it (to count failures only, with `count`). */
