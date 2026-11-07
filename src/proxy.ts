@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import createMiddleware from "next-intl/middleware";
 import { NextRequest, NextResponse } from "next/server";
 import { routing } from "./i18n/routing";
+import { contentSecurityPolicy, newNonce } from "./lib/csp";
 import { sessionCookieOptions } from "./lib/env";
 
 const intl = createMiddleware(routing);
@@ -17,9 +18,16 @@ export async function proxy(request: NextRequest) {
   // next-intl doesn't see Accept-Language, so nothing tries another language.
   const headers = new Headers(request.headers);
   headers.delete("accept-language");
+  // A fresh nonce for this page: Next.js reads it from the request's policy
+  // and stamps its scripts; the layout reads x-nonce for its own two.
+  const nonce = newNonce();
+  const csp = contentSecurityPolicy(nonce);
+  headers.set("x-nonce", nonce);
+  headers.set("content-security-policy", csp);
   const response = intl(new NextRequest(request, { headers }));
   // Redirect responses don't need a session refresh.
   if (response.headers.get("location")) return response;
+  response.headers.set("Content-Security-Policy", csp);
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
