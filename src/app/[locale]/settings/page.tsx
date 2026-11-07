@@ -6,6 +6,7 @@ import { isPhoneAccountEmail } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/server";
 import { blockUserAction, savePreferencesAction } from "@/server/profile";
 import { signOutAction } from "@/server/auth";
+import { SecondFactorSettings } from "@/components/auth/second-factor-settings";
 import { ActionForm, InlineAction, SubmitButton } from "@/components/ui/action-form";
 import { buttonClass } from "@/components/ui/button";
 import { Card, CardBody, Container, DefinitionList, PageHeader, Section } from "@/components/ui/primitives";
@@ -52,6 +53,14 @@ export default async function SettingsPage({ params }: PageProps<"/[locale]/sett
               </form>
             </div>
             <p className="text-xs text-muted">{t("deleteNote")}</p>
+          </CardBody>
+        </Card>
+      </Section>
+
+      <Section title={t("secondFactor")} id="two-step">
+        <Card>
+          <CardBody>
+            <SecondFactorSettings enabled={user.secondFactor} />
           </CardBody>
         </Card>
       </Section>

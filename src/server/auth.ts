@@ -11,6 +11,7 @@ import { publicEnv } from "@/lib/env";
 import { logger } from "@/lib/log";
 import { clearPendingEmail, getPendingEmail, setPendingEmail } from "@/lib/pending-email";
 import { looksLikePhone, normalizePhone } from "@/lib/phone";
+import { hasSecondFactor } from "@/lib/second-factor";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { allowed, buckets, count } from "@/lib/throttle";
@@ -75,6 +76,10 @@ export async function signInAction(_: ActionState, fd: FormData): Promise<Action
       redirect({ href: "/verify-email", locale: await currentLocale() });
     }
     return fail(code);
+  }
+  // With an authenticator app, the password is only the first step: the code comes next.
+  if (hasSecondFactor(data.user)) {
+    redirect({ href: { pathname: "/mfa", query: { next: safeNext(fd.get("next")) } }, locale: await currentLocale() });
   }
   const { data: prefs } = await supabase.from("user_preferences").select("locale").eq("user_id", data.user.id).maybeSingle();
   const locale = isLocale(prefs?.locale) ? prefs.locale : await currentLocale();

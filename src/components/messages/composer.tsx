@@ -78,9 +78,12 @@ function TextComposer({ conversationId, onMode, onSending }: { conversationId: s
   const t = useTranslations("messages");
   const fileInput = useRef<HTMLInputElement>(null);
   const box = useRef<HTMLTextAreaElement>(null);
-  // Written while a message was on its way. React empties the form once sending
-  // ends, whatever the answer: this is put back afterwards.
+  // Written since a text message left the box. React empties the form once
+  // sending ends, whatever the answer, and the form clears itself again just
+  // after: this is put back then. Kept up to date on every keystroke (not read
+  // once when the answer comes), so nothing typed in between is lost.
   const typed = useRef("");
+  const sending = useRef(false);
   const [preview, setPreview] = useState<string | null>(null);
 
   const send: FormAction = async (prev, fd) => {
@@ -90,22 +93,24 @@ function TextComposer({ conversationId, onMode, onSending }: { conversationId: s
     if (textOnly) {
       onSending!(body);
       if (box.current) box.current.value = "";
+      typed.current = "";
+      sending.current = true;
     }
     try {
       return await sendMessageAction(prev, fd);
     } catch {
       // No answer at all (the connection dropped): taken back like any refusal, not a broken page.
       return { ok: false, error: "generic", at: Date.now() };
-    } finally {
-      typed.current = textOnly ? (box.current?.value ?? "") : "";
     }
   };
   /** Puts back what was written while sending, after what the form itself restored (a refused message's text). */
   const keepTyped = () => {
     const draft = typed.current;
     typed.current = "";
+    sending.current = false;
     if (!draft || !box.current) return;
-    box.current.value = box.current.value ? `${box.current.value}\n${draft}` : draft;
+    const restored = box.current.value;
+    box.current.value = restored && restored !== draft ? `${restored}\n${draft}` : draft;
   };
 
   const clear = () => {
@@ -140,7 +145,19 @@ function TextComposer({ conversationId, onMode, onSending }: { conversationId: s
         </div>
       ) : null}
       <label htmlFor="message-body" className="sr-only">{t("write")}</label>
-      <Textarea ref={box} id="message-body" name="body" required={!preview} maxLength={2000} placeholder={t("placeholder")} className="min-h-20" dir="auto" />
+      <Textarea
+        ref={box}
+        id="message-body"
+        name="body"
+        required={!preview}
+        maxLength={2000}
+        placeholder={t("placeholder")}
+        className="min-h-20"
+        dir="auto"
+        onInput={(e) => {
+          if (sending.current) typed.current = e.currentTarget.value;
+        }}
+      />
       {/* Send on the right, the picture/location/voice tools on the left. */}
       <div className="flex items-center justify-between gap-2">
         <SubmitButton>{t("send")}</SubmitButton>

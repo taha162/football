@@ -39,7 +39,18 @@ export async function admin<T extends QueryResultRow = QueryResultRow>(sql: stri
   return res.rows;
 }
 
-export type Actor = string | null; // user id, or null for anon
+/**
+ * A user id, or null for anon. `{ id, aal }` also says how far the session got
+ * through sign-in: "aal1" with the password only, "aal2" after the
+ * authenticator-app code (a plain id carries no level, which counts as aal1).
+ */
+export type Actor = string | null | { id: string; aal: "aal1" | "aal2" };
+
+function claimsOf(actor: Actor): Record<string, string> {
+  if (actor === null) return { role: "anon" };
+  if (typeof actor === "string") return { sub: actor, role: "authenticated" };
+  return { sub: actor.id, role: "authenticated", aal: actor.aal };
+}
 
 /** Runs SQL as the given user (or anon) inside its own transaction. */
 export async function asUser<T extends QueryResultRow = QueryResultRow>(actor: Actor, sql: string, params: unknown[] = []): Promise<T[]> {
@@ -47,9 +58,7 @@ export async function asUser<T extends QueryResultRow = QueryResultRow>(actor: A
   try {
     await c.query("begin");
     await c.query(`set local role ${actor ? "authenticated" : "anon"}`);
-    await c.query("select set_config('request.jwt.claims', $1, true)", [
-      JSON.stringify(actor ? { sub: actor, role: "authenticated" } : { role: "anon" }),
-    ]);
+    await c.query("select set_config('request.jwt.claims', $1, true)", [JSON.stringify(claimsOf(actor))]);
     const res = await c.query<T>(sql, params);
     await c.query("commit");
     return res.rows;

@@ -1,6 +1,7 @@
 import "server-only";
 import { createHmac } from "node:crypto";
 import { headers } from "next/headers";
+import { clientIp } from "@/lib/client-ip";
 import { logger } from "@/lib/log";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -26,8 +27,7 @@ export type Bucket = { key: string; setting: string; default: number; window: nu
 
 /** The visitor's address as the host saw it (Vercel sets these headers itself; a visitor can't). */
 async function visitorAddress(): Promise<string | null> {
-  const h = await headers();
-  const ip = h.get("x-real-ip")?.trim() || h.get("x-forwarded-for")?.split(",")[0]?.trim() || null;
+  const ip = clientIp(await headers());
   // The same machine (development and tests) isn't limited by address; accounts still are.
   if (!ip || ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1") return null;
   return ip;
@@ -56,7 +56,12 @@ async function ask(list: Bucket[], record: boolean): Promise<boolean> {
     logger.warn("auth_throttle_unavailable", { message: error.message });
     return true;
   }
-  return data !== false;
+  if (data === false) {
+    // Repeated wrong passwords, codes or sign-ups: logged with the limits' names only (no address, no account).
+    logger.warn("auth_limit_reached", { limits: list.map((b) => b.setting) });
+    return false;
+  }
+  return true;
 }
 
 /** Whether the attempt may go ahead, without counting it (to count failures only, with `count`). */

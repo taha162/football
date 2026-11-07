@@ -14,7 +14,15 @@ type Rpc = Parameters<Awaited<ReturnType<typeof createClient>>["rpc"]>[0];
 async function run(fn: Rpc, args: Record<string, unknown>, success: string): Promise<ActionState> {
   const supabase = await createClient();
   const { error } = await supabase.rpc(fn, args as never);
-  if (error) return fail(dbErrorCode(error, fn));
+  if (error) {
+    const code = dbErrorCode(error, fn);
+    // Someone without the role tried a moderator or admin action: a security event, not just a failed form.
+    if (code === "forbidden" || code === "not_authenticated" || code === "mfa_required") {
+      const { data } = await supabase.auth.getUser();
+      logger.warn("admin_action_refused", { action: fn, code, by: data.user?.id ?? null });
+    }
+    return fail(code);
+  }
   revalidatePath("/[locale]/admin", "layout");
   return ok(success);
 }
@@ -33,6 +41,38 @@ export async function setUserStatusAction(_: ActionState, fd: FormData): Promise
       if (error) logger.warn("auth_ban_failed", { status: error.status });
     }
   }
+  return res;
+}
+
+/**
+ * Someone lost the phone with their authenticator app: an admin removes it so
+ * they can sign in with the password alone (and set it up again). The database
+ * authorizes it (admins only, never their own) and records it first; the
+ * factors are then deleted through the Auth admin API.
+ */
+export async function resetSecondFactorAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  const user = uuid.safeParse(fd.get("user_id"));
+  if (!user.success) return fail("invalid");
+  const adminClient = createAdminClient();
+  if (!adminClient) {
+    logger.error("second_factor_reset_failed", { hint: "SUPABASE_SERVICE_ROLE_KEY is not set" });
+    return fail("generic");
+  }
+  const res = await run("admin_reset_second_factor", { p_user_id: user.data, p_reason: str(fd, "reason") }, "second_factor_reset");
+  if (!res?.ok) return res;
+  const { data, error } = await adminClient.auth.admin.mfa.listFactors({ userId: user.data });
+  if (error) {
+    logger.error("second_factor_reset_failed", { status: error.status, code: error.code });
+    return fail("generic");
+  }
+  for (const factor of data.factors) {
+    const { error: deleteError } = await adminClient.auth.admin.mfa.deleteFactor({ id: factor.id, userId: user.data });
+    if (deleteError) {
+      logger.error("second_factor_reset_failed", { status: deleteError.status, code: deleteError.code });
+      return fail("generic");
+    }
+  }
+  logger.info("second_factor_reset", { user: user.data });
   return res;
 }
 

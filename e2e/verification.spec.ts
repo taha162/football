@@ -1,5 +1,5 @@
-import { randomUUID } from "node:crypto";
-import { createAuthUser, emailedCode, emailedHtml, expect, PASSWORD, telegramMessage, telegramUser, test, verifyWithTelegram } from "./fixtures";
+import { randomInt, randomUUID } from "node:crypto";
+import { admin, createAuthUser, emailedCode, emailedHtml, expect, PASSWORD, telegramMessage, telegramUser, test, verifyWithTelegram } from "./fixtures";
 
 const phone = () => `9647${String(Math.floor(Math.random() * 1e9)).padStart(9, "0")}`;
 const localFormat = (e164: string) => `0${e164.slice(3)}`;
@@ -167,6 +167,34 @@ test.describe("Account verification", () => {
     const reply = await verifyWithTelegram(baseURL!, telegramUser(), await signUp(other), from);
     expect(reply.text).toContain("هذا الرقم مرتبط بحساب آخر");
     await expect(other.getByText("هذا الرقم مرتبط بحساب آخر في «الملعب».")).toBeVisible({ timeout: 15_000 });
+  });
+
+  test("Telegram sign-up: past the per-device limit, no account is created at all", async ({ browser }) => {
+    // A device of its own (an address only this test uses), and a limit of two sign-ups for it.
+    const ip = `203.0.113.${randomInt(1, 255)}`;
+    const tag = `Throttle ${randomUUID().slice(0, 8)}`;
+    const [setting] = await admin<{ value: unknown }>("select value from public.platform_settings where key = 'auth.signups_per_device'");
+    await admin("update public.platform_settings set value = '2'::jsonb where key = 'auth.signups_per_device'");
+    const context = await browser.newContext({ extraHTTPHeaders: { "x-real-ip": ip } });
+    try {
+      for (let i = 1; i <= 3; i++) {
+        const page = await context.newPage();
+        await page.goto("/ar/sign-up?method=telegram");
+        await page.getByRole("textbox", { name: "الاسم الظاهر" }).fill(tag);
+        await page.getByRole("textbox", { name: "كلمة المرور" }).fill(PASSWORD);
+        await page.getByRole("checkbox").check();
+        await page.getByRole("button", { name: "متابعة عبر تيليغرام" }).click();
+        if (i <= 2) await page.waitForURL(/\/ar\/verify-telegram/);
+        else await expect(page.getByText("محاولات كثيرة من هذا الجهاز")).toBeVisible();
+        await page.close();
+      }
+      // The refused attempt never reached Supabase Auth: two accounts, not three.
+      const [{ n }] = await admin<{ n: number }>("select count(*)::int as n from auth.users where raw_user_meta_data->>'display_name' = $1", [tag]);
+      expect(n).toBe(2);
+    } finally {
+      await admin("update public.platform_settings set value = $1::jsonb where key = 'auth.signups_per_device'", [JSON.stringify(setting?.value ?? 20)]);
+      await context.close();
+    }
   });
 
   test("Telegram bot: refuses unsigned updates and guides people who arrive without a valid code", async ({ baseURL }) => {

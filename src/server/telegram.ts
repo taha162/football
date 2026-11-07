@@ -14,6 +14,7 @@ import { clearVerifyTicket, clientKey, getVerifyTicket, hashTicket, newTicket, n
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { registerWebhook, telegramConfig } from "@/lib/telegram";
+import { buckets, count } from "@/lib/throttle";
 
 async function currentLocale(): Promise<Locale> {
   const l = await getLocale();
@@ -53,6 +54,9 @@ export async function startTelegramSignupAction(_: ActionState, fd: FormData): P
     })
     .safeParse({ display_name: fd.get("display_name"), password: fd.get("password"), accept_terms: fd.get("accept_terms") ?? undefined });
   if (!parsed.success) return fail("validation", zodFieldErrors(parsed.error));
+  // The same per-device limit as e-mail sign-ups, checked before any account is created:
+  // otherwise every request past the limit would still create (and then delete) an account.
+  if (!(await count(await buckets(["signupDevice"])))) return fail("too_many_attempts");
   const locale = await currentLocale();
   const admin = createAdminClient()!;
   const { data, error } = await admin.auth.admin.createUser({

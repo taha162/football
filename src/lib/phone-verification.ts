@@ -1,6 +1,7 @@
 import "server-only";
 import { createHash, randomBytes, randomInt } from "node:crypto";
 import { cookies, headers } from "next/headers";
+import { clientIp } from "@/lib/client-ip";
 
 /**
  * Pieces shared by the phone verification flows (sign-up and password reset
@@ -48,6 +49,5 @@ export async function clearVerifyTicket() {
 
 /** Client identifier for rate limiting (hashed in the database, never stored raw). */
 export async function clientKey(): Promise<string> {
-  const h = await headers();
-  return (h.get("x-forwarded-for")?.split(",")[0] ?? h.get("x-real-ip") ?? "unknown").trim();
+  return clientIp(await headers()) ?? "unknown";
 }

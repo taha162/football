@@ -43,4 +43,10 @@ describe("auth error codes", () => {
     expect(authErrorCode({ status: 429, code: "over_request_rate_limit", message: "Request rate limit reached" })).toBe("rate_limited");
     expect(authErrorCode({ status: 500, code: "unexpected_failure", message: "Database error saving new user" })).toBe("auth_failed");
   });
+
+  it("a new password from a day-old session asks for a fresh reset link", () => {
+    expect(authErrorCode({ status: 400, code: "reauthentication_needed", message: "Password update requires reauthentication" })).toBe(
+      "reset_link_expired",
+    );
+  });
 });

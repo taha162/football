@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import { notFound } from "next/navigation";
 import { Barlow, Barlow_Condensed, Cairo } from "next/font/google";
 import { hasLocale } from "next-intl";
+import { headers } from "next/headers";
 import { getTimeZone, getTranslations, setRequestLocale } from "next-intl/server";
 import { directionOf, routing } from "@/i18n/routing";
 import { SiteHeader } from "@/components/layout/site-header";
@@ -66,6 +67,8 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
   setRequestLocale(locale);
   const user = await getCurrentUser();
   const t = await getTranslations({ locale, namespace: "common" });
+  // The page's script nonce (src/proxy.ts): only scripts carrying it may run.
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   const fontVars =
     locale === "ar"
       ? { "--font-body": "var(--font-cairo)", "--font-heading": "var(--font-cairo)" }
@@ -82,9 +85,9 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
     >
       <body className="flex min-h-svh flex-col">
         {/* Landing page only: decides before first paint whether the opening plays. */}
-        <script dangerouslySetInnerHTML={{ __html: INTRO_SCRIPT }} />
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: INTRO_SCRIPT }} />
         {/* Every page: content rises into place at first paint (components/motion/enter-script.ts). */}
-        <script dangerouslySetInnerHTML={{ __html: ENTER_SCRIPT }} />
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: ENTER_SCRIPT }} />
         <IntlProvider locale={locale} timeZone={await getTimeZone()}>
           <a
             href="#main"

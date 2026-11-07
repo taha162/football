@@ -4,7 +4,7 @@ import { Link, redirect } from "@/i18n/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
-import { setRoleAction, setUserStatusAction } from "@/server/admin";
+import { resetSecondFactorAction, setRoleAction, setUserStatusAction } from "@/server/admin";
 import { InlineAction } from "@/components/ui/action-form";
 import { buttonClass } from "@/components/ui/button";
 import { ConfirmAction } from "@/components/ui/confirm-action";
@@ -24,6 +24,9 @@ export default async function AdminUsersPage({ searchParams }: PageProps<"/[loca
   const supabase = await createClient();
   const { data } = await supabase.rpc("admin_list_users", { p_search: q || undefined, p_limit: 51, p_offset: (page - 1) * 50 });
   const rows = (data ?? []).slice(0, 50);
+  // Who on this page uses two-step verification (empty before migration 0027 is run).
+  const { data: withApp } = rows.length ? await supabase.rpc("admin_users_with_second_factor", { p_user_ids: rows.map((u) => u.id) }) : { data: [] };
+  const secondFactor = new Set<string>(withApp ?? []);
   return (
     <>
       <PageHeader title={t("nav.users")} />
@@ -49,6 +52,7 @@ export default async function AdminUsersPage({ searchParams }: PageProps<"/[loca
                 <td className="p-2">
                   <Link href={`/players/${u.id}`} className="font-medium hover:underline">{u.display_name}</Link>
                   {u.status === "suspended" ? <Badge tone="danger" className="ms-2">{t("suspended")}</Badge> : null}
+                  {secondFactor.has(u.id) ? <Badge tone="success" className="ms-2">{t("secondFactor")}</Badge> : null}
                 </td>
                 <td className="p-2 text-muted" dir="ltr">
                   {/* Phone accounts have only an internal e-mail; their number is what identifies them. */}
@@ -85,6 +89,19 @@ export default async function AdminUsersPage({ searchParams }: PageProps<"/[loca
                           <ConfirmAction key={role} action={setRoleAction} values={{ user_id: u.id, role, grant: "1" }} label={t(`grant.${role}`)} title={t(`grant.${role}`)} description={t(`grantDescription.${role}`)} confirmLabel={t(`grant.${role}`)} variant="outline" />
                         ),
                       )}
+                      {secondFactor.has(u.id) ? (
+                        <ConfirmAction
+                          action={resetSecondFactorAction}
+                          values={{ user_id: u.id }}
+                          label={t("resetSecondFactor")}
+                          title={t("resetSecondFactor")}
+                          description={t("resetSecondFactorDescription")}
+                          confirmLabel={t("resetSecondFactor")}
+                          reasonName="reason"
+                          reasonLabel={t("reason")}
+                          variant="outline"
+                        />
+                      ) : null}
                     </div>
                   ) : (
                     <span className="text-xs text-muted">{t("you")}</span>

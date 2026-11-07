@@ -2,6 +2,9 @@ import { createServerClient } from "@supabase/ssr";
 import createMiddleware from "next-intl/middleware";
 import { NextRequest, NextResponse } from "next/server";
 import { routing } from "./i18n/routing";
+import { contentSecurityPolicy, newNonce } from "./lib/csp";
+import { sessionCookieOptions } from "./lib/env";
+import { hasSecondFactor, needsSecondStep } from "./lib/second-factor";
 
 const intl = createMiddleware(routing);
 
@@ -16,15 +19,23 @@ export async function proxy(request: NextRequest) {
   // next-intl doesn't see Accept-Language, so nothing tries another language.
   const headers = new Headers(request.headers);
   headers.delete("accept-language");
+  // A fresh nonce for this page: Next.js reads it from the request's policy
+  // and stamps its scripts; the layout reads x-nonce for its own two.
+  const nonce = newNonce();
+  const csp = contentSecurityPolicy(nonce);
+  headers.set("x-nonce", nonce);
+  headers.set("content-security-policy", csp);
   const response = intl(new NextRequest(request, { headers }));
   // Redirect responses don't need a session refresh.
   if (response.headers.get("location")) return response;
+  response.headers.set("Content-Security-Policy", csp);
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) return response;
 
   const supabase = createServerClient(url, key, {
+    cookieOptions: sessionCookieOptions(),
     cookies: {
       getAll() {
         return request.cookies.getAll();
@@ -40,21 +51,30 @@ export async function proxy(request: NextRequest) {
   });
   // Validates and, if needed, refreshes the session.
   const { data } = await supabase.auth.getUser();
+  const [, locale, ...rest] = request.nextUrl.pathname.split("/");
+  const path = `/${rest.join("/")}`;
+  if (!routing.locales.includes(locale as "ar")) return response;
+
+  /** A 307 to `/{locale}{to}?next=<this page>`, keeping any refreshed session cookies. */
+  const sendTo = (to: string) => {
+    const url = request.nextUrl.clone();
+    url.pathname = `/${locale}${to}`;
+    url.search = `?next=${encodeURIComponent(path + request.nextUrl.search)}`;
+    const redirect = NextResponse.redirect(url);
+    for (const c of response.cookies.getAll()) redirect.cookies.set(c);
+    return redirect;
+  };
 
   // Optimistic redirect for signed-out visitors to private areas (proper 307
   // instead of an in-stream redirect). Pages and the database still enforce
   // authorization independently.
-  if (!data.user) {
-    const [, locale, ...rest] = request.nextUrl.pathname.split("/");
-    const path = `/${rest.join("/")}`;
-    if (PROTECTED.some((p) => p.test(path)) && routing.locales.includes(locale as "ar")) {
-      const url = request.nextUrl.clone();
-      url.pathname = `/${locale}/sign-in`;
-      url.search = `?next=${encodeURIComponent(path + request.nextUrl.search)}`;
-      const redirect = NextResponse.redirect(url);
-      for (const c of response.cookies.getAll()) redirect.cookies.set(c);
-      return redirect;
-    }
+  if (!data.user) return PROTECTED.some((p) => p.test(path)) ? sendTo("/sign-in") : response;
+
+  // Password passed, authenticator-app code not yet: the database shows such a
+  // session nothing (migration 0027), so every page but the code page waits for it.
+  if (hasSecondFactor(data.user)) {
+    const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (needsSecondStep(data.user, aal?.currentLevel, path)) return sendTo("/mfa");
   }
   return response;
 }

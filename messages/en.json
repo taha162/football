@@ -135,7 +135,13 @@
     "tgNoAccount": "No account is linked to this number.",
     "tgVerified": "Verified! Taking you there…",
     "or": "or",
-    "tgNoBot": "The bot didn't open?"
+    "tgNoBot": "The bot didn't open?",
+    "secondStepTitle": "Two-step verification",
+    "secondStepSubtitle": "Open the authenticator app on your phone and type the code it shows for Al-Malab.",
+    "secondStepLost": "Lost your phone? Contact the site's administrators to reset two-step verification.",
+    "secondStepSignOut": "Sign out",
+    "appCode": "App code",
+    "appCodeHint": "6 digits; it changes every 30 seconds."
   },
   "onboarding": {
     "eyebrow": "Step 1 of 1",
@@ -437,7 +443,10 @@
     "user_busy": "On another call.",
     "call_not_found": "Call not found.",
     "call_ended": "The call has ended.",
-    "invalid_signal": "Couldn't connect the call."
+    "invalid_signal": "Couldn't connect the call.",
+    "mfa_required": "Finish signing in with the code from your authenticator app first.",
+    "second_factor_on": "Two-step verification is already on for this account.",
+    "second_factor_off": "Two-step verification isn't on for this account."
   },
   "validation": {
     "invalid": "Invalid value.",
@@ -462,7 +471,8 @@
     "invalid_rule": "Complete the rule: days, times and price.",
     "invalid_json": "Enter a valid JSON value.",
     "invalid_slug": "Use lowercase letters, digits and dashes.",
-    "invalid_code": "Enter the numeric code you received."
+    "invalid_code": "Enter the numeric code you received.",
+    "app_code": "Type the six digits the app shows."
   },
   "success": {
     "saved": "Saved.",
@@ -555,7 +565,10 @@
     "deposit_reported": "Thanks. The venue has been told and will confirm once it sees the deposit.",
     "deposit_recorded": "Deposit recorded. The booking is confirmed.",
     "deposit_refunded": "Recorded as returned. The customer has been told.",
-    "deposit_instructions_saved": "Payment details saved."
+    "deposit_instructions_saved": "Payment details saved.",
+    "second_factor_on": "Two-step verification is on.",
+    "second_factor_off": "Two-step verification is off.",
+    "second_factor_reset": "Two-step verification was reset. The owner can sign in with the password and set it up again."
   },
   "notifications": {
     "generic": "You have a new update.",
@@ -1423,7 +1436,12 @@
     "callsRelayNone": "Not set: calls work on most networks, but may fail between some mobile networks",
     "callsHint": "A call goes straight between the two browsers and nothing of it is stored. The relay passes the sound on when a direct path isn't possible. Setup steps are in DEPLOYMENT.md.",
     "reportedVoice": "The reported voice message",
-    "handle": "Handle"
+    "handle": "Handle",
+    "secondFactor": "Two-step",
+    "resetSecondFactor": "Reset two-step verification",
+    "resetSecondFactorDescription": "For someone who lost their phone: the authenticator app is removed from their account, so they sign in with the password alone and set it up again. First make sure the request comes from the account's owner.",
+    "secondFactorAdvice": "Your account has admin rights: turn on two-step verification to protect it.",
+    "secondFactorAdviceAction": "Turn it on in Settings"
   },
   "teams": {
     "title": "Teams",
@@ -1688,7 +1706,25 @@
     "noBlocked": "You haven't blocked anyone.",
     "unblock": "Unblock",
     "phone": "Phone number",
-    "phoneVerified": "Verified"
+    "phoneVerified": "Verified",
+    "secondFactor": "Two-step verification",
+    "secondFactorIntro": "After your password, the site asks for a code from an authenticator app on your phone, such as Google Authenticator or Microsoft Authenticator. Nobody gets into your account with the password alone.",
+    "secondFactorTurnOn": "Turn on two-step verification",
+    "secondFactorStep1": "Install an authenticator app on your phone if you don't have one, such as Google Authenticator or Microsoft Authenticator.",
+    "secondFactorStep2": "In the app, add an account and scan this code, or choose manual entry and type the key.",
+    "secondFactorStep3": "Type the 6-digit code the app shows.",
+    "secondFactorQrAlt": "QR code that adds your Al-Malab account to an authenticator app",
+    "secondFactorKeyHint": "On this same phone? Copy the key and paste it into the app:",
+    "secondFactorCopy": "Copy key",
+    "secondFactorCopied": "Copied",
+    "secondFactorCodeLabel": "Code from the app",
+    "secondFactorConfirm": "Confirm and turn on",
+    "secondFactorCancel": "Cancel",
+    "secondFactorOn": "On",
+    "secondFactorOnHint": "Every sign-in asks for a code from the app after the password.",
+    "secondFactorOffLabel": "To turn it off, type a code from the app",
+    "secondFactorOffHint": "Once it's off, the password alone opens your account.",
+    "secondFactorTurnOff": "Turn off two-step verification"
   },
   "messages": {
     "title": "Messages",
