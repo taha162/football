@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { clientIp } from "@/lib/client-ip";
 import { contentSecurityPolicy, newNonce } from "@/lib/csp";
 import { sessionCookieOptions } from "@/lib/env";
+import { afterSecondStep, hasSecondFactor, needsSecondStep } from "@/lib/second-factor";
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => null }));
@@ -45,6 +46,39 @@ describe("Content-Security-Policy", () => {
     const seen = new Set(Array.from({ length: 200 }, () => newNonce()));
     expect(seen.size).toBe(200);
     for (const n of seen) expect(atob(n)).toHaveLength(16);
+  });
+});
+
+describe("two-step verification: who must enter the app code, and where to", () => {
+  const withApp = { factors: [{ status: "verified" }] };
+  const unfinished = { factors: [{ status: "unverified" }] };
+
+  it("only a confirmed app counts", () => {
+    expect(hasSecondFactor(withApp)).toBe(true);
+    expect(hasSecondFactor(unfinished)).toBe(false);
+    expect(hasSecondFactor({ factors: null })).toBe(false);
+    expect(hasSecondFactor(null)).toBe(false);
+  });
+
+  it("after the password alone, every page but the code page waits for the code", () => {
+    expect(needsSecondStep(withApp, "aal1", "/dashboard")).toBe(true);
+    expect(needsSecondStep(withApp, "aal1", "/")).toBe(true);
+    expect(needsSecondStep(withApp, "aal1", "/settings")).toBe(true);
+    expect(needsSecondStep(withApp, null, "/admin/users")).toBe(true);
+    expect(needsSecondStep(withApp, "aal1", "/mfa")).toBe(false);
+    expect(needsSecondStep(withApp, "aal1", "/mfa-elsewhere")).toBe(true);
+  });
+
+  it("after the code, or without an app, nothing changes", () => {
+    expect(needsSecondStep(withApp, "aal2", "/dashboard")).toBe(false);
+    expect(needsSecondStep(unfinished, "aal1", "/dashboard")).toBe(false);
+    expect(needsSecondStep(null, null, "/dashboard")).toBe(false);
+  });
+
+  it("the code page never sends people back to itself", () => {
+    expect(afterSecondStep("/matches?city=mosul")).toBe("/matches?city=mosul");
+    expect(afterSecondStep("/mfa")).toBe("/dashboard");
+    expect(afterSecondStep("/mfa?next=/mfa")).toBe("/dashboard");
   });
 });
 

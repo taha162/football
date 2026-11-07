@@ -3,6 +3,7 @@ import { cache } from "react";
 import { redirect } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { isSupabaseConfigured } from "@/lib/env";
+import { hasSecondFactor } from "@/lib/second-factor";
 import { createClient } from "@/lib/supabase/server";
 import type { Tables } from "@/lib/supabase/types";
 
@@ -16,6 +17,8 @@ export interface CurrentUser {
   roles: ("admin" | "moderator")[];
   isAdmin: boolean;
   isModerator: boolean;
+  /** Has a confirmed authenticator app (two-step verification). */
+  secondFactor: boolean;
 }
 
 /**
@@ -41,6 +44,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
     roles: roleList,
     isAdmin: roleList.includes("admin"),
     isModerator: roleList.includes("admin") || roleList.includes("moderator"),
+    secondFactor: hasSecondFactor(data.user),
   };
 });
 

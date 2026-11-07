@@ -6,13 +6,20 @@
  */
 import { createHash, randomInt, randomUUID } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { admin, localTime, mosul, rpc } from "../tests/shared/db";
+import { totp, wrongCode } from "../tests/shared/totp";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "http://127.0.0.1:54321";
 const SERVICE_KEY =
   process.env.SUPABASE_SERVICE_ROLE_KEY ??
   // Well-known key of the local Supabase development stack (not a secret).
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU";
+
+const ANON_KEY =
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+  // Well-known key of the local Supabase development stack (not a secret).
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0";
 
 export const PASSWORD = "Str0ng-pass-123";
 
@@ -138,6 +145,27 @@ export async function verifyWithTelegram(baseURL: string, from: number, code: st
   return telegramMessage(baseURL, from, { contact: { phone_number: phone, first_name: "E2E", user_id: from } });
 }
 
-export { admin, localTime, mosul, rpc };
+/**
+ * Signs in straight against the Supabase API with the password only, as
+ * someone who knows the password but not the app code would (no browser).
+ */
+export async function passwordSession(user: TestUser): Promise<SupabaseClient> {
+  const client = createClient(SUPABASE_URL, ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
+  const { error } = await client.auth.signInWithPassword({ email: user.email, password: PASSWORD });
+  if (error) throw error;
+  return client;
+}
+
+/** Turns on two-step verification for `user` as their app would (enrol + first code); returns the secret. */
+export async function turnOnSecondFactor(user: TestUser): Promise<string> {
+  const client = await passwordSession(user);
+  const { data, error } = await client.auth.mfa.enroll({ factorType: "totp" });
+  if (error) throw error;
+  const verified = await client.auth.mfa.challengeAndVerify({ factorId: data.id, code: totp(data.totp.secret) });
+  if (verified.error) throw verified.error;
+  return data.totp.secret;
+}
+
+export { admin, localTime, mosul, rpc, totp, wrongCode };
 
 export { expect, test };

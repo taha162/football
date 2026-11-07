@@ -1,5 +1,6 @@
 "use client";
 
+import type { ComponentProps } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { ActionForm, FormField, Hidden, SubmitButton } from "@/components/ui/action-form";
@@ -13,6 +14,7 @@ import {
   signUpAction,
   verifyEmailCodeAction,
 } from "@/server/auth";
+import { verifySecondFactorAction } from "@/server/mfa";
 import { startTelegramResetAction, startTelegramSignupAction } from "@/server/telegram";
 import { useActionMessage } from "@/components/ui/use-action-message";
 
@@ -130,6 +132,35 @@ export function VerifyEmailForm() {
         <SubmitButton variant="ghost" size="sm">{t("resendCode")}</SubmitButton>
       </ActionForm>
     </div>
+  );
+}
+
+/** The six digits an authenticator app shows: typed by hand or filled in by the phone. */
+export function AppCodeInput(props: ComponentProps<typeof Input>) {
+  return (
+    <Input
+      {...props}
+      inputMode="numeric"
+      autoComplete="one-time-code"
+      pattern="[0-9 ]{6,7}"
+      maxLength={7}
+      required
+      dir="ltr"
+      className="text-center font-display text-2xl tracking-[0.4em]"
+    />
+  );
+}
+
+export function SecondStepForm({ next }: { next: string }) {
+  const t = useTranslations("auth");
+  return (
+    <ActionForm action={verifySecondFactorAction}>
+      <Hidden values={{ next }} />
+      <FormField name="code" label={t("appCode")} hint={t("appCodeHint")} required>
+        {(a) => <AppCodeInput {...a} autoFocus />}
+      </FormField>
+      <SubmitButton size="lg">{t("verify")}</SubmitButton>
+    </ActionForm>
   );
 }
 

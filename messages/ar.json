@@ -135,7 +135,13 @@
     "tgNoAccount": "لا يوجد حساب مرتبط بهذا الرقم.",
     "tgVerified": "تم التحقق! جارٍ تحويلك…",
     "or": "أو",
-    "tgNoBot": "لم يفتح البوت؟"
+    "tgNoBot": "لم يفتح البوت؟",
+    "secondStepTitle": "التحقق بخطوتين",
+    "secondStepSubtitle": "افتح تطبيق المصادقة على هاتفك واكتب الرمز الظاهر لحساب «الملعب».",
+    "secondStepLost": "فقدت هاتفك؟ تواصل مع إدارة الموقع لإعادة ضبط التحقق بخطوتين.",
+    "secondStepSignOut": "تسجيل الخروج",
+    "appCode": "رمز التطبيق",
+    "appCodeHint": "6 أرقام، يتغيّر كل 30 ثانية."
   },
   "onboarding": {
     "eyebrow": "الخطوة 1 من 1",
@@ -437,7 +443,10 @@
     "user_busy": "مشغول بمكالمة أخرى.",
     "call_not_found": "المكالمة غير موجودة.",
     "call_ended": "انتهت المكالمة.",
-    "invalid_signal": "تعذّر وصل المكالمة."
+    "invalid_signal": "تعذّر وصل المكالمة.",
+    "mfa_required": "أكمل تسجيل الدخول برمز تطبيق المصادقة أولًا.",
+    "second_factor_on": "التحقق بخطوتين مفعّل مسبقًا لهذا الحساب.",
+    "second_factor_off": "التحقق بخطوتين غير مفعّل لهذا الحساب."
   },
   "validation": {
     "invalid": "قيمة غير صالحة.",
@@ -462,7 +471,8 @@
     "invalid_rule": "أكمل القاعدة: الأيام والأوقات والسعر.",
     "invalid_json": "أدخل قيمة JSON صحيحة.",
     "invalid_slug": "استخدم أحرفاً إنجليزية صغيرة وأرقاماً وشرطات.",
-    "invalid_code": "أدخل الرمز المكوّن من الأرقام كما وصلك."
+    "invalid_code": "أدخل الرمز المكوّن من الأرقام كما وصلك.",
+    "app_code": "اكتب الأرقام الستة الظاهرة في التطبيق."
   },
   "success": {
     "saved": "تم الحفظ.",
@@ -555,7 +565,10 @@
     "deposit_reported": "شكراً. أبلغنا الملعب، وسيثبّت الحجز عندما يرى العربون.",
     "deposit_recorded": "سُجّل استلام العربون وتثبّت الحجز.",
     "deposit_refunded": "سُجّل إرجاع العربون، وأُبلغ الزبون.",
-    "deposit_instructions_saved": "حُفظت طريقة الدفع."
+    "deposit_instructions_saved": "حُفظت طريقة الدفع.",
+    "second_factor_on": "تم تفعيل التحقق بخطوتين.",
+    "second_factor_off": "تم إيقاف التحقق بخطوتين.",
+    "second_factor_reset": "أُعيد ضبط التحقق بخطوتين. يستطيع صاحب الحساب الدخول بكلمة المرور ثم تفعيله من جديد."
   },
   "notifications": {
     "generic": "لديك تحديث جديد.",
@@ -1423,7 +1436,12 @@
     "callsRelayNone": "غير مضبوط: تعمل المكالمات على أغلب الشبكات، وقد تفشل بين بعض شبكات الهاتف",
     "callsHint": "المكالمة تمر مباشرة بين المتصفحين ولا يُحفظ منها شيء. خادم الوصل يمرر الصوت حين يتعذّر الطريق المباشر. خطوات ضبطه في DEPLOYMENT.md.",
     "reportedVoice": "الرسالة الصوتية المبلّغ عنها",
-    "handle": "إدارة"
+    "handle": "إدارة",
+    "secondFactor": "تحقق بخطوتين",
+    "resetSecondFactor": "إعادة ضبط التحقق بخطوتين",
+    "resetSecondFactorDescription": "لمن فقد هاتفه: يُحذف تطبيق المصادقة من حسابه، فيدخل بكلمة المرور وحدها ثم يفعّله من جديد. تأكّد أولًا أن الطلب من صاحب الحساب نفسه.",
+    "secondFactorAdvice": "حسابك يملك صلاحيات إدارية، ففعّل التحقق بخطوتين لحمايته.",
+    "secondFactorAdviceAction": "فعّله من الإعدادات"
   },
   "teams": {
     "title": "الفرق",
@@ -1688,7 +1706,25 @@
     "noBlocked": "لم تحظر أحداً.",
     "unblock": "إلغاء الحظر",
     "phone": "رقم الهاتف",
-    "phoneVerified": "موثّق"
+    "phoneVerified": "موثّق",
+    "secondFactor": "التحقق بخطوتين",
+    "secondFactorIntro": "بعد كلمة المرور يطلب الموقع رمزًا من تطبيق مصادقة على هاتفك، مثل Google Authenticator أو Microsoft Authenticator. هكذا لا يدخل أحد إلى حسابك بكلمة المرور وحدها.",
+    "secondFactorTurnOn": "تفعيل التحقق بخطوتين",
+    "secondFactorStep1": "ثبّت تطبيق مصادقة على هاتفك إن لم يكن لديك واحد، مثل Google Authenticator أو Microsoft Authenticator.",
+    "secondFactorStep2": "في التطبيق أضف حسابًا جديدًا وامسح هذا الرمز، أو اختر الإدخال اليدوي واكتب المفتاح.",
+    "secondFactorStep3": "اكتب الرمز المكوّن من 6 أرقام الذي يظهر في التطبيق.",
+    "secondFactorQrAlt": "رمز QR لإضافة حسابك في «الملعب» إلى تطبيق المصادقة",
+    "secondFactorKeyHint": "على هذا الهاتف نفسه؟ انسخ المفتاح والصقه في التطبيق:",
+    "secondFactorCopy": "نسخ المفتاح",
+    "secondFactorCopied": "تم النسخ",
+    "secondFactorCodeLabel": "الرمز من التطبيق",
+    "secondFactorConfirm": "تأكيد وتفعيل",
+    "secondFactorCancel": "إلغاء",
+    "secondFactorOn": "مفعّل",
+    "secondFactorOnHint": "يُطلب رمز من التطبيق بعد كلمة المرور عند كل تسجيل دخول.",
+    "secondFactorOffLabel": "لإيقافه اكتب رمزًا من التطبيق",
+    "secondFactorOffHint": "بعد إيقافه تكفي كلمة المرور وحدها للدخول إلى حسابك.",
+    "secondFactorTurnOff": "إيقاف التحقق بخطوتين"
   },
   "messages": {
     "title": "الرسائل",

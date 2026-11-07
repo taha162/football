@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { routing } from "./i18n/routing";
 import { contentSecurityPolicy, newNonce } from "./lib/csp";
 import { sessionCookieOptions } from "./lib/env";
+import { hasSecondFactor, needsSecondStep } from "./lib/second-factor";
 
 const intl = createMiddleware(routing);
 
@@ -50,21 +51,30 @@ export async function proxy(request: NextRequest) {
   });
   // Validates and, if needed, refreshes the session.
   const { data } = await supabase.auth.getUser();
+  const [, locale, ...rest] = request.nextUrl.pathname.split("/");
+  const path = `/${rest.join("/")}`;
+  if (!routing.locales.includes(locale as "ar")) return response;
+
+  /** A 307 to `/{locale}{to}?next=<this page>`, keeping any refreshed session cookies. */
+  const sendTo = (to: string) => {
+    const url = request.nextUrl.clone();
+    url.pathname = `/${locale}${to}`;
+    url.search = `?next=${encodeURIComponent(path + request.nextUrl.search)}`;
+    const redirect = NextResponse.redirect(url);
+    for (const c of response.cookies.getAll()) redirect.cookies.set(c);
+    return redirect;
+  };
 
   // Optimistic redirect for signed-out visitors to private areas (proper 307
   // instead of an in-stream redirect). Pages and the database still enforce
   // authorization independently.
-  if (!data.user) {
-    const [, locale, ...rest] = request.nextUrl.pathname.split("/");
-    const path = `/${rest.join("/")}`;
-    if (PROTECTED.some((p) => p.test(path)) && routing.locales.includes(locale as "ar")) {
-      const url = request.nextUrl.clone();
-      url.pathname = `/${locale}/sign-in`;
-      url.search = `?next=${encodeURIComponent(path + request.nextUrl.search)}`;
-      const redirect = NextResponse.redirect(url);
-      for (const c of response.cookies.getAll()) redirect.cookies.set(c);
-      return redirect;
-    }
+  if (!data.user) return PROTECTED.some((p) => p.test(path)) ? sendTo("/sign-in") : response;
+
+  // Password passed, authenticator-app code not yet: the database shows such a
+  // session nothing (migration 0027), so every page but the code page waits for it.
+  if (hasSecondFactor(data.user)) {
+    const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (needsSecondStep(data.user, aal?.currentLevel, path)) return sendTo("/mfa");
   }
   return response;
 }

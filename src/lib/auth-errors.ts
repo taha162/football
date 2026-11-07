@@ -34,6 +34,8 @@ export function authErrorCode(error: AuthErrorLike): string {
   if (error.code === "user_already_exists" || error.code === "email_exists") return "email_taken";
   // A new password from a session older than a day: only a fresh reset link may set it.
   if (error.code === "reauthentication_needed") return "reset_link_expired";
+  // With an authenticator app, changing the password (or e-mail) needs the code first.
+  if (error.code === "insufficient_aal") return "mfa_required";
   const m = (error.message ?? "").toLowerCase();
   if (m.includes("invalid login") || m.includes("invalid credentials")) return "invalid_credentials";
   if (m.includes("email not confirmed")) return "email_not_confirmed";

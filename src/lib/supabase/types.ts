@@ -1391,6 +1391,9 @@ isOneToOne: false
 "admin_remove_message":
 { Args: { "p_message_id": number,"p_reason": string }; Returns: undefined
                            },
+"admin_reset_second_factor":
+{ Args: { "p_reason"?: string,"p_user_id": string }; Returns: undefined
+                           },
 "admin_set_hidden":
 { Args: { "p_entity_id": string,"p_entity_type": string,"p_hidden": boolean,"p_reason"?: string }; Returns: undefined
                            },
@@ -1417,6 +1420,9 @@ isOneToOne: false
                            },
 "admin_upsert_city":
 { Args: { "p_country_code": string,"p_currency": string,"p_id": string,"p_is_active"?: boolean,"p_latitude"?: number,"p_longitude"?: number,"p_name_ar": string,"p_name_en": string,"p_slug": string,"p_timezone": string }; Returns: string
+                           },
+"admin_users_with_second_factor":
+{ Args: { "p_user_ids": (string)[] }; Returns: string[]
                            },
 "answer_call":
 { Args: { "p_call_id": string }; Returns: string
