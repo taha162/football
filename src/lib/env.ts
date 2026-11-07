@@ -47,6 +47,18 @@ export const publicEnv = {
   mapboxToken: process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "",
 };
 
+/**
+ * Options for the Supabase session cookie. @supabase/ssr leaves out `Secure`,
+ * so a browser would also send the session over plain http (an http link, a
+ * hostile network before HSTS is known). Wherever the site is served over
+ * https, the cookie is marked Secure. It stays readable by the page's own
+ * script, which the browser client needs for live updates; the nonce policy
+ * (src/lib/csp.ts) keeps other script from running.
+ */
+export function sessionCookieOptions(siteUrl = publicEnv.siteUrl): { secure: boolean } {
+  return { secure: siteUrl.startsWith("https://") };
+}
+
 export function isSupabaseConfigured(): boolean {
   return Boolean(publicEnv.supabaseUrl && publicEnv.supabaseAnonKey);
 }

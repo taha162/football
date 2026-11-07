@@ -948,3 +948,14 @@
 **لا يحتاج** أي ملف SQL.
 
 التعديل: «Client address read in one place, preferring the host's own header»
+
+### 62. كوكي تسجيل الدخول لا يُرسل إلا عبر اتصال آمن
+**ما تغيّر:** كوكي تسجيل الدخول صار يحمل العلامة `Secure` حين يعمل الموقع على https، فلا يرسله المتصفح أبداً عبر اتصال غير مشفّر. على الجهاز المحلي (http) يبقى كما كان. الكوكي الموجود عند الناس يُكتب من جديد بالعلامة عند تجديد الجلسة، فلا يحتاج أحد إلى تسجيل الخروج.
+
+الملفات: `src/lib/env.ts` (`sessionCookieOptions`)، `src/lib/supabase/server.ts` و`client.ts`، `src/proxy.ts`. اختبار وحدة.
+
+**ما حُذف:** لا شيء.
+
+**لا يحتاج** أي ملف SQL.
+
+التعديل: «Session cookie marked Secure over https»
