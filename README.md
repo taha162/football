@@ -12,6 +12,7 @@ A community platform for recreational football: find and organize matches, build
 | [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) | What is done, verified, and not yet built |
 | [DEPLOYMENT.md](DEPLOYMENT.md) | Step-by-step Vercel + Supabase deployment (Arabic) |
 | [AUDIT.md](AUDIT.md) | Launch audit: security, load, page inspection, mobile speed, what remains (Arabic) |
+| [SECURITY_REVIEW.md](SECURITY_REVIEW.md) | Security review of 7 November: findings by severity, fixes and their tests, what needs the owner, what couldn't be verified |
 | [PERFORMANCE.md](PERFORMANCE.md) | Performance audit: what was measured and how, before/after numbers, the migration awaiting approval, skipped items |
 
 ## Stack

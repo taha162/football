@@ -3,7 +3,7 @@
 ## Principles
 
 1. **The database enforces the rules.** Clients, including our own Next.js server, get read access through RLS and write only through RPCs that validate everything.
-2. **No secrets in the browser.** Only `NEXT_PUBLIC_SUPABASE_URL`, the anon key, the site URL and an optional URL-restricted Mapbox token are public. `SUPABASE_SERVICE_ROLE_KEY` is imported only by `src/lib/supabase/admin.ts`, which is guarded by `server-only`; a scan of the production build finds neither it, `CRON_SECRET`, the Telegram token, nor the word `service_role` in any file sent to browsers. The server uses that client only where the caller was checked first or no person can reach it:
+2. **No secrets in the browser.** Only `NEXT_PUBLIC_SUPABASE_URL`, the anon key, the site URL and an optional URL-restricted Mapbox token are public. `SUPABASE_SERVICE_ROLE_KEY` is imported only by `src/lib/supabase/admin.ts`, which is guarded by `server-only`. A scan of the production build's browser files (`.next/static`) finds none of the values of the service-role key, `CRON_SECRET` or the Telegram token. The word `service_role` appears there once, as the name of an admin message (`service_role_missing`), never as a key. The server uses that client only where the caller was checked first or no person can reach it:
    - `/api/cron` (bearer secret) and the Telegram webhook (secret header);
    - the sign-in limits (`auth_throttle`, executable by `service_role` only) and the phone-to-address lookup at sign-in, after the limit check;
    - the Telegram verification page, for the caller's own httpOnly ticket;
@@ -18,9 +18,22 @@
 
 ## Authentication and authorization
 
-- Supabase Auth with e-mail and password (minimum length 8, configured in `supabase/config.toml`). Sessions use HTTP-only cookies via `@supabase/ssr`, and the proxy refreshes them.
+- Supabase Auth with e-mail and password (minimum length 8, configured in `supabase/config.toml`).
+- **Session cookies** are set by `@supabase/ssr` and refreshed by the proxy.
+  - They are `SameSite=Lax`, and `Secure` wherever the site is served over https (`sessionCookieOptions()` in `src/lib/env.ts`, unit-tested).
+  - They are **not** `HttpOnly`: the browser client reads the session to open live updates and calls. So the page's own scripts can read the cookie. The defence against a script that shouldn't be there is the nonce Content-Security-Policy (below), which refuses any script the server didn't send.
+  - They last 400 days (the library's default) and are refreshed while used. Signing out, or changing the password, ends the account's other sessions at Supabase. An access token already handed out stays valid until it expires (at most an hour, `jwt_expiry`).
 - Server code identifies the user with `auth.getUser()`, which is validated by Auth and memoized per request. It never relies on `getSession()` alone.
-- `private.require_user()` rejects anonymous and suspended accounts, and can require completed onboarding.
+- `private.require_user()` rejects anonymous and suspended accounts, and anyone whose session still owes the authenticator-app code (below). It can also require completed onboarding.
+- **Changing the password** needs a session younger than a day (`secure_password_change`). The e-mailed reset link starts a fresh session, so the "forgot password" route always works. An older session gets "the link expired, ask for a new one". With an authenticator app, Supabase also refuses a new password (or e-mail) from a session that hasn't passed the code.
+- **Two-step verification** (authenticator app, TOTP), optional for everyone and recommended for staff (the admin pages say so until it's on):
+  - Turned on in Settings: a QR code, or the key to type into the app on the same phone, then a first code to confirm it. Turning it off takes a current code too.
+  - After the password, every page sends to `/mfa` until the code is accepted (`src/proxy.ts`). Sign-in goes there directly.
+  - **The database enforces it, not just the pages** (migration 0027). `private.mfa_satisfied()` is true for people without a confirmed app, and for sessions whose token says `aal2`. Every table with RLS, and storage, has a `RESTRICTIVE` policy on it. That policy can only take access away, so people without an app keep exactly the access they had. `require_user()` refuses with `mfa_required`. The six definer functions that read as the person without `require_user()` (`my_phone`, `my_conversations`, `unread_counts`, `entity_conversation_id`, `player_stats`, `quote_booking`) treat such a session as nobody.
+  - Wrong codes count towards the per-account code limit (10 in 15 minutes).
+  - **Lost phone:** an admin resets it from Admin → Users. The database authorizes the reset (admins only, never their own), records it in the audit log with the reason, and then the server deletes the factor through the Auth admin API. Check the request really comes from the account's owner before resetting.
+  - **A table added by a later migration needs the same policy.** A DB test lists every table with RLS that lacks it, and fails until it has it.
+  - Tests: 11 DB tests (password only: no rows, not even public lists, every RPC refused, private reads empty, files hidden; after the code: as before; unconfirmed set-up: no change; every RLS table has the policy; admin reset rules and audit). Switching the check off makes 5 of them fail. E2E: turn on, sign out, sign in → code page; other pages wait; straight through the API with the password only: no rows, `mfa_required`, password change refused; wrong code refused; right code → the page asked for; turn off with a code. A second E2E covers the admin reset, the audit row, and the password-only sign-in afterwards.
 - **Roles.** `user_roles` has no write privilege for API roles:
   - Only `admin_set_role` (admins only) changes roles. Admins cannot remove their own admin role.
   - Moderators cannot grant roles or suspend admins.
@@ -46,8 +59,9 @@
 
 - Per-user rate limits (advisory-locked) for messages, invitations, reports, team creation and organizer limits. Values are in `platform_settings`.
 - **Sign-in, sign-up, password reset and e-mail codes are limited per device and per account** (`public.auth_throttle`, settings `auth.*`). Supabase Auth sees every request coming from our server, so its own per-IP limits can't tell attackers apart; the app counts instead.
-  - Wrong passwords: 50 per device and 10 per account in 15 minutes. Wrong codes: 10 per account in 15 minutes. Sign-ups: 20 per device an hour. Reset e-mails: 10 per device and 5 per account an hour. Code resends: 5 per account an hour. Past a limit the form says to wait; the correct password is refused too until the window passes.
-  - The device is the client IP from `x-real-ip` / `x-forwarded-for`, set by Vercel. Mobile networks in Iraq can put many people behind one address, so the device limits are generous and admins can raise them.
+  - Wrong passwords: 50 per device and 10 per account in 15 minutes. Wrong codes (e-mailed or from the authenticator app): 10 per account in 15 minutes. Sign-ups, by e-mail or by Telegram: 20 per device an hour. Reset e-mails: 10 per device and 5 per account an hour. Code resends: 5 per account an hour. Past a limit the form says to wait; the correct password is refused too until the window passes.
+  - A Telegram sign-up is counted **before** its account is created, so requests past the limit create nothing (E2E: with the limit at 2, a third sign-up from one device is refused and exactly two accounts exist).
+  - The device is the client IP, read in one place (`clientIp()` in `src/lib/client-ip.ts`). It prefers `x-real-ip`, which Vercel sets to the connecting address. The first `x-forwarded-for` hop is used only as a fallback, because a visitor can put anything first there (unit test). Mobile networks in Iraq can put many people behind one address, so the device limits are generous and admins can raise them.
   - Keys are HMAC-SHA256 of the IP or account (keyed by the service-role key), so the table holds no addresses. Rows older than a day are deleted.
   - The limits need `SUPABASE_SERVICE_ROLE_KEY`; without it they are off and sign-in works unlimited. If the database call fails (for example before migration 0021 is run), sign-in still works and a warning is logged.
   - DB tests: only the server may count; limits, check-only and separate keys; an admin setting overrides the default. E2E: ten wrong passwords, then the right one is refused with the waiting message.
@@ -60,14 +74,23 @@
 
 ## HTTP hardening
 
-`next.config.ts` sets:
-- a `Content-Security-Policy`:
-  - scripts, styles, fonts, workers and the manifest from the site itself (plus `data:` fonts and `blob:` workers);
-  - pictures from the site, the Supabase project, and the map tiles (OpenStreetMap, Mapbox), plus `data:` and `blob:`; voice notes from the site and the Supabase project;
+A `Content-Security-Policy` (built in `src/lib/csp.ts`, unit-tested):
+- **Pages get a fresh nonce on every response** from the proxy (`src/proxy.ts`). Their `script-src` is `'self' 'nonce-…' 'strict-dynamic'`, with no `'unsafe-inline'`:
+  - Next.js reads the nonce from the request's policy and stamps it on its own scripts, and the layout stamps its two first-paint scripts.
+  - Scripts those load are trusted (`'strict-dynamic'`).
+  - A `<script>` or an `onerror=` handler injected into the page has no nonce and doesn't run.
+  - Every `[locale]` page was already rendered per request, so this costs no static optimization.
+- **Other responses** (API routes, files) get the same policy without a nonce from `next.config.ts`. Each response carries exactly one policy.
+- Styles still allow `'unsafe-inline'`: React writes `style` attributes, which a nonce can't cover. `'unsafe-eval'` is allowed in development only.
+- Everything else in the policy:
+  - fonts, workers and the manifest from the site itself (plus `data:` fonts and `blob:` workers);
+  - pictures from the site, the Supabase project and the map tiles (OpenStreetMap, Mapbox), plus `data:` and `blob:`;
+  - voice notes from the site and the Supabase project;
   - connections to the site and the Supabase project (HTTPS and its Realtime socket);
-  - no frames, no plugins (`object-src 'none'`), forms post to the site only, `base-uri 'self'`, `frame-ancestors 'none'`;
+  - no frames and no plugins (`object-src 'none'`); forms post to the site only; `base-uri 'self'`; `frame-ancestors 'none'`;
   - `upgrade-insecure-requests` when Supabase is on HTTPS.
-  - Scripts and styles allow `'unsafe-inline'`: Next.js inlines its bootstrap scripts, and per-request nonces would make every static page dynamic. User text is escaped by React, and an injected script still can't load code from elsewhere or send data to another site. `'unsafe-eval'` is allowed in development only.
+
+`next.config.ts` also sets:
 - `X-Content-Type-Options: nosniff`
 - `Referrer-Policy: strict-origin-when-cross-origin`
 - `X-Frame-Options: DENY`
@@ -75,7 +98,13 @@
 - `Strict-Transport-Security` for two years with subdomains (sent always; browsers only honour it over HTTPS)
 - `poweredByHeader: false`
 
-E2E (`e2e/security.spec.ts`) checks these headers, and that a walk through the landing page, venues, matches, notifications and a live conversation reports no CSP violation.
+E2E (`e2e/security.spec.ts`) checks:
+- the headers above;
+- one policy per page, with a different nonce on each request;
+- that an `onerror=` handler injected into a page is refused, and the violation is reported;
+- that a walk through the landing page, venues, matches, notifications and a live conversation reports no CSP violation.
+
+CSRF: server actions are POSTs that Next.js accepts only from the site's own origin. The session cookies are `SameSite=Lax`. The only other POST endpoint, the Telegram webhook, requires its secret header.
 
 Server Action body size is capped at 6 MB.
 
@@ -100,6 +129,22 @@ Server Action body size is capped at 6 MB.
 ## Cron endpoint
 
 `/api/cron` requires `Authorization: Bearer $CRON_SECRET`, which must be at least 16 characters and is compared in constant time. It returns 401 otherwise, and 503 if the service role is not configured.
+
+## Security logs
+
+The server writes one JSON line per event (`src/lib/log.ts`), visible in Vercel → Logs. The logger drops values whose key looks like a password, token, secret, authorization, cookie, key, body, e-mail or phone. These events are logged:
+- `auth_limit_reached` (warn): a sign-in, sign-up, reset or code limit was hit. Logged with the limits' names only, never the address or account.
+- `cron_unauthorized` (warn): `/api/cron` called without the right secret. Logs whether a header was sent, never its value (unit test).
+- `telegram_webhook_rejected` (warn): an update without the right secret header, while the bot is set up.
+- `admin_action_refused` (warn): a moderator or admin action refused for lack of the role or the second step. Logs the action, the reason and the account id.
+- `second_factor_enabled`, `second_factor_disabled`, `second_factor_reset` (info), and failures of these (error).
+- Moderator and admin actions are also kept in the database's audit log (Admin → Audit). Supabase keeps its own Auth log (sign-ins, password and factor changes) in the project's dashboard.
+
+Vercel keeps runtime logs only for a short time, depending on the plan. Keeping them longer needs a log drain (`DEPLOYMENT.md`, section 14).
+
+## Backups
+
+Supabase backs up the database daily on paid plans. How many days are kept depends on the plan, and point-in-time recovery is an add-on. **Database backups do not include Storage files** (avatars, venue and team pictures, conversation pictures and voice notes). How to back up both, and how to rehearse a restore, is in `DEPLOYMENT.md`, section 14.
 
 ## Secrets handling
 
