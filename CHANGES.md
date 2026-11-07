@@ -937,3 +937,14 @@
 **لا يحتاج** أي ملف SQL.
 
 التعديل: «Telegram sign-up: the limit is checked before any account is created»
+
+### 61. عنوان الجهاز يُقرأ من مكان واحد
+**ما تغيّر:** حدود المحاولات «لكل جهاز» تعتمد على عنوان الجهاز (IP). كان يُقرأ بطريقتين في مكانين. إحداهما تثق بأول عنوان في الترويسة `x-forwarded-for`، والزائر يستطيع أن يكتب فيه ما يشاء فيتجاوز الحد. صار يُقرأ من دالة واحدة، `clientIp()`، تفضّل `x-real-ip` الذي يضعه Vercel بنفسه.
+
+الملفات: `src/lib/client-ip.ts` (جديد)، `src/lib/throttle.ts`، `src/lib/phone-verification.ts`. اختبار وحدة في `tests/unit/security-hardening.test.ts`.
+
+**ما حُذف:** لا شيء.
+
+**لا يحتاج** أي ملف SQL.
+
+التعديل: «Client address read in one place, preferring the host's own header»

@@ -1,6 +1,7 @@
 import "server-only";
 import { createHmac } from "node:crypto";
 import { headers } from "next/headers";
+import { clientIp } from "@/lib/client-ip";
 import { logger } from "@/lib/log";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -26,8 +27,7 @@ export type Bucket = { key: string; setting: string; default: number; window: nu
 
 /** The visitor's address as the host saw it (Vercel sets these headers itself; a visitor can't). */
 async function visitorAddress(): Promise<string | null> {
-  const h = await headers();
-  const ip = h.get("x-real-ip")?.trim() || h.get("x-forwarded-for")?.split(",")[0]?.trim() || null;
+  const ip = clientIp(await headers());
   // The same machine (development and tests) isn't limited by address; accounts still are.
   if (!ip || ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1") return null;
   return ip;
