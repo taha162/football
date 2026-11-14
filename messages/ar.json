@@ -1509,7 +1509,7 @@
     "waDatabaseMissing": "غير مطبّق. شغّل الملف في SQL Editor.",
     "waBookingMessages": "رسائل الحجوزات",
     "waOn": "مفعّلة",
-    "waBookingMessagesOff": "متوقفة. لتفعيلها غيّر <code>whatsapp.booking_messages</code> إلى <code>true</code> في القواعد أدناه.",
+    "waBookingMessagesOff": "متوقفة. لتفعيلها غيّر <code>whatsapp.booking_messages</code> إلى <code>true</code> في «سياسات المنصة» أدناه.",
     "waSiteQueue": "في الموقع",
     "waSiteQueueValue": "{queued} بالانتظار · {sending} عند البوت · أُرسل اليوم {sent} · فشل {failed}",
     "waExpectedUrl": "يرسل البوت الرسائل إلى:",
