@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { AuthShell } from "@/components/auth/auth-shell";
-import { ForgotPasswordForm, TelegramResetForm } from "@/components/auth/auth-forms";
+import { ForgotPasswordForm, TelegramResetForm, WhatsappResetForm } from "@/components/auth/auth-forms";
 import { telegramConfig } from "@/lib/telegram";
+import { whatsappConfig } from "@/lib/whatsapp";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/forgot-password">): Promise<Metadata> {
   const t = await getTranslations({ locale: (await params).locale, namespace: "auth" });
@@ -14,6 +15,11 @@ export default async function ForgotPasswordPage({ params }: PageProps<"/[locale
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations("auth");
+  // Phone accounts recover through a bot: whichever are set up, e-mail always.
+  const phoneWays = [
+    ...(whatsappConfig().enabled ? [<WhatsappResetForm key="whatsapp" />] : []),
+    ...(telegramConfig().enabled ? [<TelegramResetForm key="telegram" />] : []),
+  ];
   return (
     <AuthShell
       title={t("forgotTitle")}
@@ -25,14 +31,14 @@ export default async function ForgotPasswordPage({ params }: PageProps<"/[locale
       }
     >
       <ForgotPasswordForm />
-      {telegramConfig().enabled ? (
+      {phoneWays.length > 0 ? (
         <>
           <div className="flex items-center gap-3 text-xs text-faint" aria-hidden="true">
             <span className="h-px flex-1 bg-line" />
             {t("or")}
             <span className="h-px flex-1 bg-line" />
           </div>
-          <TelegramResetForm />
+          {phoneWays}
         </>
       ) : null}
     </AuthShell>

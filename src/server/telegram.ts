@@ -5,12 +5,12 @@ import { getLocale } from "next-intl/server";
 import { z } from "zod";
 import { redirect } from "@/i18n/navigation";
 import { isLocale, type Locale } from "@/i18n/routing";
-import { dbErrorCode, fail, ok, zodFieldErrors, type ActionState } from "@/lib/actions";
+import { bool, fail, ok, zodFieldErrors, type ActionState } from "@/lib/actions";
 import { getCurrentUser } from "@/lib/auth";
 import { publicEnv } from "@/lib/env";
 import { logger } from "@/lib/log";
 import { PHONE_ACCOUNT_DOMAIN } from "@/lib/phone";
-import { clearVerifyTicket, clientKey, getVerifyTicket, hashTicket, newTicket, newVerificationCode, setVerifyTicket } from "@/lib/phone-verification";
+import { clearVerifyTicket, createVerification, getVerifyTicket, hashTicket } from "@/lib/phone-verification";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { registerWebhook, telegramConfig } from "@/lib/telegram";
@@ -19,28 +19,6 @@ import { buckets, count } from "@/lib/throttle";
 async function currentLocale(): Promise<Locale> {
   const l = await getLocale();
   return isLocale(l) ? l : "ar";
-}
-
-/** Creates the verification row, retrying on the (unlikely) clash with another pending code. */
-async function createVerification(purpose: "signup" | "reset", userId: string | null): Promise<string | null> {
-  const admin = createAdminClient()!;
-  const key = await clientKey();
-  for (let attempt = 0; attempt < 3; attempt++) {
-    const { ticket, hash } = newTicket();
-    const { error } = await admin.rpc("phone_verify_start", {
-      p_purpose: purpose,
-      p_code: newVerificationCode(),
-      p_ticket_hash: hash,
-      p_user_id: userId as string,
-      p_client_key: key,
-    });
-    if (!error) {
-      await setVerifyTicket(ticket);
-      return null;
-    }
-    if (error.code !== "23505") return dbErrorCode(error, "phone_verify_start");
-  }
-  return "generic";
 }
 
 /** Sign-up without e-mail: the account is activated once the user shares their number with the bot. */
@@ -68,6 +46,11 @@ export async function startTelegramSignupAction(_: ActionState, fd: FormData): P
   if (error || !data.user) {
     logger.warn("telegram_signup_create_failed", { status: error?.status });
     return fail(error?.message?.toLowerCase().includes("password") ? "weak_password" : "auth_failed");
+  }
+  // The unticked-by-default box: WhatsApp offers to the number Telegram will confirm.
+  if (bool(fd, "wa_promos")) {
+    const { error: consentError } = await admin.rpc("wa_signup_consent", { p_user_id: data.user.id, p_promos: true });
+    if (consentError) logger.warn("whatsapp_signup_consent_failed", { code: consentError.code });
   }
   const failure = await createVerification("signup", data.user.id);
   if (failure) {

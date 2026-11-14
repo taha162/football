@@ -33,3 +33,8 @@ export function looksLikePhone(input: string): boolean {
 export function maskPhone(phone: string): string {
   return `+${phone.slice(0, 3)} ${phone.slice(3, 6)} ••• ${phone.slice(-4)}`;
 }
+
+/** "+964 770 123 4567" for Iraqi numbers; other numbers as "+<digits>". */
+export function displayPhone(phone: string): string {
+  return /^964\d{10}$/.test(phone) ? `+964 ${phone.slice(3, 6)} ${phone.slice(6, 9)} ${phone.slice(9)}` : `+${phone}`;
+}

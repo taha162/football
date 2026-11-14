@@ -8,6 +8,7 @@ import { readWebhookState, telegramConfig } from "@/lib/telegram";
 import { cloudflareIceServers, turnSetup } from "@/lib/turn";
 import { updateSettingAction, upsertAreaAction, upsertCityAction } from "@/server/admin";
 import { connectTelegramAction } from "@/server/telegram";
+import { WhatsappPanel } from "@/components/admin/whatsapp-panel";
 import { ActionForm, Hidden, SubmitButton } from "@/components/ui/action-form";
 import { Input, Select } from "@/components/ui/field";
 import { Alert, Card, CardBody, DefinitionList, PageHeader, Section } from "@/components/ui/primitives";
@@ -139,6 +140,9 @@ export default async function AdminSettingsPage() {
   return (
     <>
       <PageHeader title={t("nav.settings")} />
+      <Section title={t("whatsappBot")} id="whatsapp">
+        <WhatsappPanel />
+      </Section>
       <Section title={t("telegramBot")} id="telegram">
         <TelegramPanel />
       </Section>

@@ -2,6 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { logger } from "@/lib/log";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { deliverWhatsapp } from "@/lib/whatsapp-outbox";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +17,8 @@ function authorized(request: NextRequest): boolean {
 
 /**
  * Scheduled maintenance: expires stale booking requests, sends match
- * reminders, closes expired listings, auto-completes past matches.
+ * reminders, closes expired listings, auto-completes past matches, and hands
+ * waiting WhatsApp messages to the bot.
  * Call every 15 minutes with `Authorization: Bearer $CRON_SECRET`
  * (e.g. Vercel Cron or any scheduler). Idempotent.
  */
@@ -40,7 +42,21 @@ export async function GET(request: NextRequest) {
   // Calls both browsers abandoned: recorded as missed (with the notification) or ended.
   const { data: calls, error: callsError } = await admin.rpc("calls_cleanup");
   if (callsError) logger.error("cron_calls_cleanup_failed", { code: callsError.code });
-  const result = { ...(data as Record<string, unknown>), ...((cleanup as Record<string, unknown>) ?? {}), ...((calls as Record<string, unknown>) ?? {}) };
+  // WhatsApp: what the bot reports, then the next booking messages and promotions (does nothing until the bot is set up).
+  const whatsapp = await deliverWhatsapp().catch((e: unknown) => {
+    logger.error("cron_whatsapp_failed", { message: e instanceof Error ? e.message : "unknown" });
+    return null;
+  });
+  const { data: waCleanup, error: waCleanupError } = await admin.rpc("wa_outbox_cleanup");
+  // Before the database update (…0028) the function is missing: not an error worth a page.
+  if (waCleanupError && waCleanupError.code !== "PGRST202") logger.error("cron_whatsapp_cleanup_failed", { code: waCleanupError.code });
+  const result = {
+    ...(data as Record<string, unknown>),
+    ...((cleanup as Record<string, unknown>) ?? {}),
+    ...((calls as Record<string, unknown>) ?? {}),
+    ...((waCleanup as Record<string, unknown>) ?? {}),
+    ...(whatsapp ? { whatsapp } : {}),
+  };
   logger.info("cron_completed", { ms: Date.now() - started, ...result });
   return NextResponse.json({ ok: true, result });
 }

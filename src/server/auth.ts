@@ -56,7 +56,7 @@ export async function signInAction(_: ActionState, fd: FormData): Promise<Action
   const limits = await buckets(["signinDevice"], [["signinAccount", account]]);
   if (!(await allowed(limits))) return fail("too_many_attempts");
   if (!address) {
-    // Phone sign-in (accounts verified with Telegram): map the number to its auth address.
+    // Phone sign-in (accounts verified with Telegram or WhatsApp): map the number to its auth address.
     const admin = createAdminClient();
     const { data } = admin ? await admin.rpc("auth_email_for_phone", { p_phone: account }) : { data: null };
     if (!data) {

@@ -15,6 +15,7 @@ export function AdminNav({ isAdmin }: { isAdmin: boolean }) {
     { href: "/admin/venues", key: "venues" },
     { href: "/admin/content", key: "content" },
     { href: "/admin/bookings", key: "bookings" },
+    { href: "/admin/promotions", key: "promotions", admin: true },
     { href: "/admin/audit", key: "audit", admin: true },
     { href: "/admin/settings", key: "settings", admin: true },
   ].filter((i) => !i.admin || isAdmin);
