@@ -33,6 +33,9 @@ Legend: ✅ implemented and verified by automated tests · 🟡 implemented, exe
   - The site address used for the webhook and e-mail links keeps only the origin, so a `NEXT_PUBLIC_SITE_URL` copied with `/ar` no longer sends Telegram's updates to a page (which answered 200, so Telegram reported no error) — unit-tested, and checked with a build using such an address.
   - **Not yet confirmed with the owner's real bot after this fix.** The option stays hidden until `TELEGRAM_BOT_TOKEN` and `TELEGRAM_BOT_USERNAME` are set.
   - Replaces the WhatsApp verification, which needed Meta's Cloud API.
+- 🟡 **Phone sign-up and password recovery confirmed by WhatsApp, through the platform's own number (no Meta account):** the user sends the code from their own WhatsApp to the bot in `whatsapp-bot/` (Baileys), which forwards it with the sender's real number (LID addressing resolved). One step; the same verification rows and waiting page as Telegram.
+  - Covered by DB tests (verification, wrong and malformed codes, repeats, number taken, rate limit, Telegram-claimed codes, server-only access), unit tests (the bot's message reading, LID numbers, queue, API, settings; the site's templates and settings) and E2E tests that play the bot (sign-up, sign-in with the number, recovery, "0" to stop, number taken).
+  - **Not tried on real WhatsApp:** this environment can't reach WhatsApp's servers and has no phone. Hidden until `WHATSAPP_BOT_SECRET` and `WHATSAPP_BOT_NUMBER` are set; needs migration 0028 first.
 - ✅ Sign-out, onboarding (city, positions, skill) — E2E A.
 - 🟡 Forgot and reset password. Wired to Supabase Auth; requires SMTP in production. Locally, mail goes to the mail catcher.
 - ✅ Profile photo upload (magic-byte checked). After the upload, the server checks that storage really serves the picture; if the bucket is private, the upload is undone with a clear message. A picture that fails to load falls back to the original file, then to initials, never a broken-image mark — E2E profile spec (3 tests). Team logos and venue images use the same check and fallback (not E2E-tested).
@@ -79,6 +82,7 @@ Legend: ✅ implemented and verified by automated tests · 🟡 implemented, exe
 - ✅ Conversations per match/team/booking/challenge/tournament plus direct messages, with access derived from membership — DB.
 - 🟡 Realtime updates in the thread view (Supabase Realtime with RLS). Implemented; not asserted by E2E.
 - ✅ In-app notifications with dedupe and preferences. Reminders via the scheduled job — E2E A and C, DB.
+- 🟡 WhatsApp booking messages (confirmed, changed, cancelled) and opted-in promotions with an admin page, a recipient-count confirmation, a stop button, a report and audit rows. Queued in the database, paced by the bot. Tested end to end with a stand-in bot (E2E) and in the database; not yet with a real WhatsApp number. Off until the bot is set up and `whatsapp.booking_messages` is turned on.
 - ⛔ E-mail, SMS and push notifications. No provider is configured.
 
 ### Trust, safety and admin

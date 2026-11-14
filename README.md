@@ -14,6 +14,7 @@ A community platform for recreational football: find and organize matches, build
 | [AUDIT.md](AUDIT.md) | Launch audit: security, load, page inspection, mobile speed, what remains (Arabic) |
 | [SECURITY_REVIEW.md](SECURITY_REVIEW.md) | Security review of 7 November: findings by severity, fixes and their tests, what needs the owner, what couldn't be verified |
 | [PERFORMANCE.md](PERFORMANCE.md) | Performance audit: what was measured and how, before/after numbers, the migration awaiting approval, skipped items |
+| [whatsapp-bot/README.md](whatsapp-bot/README.md) | The WhatsApp bot (a separate service): running it, linking the number, backing up the session, its API (Arabic) |
 
 ## Stack
 
@@ -97,4 +98,4 @@ The repository is ready for Vercel. See **[DEPLOYMENT.md](DEPLOYMENT.md)** for t
 4. For 15-minute scheduled jobs on the Hobby plan, add `APP_URL` and `CRON_SECRET` as GitHub secrets for the **Scheduled jobs** workflow. On Pro, set the cron in `vercel.json` to `*/15 * * * *` instead.
 5. Grant the first admin with `pnpm admin:grant`.
 
-No payment provider, SMS, push or map provider is configured. The app does not pretend otherwise; see IMPLEMENTATION_STATUS.md.
+No payment provider, SMS, push or map provider is configured. The app does not pretend otherwise; see IMPLEMENTATION_STATUS.md. WhatsApp (verification, booking messages, opted-in promotions) works once the bot in `whatsapp-bot/` runs and its three variables are set (DEPLOYMENT.md, section 15).
