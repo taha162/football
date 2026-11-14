@@ -4,10 +4,13 @@ import { requireUser } from "@/lib/auth";
 import { OPTIONAL_NOTIFICATION_TYPES } from "@/lib/notifications";
 import { isPhoneAccountEmail } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/server";
+import { whatsappConfig } from "@/lib/whatsapp";
 import { blockUserAction, savePreferencesAction } from "@/server/profile";
+import { saveWhatsappSettingsAction } from "@/server/whatsapp";
 import { signOutAction } from "@/server/auth";
 import { SecondFactorSettings } from "@/components/auth/second-factor-settings";
 import { ActionForm, InlineAction, SubmitButton } from "@/components/ui/action-form";
+import { Checkbox } from "@/components/ui/field";
 import { buttonClass } from "@/components/ui/button";
 import { Card, CardBody, Container, DefinitionList, PageHeader, Section } from "@/components/ui/primitives";
 import { LinkButton } from "@/components/ui/link-button";
@@ -19,11 +22,14 @@ export default async function SettingsPage({ params }: PageProps<"/[locale]/sett
   const t = await getTranslations("settings");
   const nt = await getTranslations("notificationTypes");
   const supabase = await createClient();
-  const [{ data: prefs }, { data: blocks }, { data: phone }] = await Promise.all([
+  const [{ data: prefs }, { data: blocks }, { data: phone }, consent] = await Promise.all([
     supabase.from("user_preferences").select("*").eq("user_id", user.id).maybeSingle(),
     supabase.from("user_blocks").select("blocked_id, profile:profiles!user_blocks_blocked_id_fkey(display_name)").eq("blocker_id", user.id),
     supabase.rpc("my_phone"),
+    supabase.from("whatsapp_consent").select("opted_in_at, opted_out_at, bookings_off_at").eq("user_id", user.id).maybeSingle(),
   ]);
+  // WhatsApp messages need a verified number, the bot set up, and the database update (…0028).
+  const whatsapp = phone && whatsappConfig().canSend && !consent.error ? (consent.data ?? { opted_in_at: null, opted_out_at: null, bookings_off_at: null }) : null;
   // Phone accounts have only an internal auth address; show their verified number instead.
   const phoneAccount = isPhoneAccountEmail(user.email);
   const muted = new Set(Object.entries((prefs?.notification_prefs ?? {}) as Record<string, boolean>).filter(([, v]) => v === false).map(([k]) => k));
@@ -87,6 +93,23 @@ export default async function SettingsPage({ params }: PageProps<"/[locale]/sett
           </CardBody>
         </Card>
       </Section>
+
+      {whatsapp ? (
+        <Section title={t("whatsapp")} id="whatsapp">
+          <Card>
+            <CardBody>
+              <ActionForm action={saveWhatsappSettingsAction}>
+                <p className="text-xs text-muted">{t("whatsappHint")}</p>
+                <Checkbox name="wa_bookings" defaultChecked={!whatsapp.bookings_off_at} label={t("whatsappBookings")} />
+                {/* Offers only with an explicit tick: unticked until the person ticks it themselves. */}
+                <Checkbox name="wa_promos" defaultChecked={Boolean(whatsapp.opted_in_at && !whatsapp.opted_out_at)} label={t("whatsappPromos")} />
+                <p className="text-xs text-muted">{t("whatsappStopHint")}</p>
+                <SubmitButton className="self-start">{t("save")}</SubmitButton>
+              </ActionForm>
+            </CardBody>
+          </Card>
+        </Section>
+      ) : null}
 
       <Section title={t("blocked")} id="blocked">
         {(blocks ?? []).length === 0 ? (

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { getLocale, getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { redirect } from "@/i18n/navigation";
@@ -13,6 +14,7 @@ import { toRpcLocal } from "@/lib/format";
 import { logger } from "@/lib/log";
 import { inspectImage, isPubliclyServed, randomFileName, UPLOAD_CACHE_SECONDS } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
+import { deliverWhatsapp } from "@/lib/whatsapp-outbox";
 
 type Rpc = Parameters<Awaited<ReturnType<typeof createClient>>["rpc"]>[0];
 
@@ -32,6 +34,20 @@ async function run(fn: Rpc, args: Record<string, unknown>, venueId: string | und
 async function locale() {
   const l = await getLocale();
   return isLocale(l) ? l : "ar";
+}
+
+/**
+ * A booking may just have been confirmed or cancelled: hand its WhatsApp
+ * message to the bot after the response, instead of at the next scheduled
+ * run. Does nothing when WhatsApp isn't set up; can never affect the booking.
+ */
+function sendWhatsappSoon() {
+  after(() =>
+    deliverWhatsapp().then(
+      () => undefined,
+      (e: unknown) => logger.error("whatsapp_outbox_failed", { step: "after_booking", message: e instanceof Error ? e.message : "unknown" }),
+    ),
+  );
 }
 
 const money = (v: string | undefined, ctx: z.RefinementCtx) => {
@@ -340,6 +356,7 @@ export async function requestBookingAction(_: ActionState, fd: FormData): Promis
     p_match_id: v.match_id,
   });
   if (error) return fail(dbErrorCode(error, "request_booking"));
+  sendWhatsappSoon();
   revalidatePath("/[locale]/my/bookings", "page");
   if (v.match_id) revalidatePath(`/[locale]/matches/${v.match_id}`, "page");
   const booked = data as { booking_id: string; status: string; deposit_amount: number | null };
@@ -375,13 +392,17 @@ export async function decideBookingAction(_: ActionState, fd: FormData): Promise
   if (!id.success) return fail("invalid");
   const approve = bool(fd, "approve");
   const success = approve ? (bool(fd, "deposit") ? "deposit_recorded" : "booking_approved") : "booking_rejected";
-  return run("decide_booking", { p_booking_id: id.data, p_approve: approve, p_note: str(fd, "note") }, str(fd, "venue_id"), success);
+  const res = await run("decide_booking", { p_booking_id: id.data, p_approve: approve, p_note: str(fd, "note") }, str(fd, "venue_id"), success);
+  if (res?.ok && approve) sendWhatsappSoon();
+  return res;
 }
 
 export async function cancelBookingAction(_: ActionState, fd: FormData): Promise<ActionState> {
   const id = uuid.safeParse(fd.get("booking_id"));
   if (!id.success) return fail("invalid");
-  return run("cancel_booking", { p_booking_id: id.data, p_reason: str(fd, "reason") }, str(fd, "venue_id"), "booking_cancelled");
+  const res = await run("cancel_booking", { p_booking_id: id.data, p_reason: str(fd, "reason") }, str(fd, "venue_id"), "booking_cancelled");
+  if (res?.ok) sendWhatsappSoon();
+  return res;
 }
 
 export async function manualBookingAction(_: ActionState, fd: FormData): Promise<ActionState> {

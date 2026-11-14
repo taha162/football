@@ -4,13 +4,15 @@
 
 1. **The database enforces the rules.** Clients, including our own Next.js server, get read access through RLS and write only through RPCs that validate everything.
 2. **No secrets in the browser.** Only `NEXT_PUBLIC_SUPABASE_URL`, the anon key, the site URL and an optional URL-restricted Mapbox token are public. `SUPABASE_SERVICE_ROLE_KEY` is imported only by `src/lib/supabase/admin.ts`, which is guarded by `server-only`. A scan of the production build's browser files (`.next/static`) finds none of the values of the service-role key, `CRON_SECRET` or the Telegram token. The word `service_role` appears there once, as the name of an admin message (`service_role_missing`), never as a key. The server uses that client only where the caller was checked first or no person can reach it:
-   - `/api/cron` (bearer secret) and the Telegram webhook (secret header);
+   - `/api/cron` (bearer secret), the Telegram webhook (secret header) and the WhatsApp webhook (bearer secret);
    - the sign-in limits (`auth_throttle`, executable by `service_role` only) and the phone-to-address lookup at sign-in, after the limit check;
    - the Telegram verification page, for the caller's own httpOnly ticket;
    - conversation pictures and voice notes: uploaded after RLS shows the caller belongs to the conversation, removed only after the database accepted the deletion;
    - moderator tools, under `requireModerator`, and only after the database accepted the action (removing a message, banning a suspended account at the auth layer); admin settings readiness checks, admins only.
 
-   The operator script (`pnpm admin:grant`) also uses the key.
+   - the WhatsApp worker, run by `/api/cron` and right after a booking action, which only moves queued messages to the bot and records what it reports.
+
+   The operator script (`pnpm admin:grant`) also uses the key. `WHATSAPP_BOT_SECRET` is server-only too: it authenticates the bot to the site and the site to the bot.
 3. **No fabricated state.**
    - No payment is taken or simulated. Organizers mark payments manually, labelled "(marked)".
    - Booking and match states come from the database.
@@ -65,6 +67,7 @@
   - Keys are HMAC-SHA256 of the IP or account (keyed by the service-role key), so the table holds no addresses. Rows older than a day are deleted.
   - The limits need `SUPABASE_SERVICE_ROLE_KEY`; without it they are off and sign-in works unlimited. If the database call fails (for example before migration 0021 is run), sign-in still works and a warning is logged.
   - DB tests: only the server may count; limits, check-only and separate keys; an admin setting overrides the default. E2E: ten wrong passwords, then the right one is refused with the waiting message.
+- **Outgoing WhatsApp messages are paced to protect the number** (the bot's one queue): a random 8–25 s gap between messages, "typing…" first, hourly and daily caps, no sending to numbers that aren't on WhatsApp, an automatic pause after repeated errors, and a stop until an admin resumes at any sign that WhatsApp restricts the number (refusals, rate limits, the "reach-out" lock, new-chat caps). Promotions also stay under a daily limit that starts low and grows each day (`whatsapp.promo_daily_*`), one campaign at a time. The bot answers each chat's other messages with the help text at most every 6 hours, and handles at most `INBOUND_PER_HOUR` messages per chat.
 - Reports snapshot the reported content. Moderators can hide (and restore) matches, teams, venues, tournaments and reviews. They can remove a reported chat message: the text is erased and the report keeps a copy. They can also suspend users and resolve reports. Every action is audited and the affected owner is notified. Moderators cannot read conversations; they only see the snapshot attached to a report.
 - Contact details (phone and WhatsApp) are shown only for venues, as business contacts. Player e-mails are never exposed (DB test).
 - **Booking deposits** move between the customer and the venue directly; the platform only records them.
@@ -104,7 +107,7 @@ E2E (`e2e/security.spec.ts`) checks:
 - that an `onerror=` handler injected into a page is refused, and the violation is reported;
 - that a walk through the landing page, venues, matches, notifications and a live conversation reports no CSP violation.
 
-CSRF: server actions are POSTs that Next.js accepts only from the site's own origin. The session cookies are `SameSite=Lax`. The only other POST endpoint, the Telegram webhook, requires its secret header.
+CSRF: server actions are POSTs that Next.js accepts only from the site's own origin. The session cookies are `SameSite=Lax`. The only other POST endpoints, the Telegram and WhatsApp webhooks, require their secrets.
 
 Server Action body size is capped at 6 MB.
 
@@ -125,6 +128,11 @@ Server Action body size is capped at 6 MB.
   - All verification functions are executable by `service_role` only, and `private.user_phones` is never exposed.
   - Phone accounts use an internal address on the reserved `.invalid` TLD, so no e-mail is ever sent to them.
   - Never-verified sign-ups are deleted by the scheduled job after a day.
+- **Phone number, confirmed by WhatsApp (no Meta account):** the platform's own number runs a bot (`whatsapp-bot/`, built on the unofficial Baileys library, so the number can be restricted or banned by WhatsApp; e-mail and Telegram stay available).
+  - The user sends the code shown on the site from their own WhatsApp. The verified number is the **sender's**, as WhatsApp delivered it to the bot, so nobody can claim someone else's number. When WhatsApp hides the number behind a LID, the bot takes it from the message's alternative address (`remoteJidAlt`, `senderPn`) or the session's LID mapping, and otherwise ignores the message.
+  - The bot forwards only messages that carry a code-shaped token or ask to stop messages, as `{from, text}` (text at most 500 characters) to `/api/whatsapp/webhook` with `Authorization: Bearer WHATSAPP_BOT_SECRET` (32+ characters, compared in constant time; zod-validated body). Groups, broadcasts, its own messages and anything that isn't text are ignored.
+  - `wa_bot_receive` (service role only) matches only codes from the code alphabet; limits each number to `whatsapp.max_codes_per_hour` attempts (`private.rate_events`); refuses a verification a Telegram account opened first; answers a repeated delivery of the same message the same way without counting it again; and keeps the "number taken" and "no account" rules. DB tests cover each of these and the anonymous refusal.
+  - The bot's own HTTP API (send, status, cancel, health, link, resume) needs the same bearer secret; only `/healthz` is open and says nothing. The site refuses a plain-http bot address (except on this machine), because the secret travels with every request.
 
 ## Cron endpoint
 
@@ -138,6 +146,7 @@ The server writes one JSON line per event (`src/lib/log.ts`), visible in Vercel 
 - `telegram_webhook_rejected` (warn): an update without the right secret header, while the bot is set up.
 - `admin_action_refused` (warn): a moderator or admin action refused for lack of the role or the second step. Logs the action, the reason and the account id.
 - `second_factor_enabled`, `second_factor_disabled`, `second_factor_reset` (info), and failures of these (error).
+- `whatsapp_webhook_rejected` (warn): a request to the WhatsApp webhook without the right secret, while WhatsApp is set up. `whatsapp_bot_refused_secret` (error): the bot refused the site's secret. `whatsapp_unsubscribed` (info, no number). `whatsapp_campaign_started` / `whatsapp_campaign_stopped` (info), also in the audit log with the admin, the time and the number of recipients. The bot logs one JSON line per event, without message text or full numbers.
 - Moderator and admin actions are also kept in the database's audit log (Admin → Audit). Supabase keeps its own Auth log (sign-ins, password and factor changes) in the project's dashboard.
 
 Vercel keeps runtime logs only for a short time, depending on the plan. Keeping them longer needs a log drain (`DEPLOYMENT.md`, section 14).
@@ -156,6 +165,12 @@ Supabase backs up the database daily on paid plans. How many days are kept depen
 
 - Profile visibility settings let a user hide their match history and statistics. Statistics respect this (DB test).
 - Approximate location from "near me" is used for one query and never stored.
+- **WhatsApp messages** go only to verified numbers:
+  - booking messages unless the person turned them off in Settings;
+  - promotions only after an explicit opt-in (a box that starts unticked, at phone sign-up and in Settings), recorded in `whatsapp_consent` with the times.
+  - Every promotion ends with "send 0 to stop". Sending `0`, `stop` or «إلغاء» opts the number out of **everything** at once and drops what still waits for it, in the site and in the bot.
+  - Queued messages are re-checked just before they go (opted out, number changed, campaign stopped, booking already started) and skipped with the reason.
+  - `outbound_messages` and `whatsapp_campaigns` have row security with no policy and no grants for API roles; admins read campaign totals through role-checked functions. Message rows are deleted after 90 days.
 - Account deletion is currently handled by support (see IMPLEMENTATION_STATUS.md). User data is never deleted by tests or scripts.
 
 ## Reporting a vulnerability

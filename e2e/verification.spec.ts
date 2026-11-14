@@ -11,7 +11,7 @@ test.describe("Account verification", () => {
     await page.getByRole("textbox", { name: "الاسم الظاهر" }).fill("لاعب مكرر");
     await page.getByRole("textbox", { name: "البريد الإلكتروني" }).fill(existing.email);
     await page.getByRole("textbox", { name: "كلمة المرور" }).fill(PASSWORD);
-    await page.getByRole("checkbox").check();
+    await page.getByRole("checkbox", { name: /شروط الاستخدام/ }).check();
     await page.getByRole("button", { name: "إنشاء حساب" }).click();
     await expect(page.getByText("يوجد حساب بهذا البريد الإلكتروني بالفعل.")).toBeVisible();
     await expect(page).toHaveURL(/\/ar\/sign-up/);
@@ -53,7 +53,7 @@ test.describe("Account verification", () => {
     await page.getByRole("textbox", { name: "الاسم الظاهر" }).fill("لاعب الرمز");
     await page.getByRole("textbox", { name: "البريد الإلكتروني" }).fill(email);
     await page.getByRole("textbox", { name: "كلمة المرور" }).fill(PASSWORD);
-    await page.getByRole("checkbox").check();
+    await page.getByRole("checkbox", { name: /شروط الاستخدام/ }).check();
     await page.getByRole("button", { name: "إنشاء حساب" }).click();
     await page.waitForURL(/\/ar\/verify-email/);
     const firstCode = await emailedCode(email);
@@ -81,11 +81,11 @@ test.describe("Account verification", () => {
     const from = phone();
     const me = telegramUser();
     await page.goto("/ar/sign-up");
-    await page.getByRole("link", { name: "عبر تيليغرام" }).click();
+    await page.getByRole("link", { name: "تيليغرام", exact: true }).click();
     await page.waitForURL(/method=telegram/);
     await page.getByRole("textbox", { name: "الاسم الظاهر" }).fill("Telegram Player");
     await page.getByRole("textbox", { name: "كلمة المرور" }).fill(PASSWORD);
-    await page.getByRole("checkbox").check();
+    await page.getByRole("checkbox", { name: /شروط الاستخدام/ }).check();
     await page.getByRole("button", { name: "متابعة عبر تيليغرام" }).click();
     await page.waitForURL(/\/ar\/verify-telegram/);
 
@@ -155,7 +155,7 @@ test.describe("Account verification", () => {
       await p.goto("/ar/sign-up?method=telegram");
       await p.getByRole("textbox", { name: "الاسم الظاهر" }).fill("مرتين");
       await p.getByRole("textbox", { name: "كلمة المرور" }).fill(PASSWORD);
-      await p.getByRole("checkbox").check();
+      await p.getByRole("checkbox", { name: /شروط الاستخدام/ }).check();
       await p.getByRole("button", { name: "متابعة عبر تيليغرام" }).click();
       await p.waitForURL(/\/ar\/verify-telegram/);
       return (await p.getByTestId("verify-code").textContent())!.trim();
@@ -182,7 +182,7 @@ test.describe("Account verification", () => {
         await page.goto("/ar/sign-up?method=telegram");
         await page.getByRole("textbox", { name: "الاسم الظاهر" }).fill(tag);
         await page.getByRole("textbox", { name: "كلمة المرور" }).fill(PASSWORD);
-        await page.getByRole("checkbox").check();
+        await page.getByRole("checkbox", { name: /شروط الاستخدام/ }).check();
         await page.getByRole("button", { name: "متابعة عبر تيليغرام" }).click();
         if (i <= 2) await page.waitForURL(/\/ar\/verify-telegram/);
         else await expect(page.getByText("محاولات كثيرة من هذا الجهاز")).toBeVisible();

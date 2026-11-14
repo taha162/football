@@ -11,6 +11,10 @@ Browser ──► Next.js (proxy.ts → App Router server components / server ac
                - Writes: SECURITY DEFINER RPCs (business rules, locks, audit, notifications)
            Supabase Auth / Storage / Realtime (messages, notifications, calls)
 Scheduler ──► /api/cron (Bearer CRON_SECRET) ──► service role ──► run_scheduled_jobs()
+                    │                                              └► wa_outbox_* (WhatsApp queue)
+                    ▼
+WhatsApp bot (whatsapp-bot/, Railway/VPS, Baileys) ◄── /send, /status (Bearer WHATSAPP_BOT_SECRET)
+     └─ messages with a code or "stop" ──► /api/whatsapp/webhook ──► wa_bot_receive / wa_bot_unsubscribe
 ```
 
 **The database is the source of truth for every business rule.** Next.js does input parsing (Zod), UX, rendering and translation. It is never the only guard. Any client that talks to PostgREST directly with a user JWT hits the same rules, because API roles have no table write privileges at all.
@@ -104,7 +108,17 @@ The whole site shares one set of motion tokens (`src/app/globals.css`): duration
 - **Server-rendered form controls.** Server components cannot pass render functions to the client `FormField`. They render controls with `{...controlProps(name)}`, and `FormField` applies the error aria attributes after hydration. Client forms receive the attributes directly.
 - **Distance search** uses a haversine function over venue or match coordinates, without PostGIS. This is adequate for city scale, and PostGIS is the upgrade path.
 - **Page transitions briefly hold named elements.** While a page transition plays (about 0.45 s), the browser does not deliver clicks to the named participants: the arriving page, the header and the phone bar. A tap in that window can miss. Transitions are kept short for this reason.
-- **Notifications are in-app only.** E-mail, SMS and push are not implemented. Preferences are stored so that channels can be added later.
+- **Notifications are in-app, plus WhatsApp for bookings.** When the WhatsApp bot is set up, a booking's confirmation, change and cancellation also go to the player on WhatsApp (see below). E-mail, SMS and push notifications are not implemented.
+- **WhatsApp runs on an unofficial library.** The bot links the platform's number like WhatsApp Web (Baileys). There is no Meta account or per-message cost, but WhatsApp can restrict or ban the number; e-mail and Telegram verification stay available, and in-site notifications never depend on it.
+
+## WhatsApp
+
+A separate long-running service, `whatsapp-bot/` (Node 22, Baileys, plain `.mjs`), is linked to the platform's WhatsApp number with a QR or pairing code; the session lives on its volume. Vercel can't hold the connection open, so it runs on Railway, Render or a VPS.
+
+- **In.** The bot reads only people's own text messages (groups, broadcasts, its own and non-text messages are ignored), resolves the sender's real number (LID addressing: `remoteJidAlt`, `senderPn`, then the session's LID mapping; otherwise the message is dropped), and forwards a message to `/api/whatsapp/webhook` only if it carries a code or a stop word. The site answers `{reply}`, which the bot sends. Other text gets one short help message, at most every 6 hours per chat. The code and stop-word rules are one file (`whatsapp-bot/src/text.mjs`) that the site imports too.
+- **Verification** reuses the Telegram flow's table and functions: `phone_verify_start` → the user sends the code → `wa_bot_receive` verifies in one step → the waiting page polls `phone_verify_lookup` and opens a session once with `phone_verify_consume` (the same `pollTelegramAction`).
+- **Out.** `outbound_messages` is the durable record (`queued` → `sending` (with the bot) → `sent` / `failed` / `skipped`). A trigger on `bookings` queues booking messages with a snapshot of the booking, inside an exception block, so it can never fail a booking. Admins start campaigns (`admin_start_promo_campaign`), which queue one row per opted-in person. The worker (`src/lib/whatsapp-outbox.ts`) runs from `/api/cron` and with `after()` right after booking actions and campaign starts. It asks the bot what became of the messages it holds (`/status`), claims the next ones (`wa_outbox_claim`: re-checks consent and freshness, booking messages first, promotions within the daily allowance), writes each from its template (`src/lib/whatsapp-messages.ts`, unit-tested), and hands it to the bot (`/send`, idempotent by id). Retries are limited (`whatsapp.max_attempts`).
+- **Pacing** is the bot's: one queue with replies before booking messages before promotions, a random 8–25 s gap, "typing…" before each message, hourly and daily caps, a pause after repeated errors, and a stop at signs of a restriction. The queue is saved on the volume, so a restart loses nothing and doesn't lift a pause.
 
 ## Observability
 

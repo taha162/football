@@ -81,7 +81,8 @@ export async function BookingRow({
       ? depositSent ? t("cancelForfeitNote", { amount: deposit ?? "" }) : t("cancelCustomerNote")
       : depositSent ? t("cancelStaffRefundNote", { amount: deposit ?? "" }) : t("cancelStaffNote");
   return (
-    <li className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-4">
+    // The anchor that a WhatsApp booking message links to (My bookings#booking-<id>).
+    <li id={`booking-${b.id}`} className="flex scroll-mt-24 flex-col gap-3 rounded-xl border border-line bg-surface p-4">
       <div className="flex flex-wrap items-center gap-2">
         <span className="font-semibold">
           {mode === "customer" && b.venue ? <Link href={`/venues/${b.venue.id}`} className="hover:underline">{b.venue.name}</Link> : null}

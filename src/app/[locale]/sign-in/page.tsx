@@ -6,6 +6,7 @@ import { AuthShell } from "@/components/auth/auth-shell";
 import { SignInForm } from "@/components/auth/auth-forms";
 import { Alert } from "@/components/ui/primitives";
 import { telegramConfig } from "@/lib/telegram";
+import { whatsappConfig } from "@/lib/whatsapp";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/sign-in">): Promise<Metadata> {
   const t = await getTranslations({ locale: (await params).locale, namespace: "auth" });
@@ -33,7 +34,7 @@ export default async function SignInPage({ params, searchParams }: PageProps<"/[
       }
     >
       {sp.error === "link_invalid" ? <Alert tone="warning">{t("linkInvalid")}</Alert> : null}
-      <SignInForm next={next} allowPhone={telegramConfig().enabled} />
+      <SignInForm next={next} allowPhone={telegramConfig().enabled || whatsappConfig().enabled} />
     </AuthShell>
   );
 }

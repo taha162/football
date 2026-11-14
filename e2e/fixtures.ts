@@ -145,6 +145,23 @@ export async function verifyWithTelegram(baseURL: string, from: number, code: st
   return telegramMessage(baseURL, from, { contact: { phone_number: phone, first_name: "E2E", user_id: from } });
 }
 
+/** What the site answered the WhatsApp bot, with the HTTP status. */
+export interface WhatsappReply {
+  status: number;
+  reply?: string;
+}
+
+/** Posts an incoming WhatsApp message to the site's webhook, as the bot (whatsapp-bot/) forwards it. */
+export async function whatsappMessage(baseURL: string, from: string, text: string, secret = process.env.WHATSAPP_BOT_SECRET ?? ""): Promise<WhatsappReply> {
+  const res = await fetch(`${baseURL}/api/whatsapp/webhook`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${secret}` },
+    body: JSON.stringify({ from, text }),
+  });
+  const body = res.headers.get("content-type")?.includes("json") ? ((await res.json()) as { reply?: string }) : {};
+  return { status: res.status, ...body };
+}
+
 /**
  * Signs in straight against the Supabase API with the password only, as
  * someone who knows the password but not the app code would (no browser).
