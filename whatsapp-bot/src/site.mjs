@@ -9,13 +9,20 @@
 const WEBHOOK = "/api/whatsapp/webhook";
 
 /**
- * @typedef {{ ok: true, reply: string | null }
+ * What the site answered:
+ *   reply   the text to send back (null: nothing to send);
+ *   check   for a sender WhatsApp hides: the number the code was requested
+ *           for, to compare with the sender before sending it again with it;
+ *   reason  why there's nothing to check (e.g. "no_typed_number").
+ * @typedef {{ ok: true, reply: string | null, check?: string, reason?: string }
  *   | { ok: false, problem: "refused_secret" | "refused" | "error" | "unreachable", status?: number }} ForwardResult
  */
 
 /**
+ * Hands a message to the site: `{from, text}` with the sender's number, or
+ * `{hidden: true, text}` (from = null) when WhatsApp hides it.
  * @param {{
- *   siteUrl: string, secret: string, from: string, text: string,
+ *   siteUrl: string, secret: string, from: string | null, text: string,
  *   fetchImpl?: typeof fetch, timeoutMs?: number, tries?: number,
  *   sleep?: (ms: number) => Promise<void>, log?: (event: string, meta?: Record<string, unknown>) => void,
  * }} opts
@@ -39,12 +46,19 @@ export async function forwardToSite({
       const res = await fetchImpl(`${siteUrl}${WEBHOOK}`, {
         method: "POST",
         headers: { Authorization: `Bearer ${secret}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ from, text: text.slice(0, 500) }),
+        body: JSON.stringify(from ? { from, text: text.slice(0, 500) } : { hidden: true, text: text.slice(0, 500) }),
         signal: AbortSignal.timeout(timeoutMs),
       });
       if (res.ok) {
         const json = await res.json().catch(() => null);
-        return { ok: true, reply: typeof json?.reply === "string" && json.reply.trim() ? json.reply.slice(0, 2000) : null };
+        const check = typeof json?.check === "string" && /^[1-9]\d{7,14}$/.test(json.check) ? json.check : null;
+        const reason = typeof json?.reason === "string" && /^[a-z_]{1,40}$/.test(json.reason) ? json.reason : null;
+        return {
+          ok: true,
+          reply: typeof json?.reply === "string" && json.reply.trim() ? json.reply.slice(0, 2000) : null,
+          ...(check ? { check } : {}),
+          ...(reason ? { reason } : {}),
+        };
       }
       if (res.status === 401) {
         log("site_refused_secret", { hint: "WHATSAPP_BOT_SECRET differs between the bot and the site" });

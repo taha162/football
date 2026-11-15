@@ -753,14 +753,14 @@ isOneToOne: false
                   ]
                 },"phone_verifications": {
                   Row: {
-                    "client_ref": string | null,"code": string,"consumed_at": string | null,"created_at": string,"expires_at": string,"id": string,"phone": string | null,"purpose": Database["public"]['Enums']["phone_verify_purpose"],"status": Database["public"]['Enums']["phone_verify_status"],"tg_user_id": number | null,"ticket_hash": string,"user_id": string | null,"verified_at": string | null
+                    "claimed_phone": string | null,"client_ref": string | null,"code": string,"consumed_at": string | null,"created_at": string,"expires_at": string,"id": string,"phone": string | null,"purpose": Database["public"]['Enums']["phone_verify_purpose"],"status": Database["public"]['Enums']["phone_verify_status"],"tg_user_id": number | null,"ticket_hash": string,"user_id": string | null,"verified_at": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "client_ref"?: string | null,"code": string,"consumed_at"?: string | null,"created_at"?: string,"expires_at"?: string,"id"?: string,"phone"?: string | null,"purpose": Database["public"]['Enums']["phone_verify_purpose"],"status"?: Database["public"]['Enums']["phone_verify_status"],"tg_user_id"?: number | null,"ticket_hash": string,"user_id"?: string | null,"verified_at"?: string | null
+                    "claimed_phone"?: string | null,"client_ref"?: string | null,"code": string,"consumed_at"?: string | null,"created_at"?: string,"expires_at"?: string,"id"?: string,"phone"?: string | null,"purpose": Database["public"]['Enums']["phone_verify_purpose"],"status"?: Database["public"]['Enums']["phone_verify_status"],"tg_user_id"?: number | null,"ticket_hash": string,"user_id"?: string | null,"verified_at"?: string | null
                   }
                   Update: {
-                    "client_ref"?: string | null,"code"?: string,"consumed_at"?: string | null,"created_at"?: string,"expires_at"?: string,"id"?: string,"phone"?: string | null,"purpose"?: Database["public"]['Enums']["phone_verify_purpose"],"status"?: Database["public"]['Enums']["phone_verify_status"],"tg_user_id"?: number | null,"ticket_hash"?: string,"user_id"?: string | null,"verified_at"?: string | null
+                    "claimed_phone"?: string | null,"client_ref"?: string | null,"code"?: string,"consumed_at"?: string | null,"created_at"?: string,"expires_at"?: string,"id"?: string,"phone"?: string | null,"purpose"?: Database["public"]['Enums']["phone_verify_purpose"],"status"?: Database["public"]['Enums']["phone_verify_status"],"tg_user_id"?: number | null,"ticket_hash"?: string,"user_id"?: string | null,"verified_at"?: string | null
                   }
                   Relationships: [
                     
@@ -1676,11 +1676,11 @@ isOneToOne: true
                            },
 "phone_verify_lookup":
 { Args: { "p_ticket_hash": string }; Returns: {
-              "code": string,"expires_at": string,"linked": boolean,"phone": string,"purpose": Database["public"]['Enums']["phone_verify_purpose"],"status": Database["public"]['Enums']["phone_verify_status"]
+              "claimed_phone": string,"code": string,"expires_at": string,"linked": boolean,"phone": string,"purpose": Database["public"]['Enums']["phone_verify_purpose"],"status": Database["public"]['Enums']["phone_verify_status"]
             }[]
                            },
 "phone_verify_start":
-{ Args: { "p_client_key": string,"p_code": string,"p_purpose": Database["public"]['Enums']["phone_verify_purpose"],"p_ticket_hash": string,"p_user_id": string }; Returns: string
+{ Args: { "p_client_key": string,"p_code": string,"p_phone"?: string,"p_purpose": Database["public"]['Enums']["phone_verify_purpose"],"p_ticket_hash": string,"p_user_id": string }; Returns: string
                            },
 "player_reputation":
 { Args: { "p_user_id": string }; Returns: Json
@@ -1913,6 +1913,9 @@ isOneToOne: true
                            },
 "venue_rating":
 { Args: { "p_venue_id": string }; Returns: Json
+                           },
+"wa_bot_claimed_phone":
+{ Args: { "p_body": string }; Returns: Json
                            },
 "wa_bot_receive":
 { Args: { "p_body": string,"p_phone": string }; Returns: Json

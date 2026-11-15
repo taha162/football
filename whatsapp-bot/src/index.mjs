@@ -60,9 +60,16 @@ function refreshSite() {
 }
 
 const inbound = createInboundHandler({
-  texts: { help: config.helpText, noNumberCode: config.noNumberCodeText, noNumberStop: config.noNumberStopText, trouble: config.troubleText },
+  texts: {
+    help: config.helpText,
+    noNumberCode: config.noNumberCodeText,
+    noNumberStop: config.noNumberStopText,
+    otherNumber: config.otherNumberText,
+    trouble: config.troubleText,
+  },
   inboundPerHour: config.inboundPerHour,
   pnForLid: (lid) => connection?.pnForLid(lid) ?? Promise.resolve(null),
+  lidForPhone: (phone) => (connection ? connection.lidForPhone(phone) : Promise.reject(new Error("not_connected"))),
   async forward(from, text) {
     const result = await forwardToSite({ siteUrl: config.siteUrl, secret: config.secret, from, text, log });
     if (!result.ok) void refreshSite();

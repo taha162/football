@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { readConfig, siteOrigin } from "../../whatsapp-bot/src/config.mjs";
-import { classify, createInboundHandler, hourlyLimiter, phoneOfJid, senderPhone, textOf } from "../../whatsapp-bot/src/inbound.mjs";
+import { classify, createInboundHandler, hourlyLimiter, lidUser, maskPhone, phoneOfJid, senderPhone, textOf } from "../../whatsapp-bot/src/inbound.mjs";
 import { isBanSignal, OutboundQueue, QueueFullError, startOfDay } from "../../whatsapp-bot/src/queue.mjs";
 import { handle } from "../../whatsapp-bot/src/server.mjs";
 import { checkSite, forwardToSite, type ForwardResult } from "../../whatsapp-bot/src/site.mjs";
@@ -290,6 +290,9 @@ describe("reading incoming messages", () => {
   it("takes the sender's real number, also behind a LID; never guesses one", async () => {
     expect(phoneOfJid("9647700000001:12@s.whatsapp.net")).toBe("9647700000001");
     expect(phoneOfJid("123456789@lid")).toBeNull();
+    expect(lidUser("201234567890123:5@lid")).toBe("201234567890123");
+    expect(lidUser("9647700000001@s.whatsapp.net")).toBeNull();
+    expect(maskPhone("9647701234567")).toBe("⁦+964 770 ••• 4567⁩");
     expect(await senderPhone({ remoteJid: "9647700000001@s.whatsapp.net" })).toEqual({ phone: "9647700000001", via: "chat" });
     // Baileys 7: the alternative address on the key.
     expect(await senderPhone({ remoteJid: "201234567890123@lid", remoteJidAlt: "9647700000002@s.whatsapp.net" })).toEqual({ phone: "9647700000002", via: "alt" });
@@ -325,9 +328,16 @@ describe("reading incoming messages", () => {
 describe("handling incoming messages", () => {
   const LID = "201234567890123@lid";
   const PN = "9647700000001@s.whatsapp.net";
-  const TEXTS = { help: "HELP", noNumberCode: "NO NUMBER (code)", noNumberStop: "NO NUMBER (stop)", trouble: "TROUBLE" };
+  const TEXTS = { help: "HELP", noNumberCode: "NO NUMBER (code)", noNumberStop: "NO NUMBER (stop)", trouble: "TROUBLE", otherNumber: "OTHER {number}" };
 
-  function bot(opts: { forward?: (from: string, text: string) => Promise<ForwardResult>; pnForLid?: (lid: string) => Promise<string | null>; perHour?: number } = {}) {
+  function bot(
+    opts: {
+      forward?: (from: string | null, text: string) => Promise<ForwardResult>;
+      pnForLid?: (lid: string) => Promise<string | null>;
+      lidForPhone?: (phone: string) => Promise<string | null>;
+      perHour?: number;
+    } = {},
+  ) {
     let t = Date.UTC(2026, 10, 14, 9, 0, 0);
     let n = 0;
     const replies: string[] = [];
@@ -339,6 +349,7 @@ describe("handling incoming messages", () => {
       texts: TEXTS,
       inboundPerHour: opts.perHour ?? 10,
       pnForLid: opts.pnForLid ?? (async () => null),
+      lidForPhone: opts.lidForPhone ?? null,
       forward,
       reply: (chat: string, text: string) => replies.push(`${chat} ${text}`),
       dropFor,
@@ -395,6 +406,68 @@ describe("handling incoming messages", () => {
     b.pass(16 * MIN);
     expect(await b.handler.handle(b.message("0", { remoteJid: LID }))).toBe("no_number");
     expect(b.replies.at(-1)).toBe(`${LID} NO NUMBER (stop)`);
+  });
+
+  describe("a code from a sender WhatsApp hides", () => {
+    const TYPED = "9647700000009";
+    /** The site: asked without a number, it says which number was typed; with that number, it verifies. */
+    const site = (first: ForwardResult) =>
+      vi.fn(async (from: string | null): Promise<ForwardResult> => (from === null ? first : { ok: true, reply: "✅ تم تأكيد رقمك" }));
+
+    it("goes on with the typed number only when WhatsApp says that number is the sender", async () => {
+      const forward = site({ ok: true, reply: null, check: TYPED });
+      const lidForPhone = vi.fn(async () => "201234567890123@lid");
+      const b = bot({ forward, lidForPhone });
+      expect(await b.handler.handle(b.message("ABCD-EFGH", { remoteJid: LID }))).toBe("replied");
+      expect(forward.mock.calls).toEqual([
+        [null, "ABCD-EFGH"],
+        [TYPED, "ABCD-EFGH"],
+      ]);
+      expect(lidForPhone).toHaveBeenCalledWith(TYPED);
+      expect(b.replies).toEqual([`${LID} ✅ تم تأكيد رقمك`]);
+      expect(b.logs.find((l) => l.event === "inbound")).toMatchObject({ outcome: "replied", via: "lid_check", chat: "lid" });
+      // The same account on another device is still the same account.
+      const device = bot({ forward: site({ ok: true, reply: null, check: TYPED }), lidForPhone: async () => "201234567890123:7@lid" });
+      expect(await device.handler.handle(device.message("ABCD-EFGH", { remoteJid: LID }))).toBe("replied");
+    });
+
+    it("someone else's code, or a number not on WhatsApp, goes no further", async () => {
+      for (const lid of ["999999999999999@lid", null]) {
+        const forward = site({ ok: true, reply: null, check: TYPED });
+        const b = bot({ forward, lidForPhone: async () => lid });
+        expect(await b.handler.handle(b.message("ABCD-EFGH", { remoteJid: LID }))).toBe("other_number");
+        expect(forward).toHaveBeenCalledTimes(1); // never sent on with the typed number
+        expect(b.replies).toEqual([`${LID} OTHER ⁦+964 770 ••• 0009⁩`]);
+      }
+    });
+
+    it("tells the sender when WhatsApp or the site can't be asked", async () => {
+      const lookupFails = bot({ forward: site({ ok: true, reply: null, check: TYPED }), lidForPhone: async () => Promise.reject(new Error("timeout")) });
+      expect(await lookupFails.handler.handle(lookupFails.message("ABCD-EFGH", { remoteJid: LID }))).toBe("lid_lookup_failed");
+      expect(lookupFails.replies).toEqual([`${LID} TROUBLE`]);
+      const siteDown = bot({ forward: site({ ok: false, problem: "unreachable" }), lidForPhone: async () => "201234567890123@lid" });
+      expect(await siteDown.handler.handle(siteDown.message("ABCD-EFGH", { remoteJid: LID }))).toBe("site_unreachable");
+      expect(siteDown.replies).toEqual([`${LID} TROUBLE`]);
+    });
+
+    it("passes on the site's answer when there's nothing to check", async () => {
+      const lidForPhone = vi.fn(async () => "201234567890123@lid");
+      const wrong = bot({ forward: site({ ok: true, reply: "⚠️ رمز غير صالح", reason: "no_pending_code" }), lidForPhone });
+      expect(await wrong.handler.handle(wrong.message("ABCD-EFGH", { remoteJid: LID }))).toBe("replied");
+      expect(wrong.replies).toEqual([`${LID} ⚠️ رمز غير صالح`]);
+      const untyped = bot({ forward: site({ ok: true, reply: "اكتب رقمك", reason: "no_typed_number" }), lidForPhone });
+      expect(await untyped.handler.handle(untyped.message("ABCD-EFGH", { remoteJid: LID }))).toBe("no_number");
+      expect(untyped.replies).toEqual([`${LID} اكتب رقمك`]);
+      expect(lidForPhone).not.toHaveBeenCalled();
+    });
+
+    it("only codes are checked this way; a hidden stop request is answered here", async () => {
+      const forward = site({ ok: true, reply: null, check: TYPED });
+      const b = bot({ forward, lidForPhone: async () => "201234567890123@lid" });
+      expect(await b.handler.handle(b.message("0", { remoteJid: LID }))).toBe("no_number");
+      expect(forward).not.toHaveBeenCalled();
+      expect(b.replies).toEqual([`${LID} NO NUMBER (stop)`]);
+    });
   });
 
   it("a stop word drops what waits for that number, and goes to the site", async () => {
@@ -524,6 +597,21 @@ describe("forwarding to the site", () => {
     expect((init.headers as Record<string, string>).Authorization).toBe(`Bearer ${SECRET}`);
     expect(JSON.parse(String(init.body))).toEqual({ from: "9647700000001", text: "x".repeat(500) });
     expect(await forwardToSite({ ...base, text: "ABCD-EFGH", fetchImpl: async () => ok(" ") })).toEqual({ ok: true, reply: null });
+  });
+
+  it("for a hidden sender, asks without a number and reads which number to check", async () => {
+    const answer = (body: unknown) => new Response(JSON.stringify(body), { status: 200, headers: { "Content-Type": "application/json" } });
+    const fetchImpl = vi.fn(async () => answer({ check: "9647700000009" }));
+    expect(await forwardToSite({ ...base, from: null, text: "ABCD-EFGH", fetchImpl })).toEqual({ ok: true, reply: null, check: "9647700000009" });
+    const [, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
+    expect(JSON.parse(String(init.body))).toEqual({ hidden: true, text: "ABCD-EFGH" });
+    expect(await forwardToSite({ ...base, from: null, text: "x", fetchImpl: async () => answer({ reply: "R", reason: "no_typed_number" }) })).toEqual({
+      ok: true,
+      reply: "R",
+      reason: "no_typed_number",
+    });
+    // Anything that isn't a number is no number to check.
+    expect(await forwardToSite({ ...base, from: null, text: "x", fetchImpl: async () => answer({ check: "+9647700000009 or so" }) })).toEqual({ ok: true, reply: null });
   });
 
   it("tries again after a server error, but not after a refusal, and says which went wrong", async () => {

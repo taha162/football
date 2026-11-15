@@ -5,7 +5,21 @@
 import { findCode, isStopKeyword } from "./text.mjs";
 
 const PN_JID = /^(\d+)(?::\d+)?@s\.whatsapp\.net$/;
-const LID_JID = /^\d+(?::\d+)?@lid$/;
+const LID_JID = /^(\d+)(?::\d+)?@lid$/;
+
+/**
+ * The account part of a LID ("201234567890123:5@lid" → "201234567890123"), so
+ * two addresses of the same account compare equal whatever the device.
+ * @param {unknown} jid
+ * @returns {string | null}
+ */
+export function lidUser(jid) {
+  const m = LID_JID.exec(typeof jid === "string" ? jid : "");
+  return m ? m[1] : null;
+}
+
+/** "+964 770 ••• 4567", kept left-to-right inside Arabic text. @param {string} phone */
+export const maskPhone = (phone) => `⁦+${phone.slice(0, 3)} ${phone.slice(3, 6)} ••• ${phone.slice(-4)}⁩`;
 
 /**
  * The number in a phone-number address ("9647701234567:3@s.whatsapp.net" → "9647701234567").
@@ -145,6 +159,11 @@ const RECENT = 8;
  * What the bot does with each incoming message:
  *   - a code or a stop word goes to the site with the sender's real number,
  *     and the site's reply goes back to the chat;
+ *   - a code from a sender WhatsApp hides (a LID nobody here knows): the site
+ *     says which number the user typed for that code, WhatsApp says which LID
+ *     that number has, and only if it is the sender's does the code go on with
+ *     that number. Otherwise the sender is told the code was asked for another
+ *     number. Nothing is guessed;
  *   - when the number can't be known, or the site can't be reached, the
  *     sender is told so (at most every 15 minutes) instead of hearing nothing;
  *   - any other text gets the help message, at most every 6 hours per chat.
@@ -154,10 +173,11 @@ const RECENT = 8;
  * site's admin page.
  *
  * @param {{
- *   texts: { help: string, noNumberCode: string, noNumberStop: string, trouble: string },
+ *   texts: { help: string, noNumberCode: string, noNumberStop: string, trouble: string, otherNumber: string },
  *   inboundPerHour: number,
  *   pnForLid?: ((lid: string) => Promise<string | null | undefined>) | null,
- *   forward: (from: string, text: string) => Promise<import("./site.mjs").ForwardResult>,
+ *   lidForPhone?: ((phone: string) => Promise<string | null | undefined>) | null,
+ *   forward: (from: string | null, text: string) => Promise<import("./site.mjs").ForwardResult>,
  *   reply: (chat: string, text: string) => unknown,
  *   dropFor: (phone: string) => unknown[],
  *   log?: (event: string, meta?: Record<string, unknown>) => void,
@@ -218,22 +238,53 @@ export function createInboundHandler(deps) {
       deps.reply(what.chat, deps.texts.help);
       return note(kind, "help_sent", meta);
     }
-    // The verified number is the sender's own: never guessed when WhatsApp hides it behind a LID.
-    const sender = await senderPhone(msg.key, deps.pnForLid ?? null, { waits: deps.lidWaits ?? [2000, 4000], ...(deps.sleep ? { sleep: deps.sleep } : {}) });
-    if (!sender) {
-      if (sayOnce(what.chat, "no_number", 15 * MIN)) deps.reply(what.chat, what.kind === "stop" ? deps.texts.noNumberStop : deps.texts.noNumberCode);
-      return note(kind, "no_number", meta);
-    }
-    meta.via = sender.via;
-    if (what.kind === "stop") meta.dropped = deps.dropFor(sender.phone).length;
-    const result = await deps.forward(sender.phone, what.text);
-    if (result.ok) {
+    const trouble = (/** @type {string} */ outcome, /** @type {Record<string, unknown>} */ extra = {}) => {
+      if (sayOnce(what.chat, "trouble", 15 * MIN)) deps.reply(what.chat, deps.texts.trouble);
+      return note(kind, outcome, { ...meta, ...extra });
+    };
+    /** Hands the message to the site with the sender's number, and sends back its answer. */
+    const deliver = async (/** @type {string} */ phone) => {
+      const result = await deps.forward(phone, what.text);
+      if (!result.ok) return trouble(`site_${result.problem}`, result.status ? { status: result.status } : {});
       if (!result.reply) return note(kind, "no_reply", meta);
       deps.reply(what.chat, result.reply);
       return note(kind, "replied", meta);
+    };
+
+    // The verified number is the sender's own: never guessed when WhatsApp hides it behind a LID.
+    const sender = await senderPhone(msg.key, deps.pnForLid ?? null, { waits: deps.lidWaits ?? [2000, 4000], ...(deps.sleep ? { sleep: deps.sleep } : {}) });
+    if (sender) {
+      meta.via = sender.via;
+      if (what.kind === "stop") meta.dropped = deps.dropFor(sender.phone).length;
+      return deliver(sender.phone);
     }
-    if (sayOnce(what.chat, "trouble", 15 * MIN)) deps.reply(what.chat, deps.texts.trouble);
-    return note(kind, `site_${result.problem}`, { ...meta, ...(result.status ? { status: result.status } : {}) });
+    if (what.kind !== "code" || !deps.lidForPhone || !isLid(what.chat)) {
+      if (sayOnce(what.chat, "no_number", 15 * MIN)) deps.reply(what.chat, what.kind === "stop" ? deps.texts.noNumberStop : deps.texts.noNumberCode);
+      return note(kind, "no_number", meta);
+    }
+
+    // Hidden sender: which number was this code requested for?
+    const asked = await deps.forward(null, what.text);
+    if (!asked.ok) return trouble(`site_${asked.problem}`, asked.status ? { status: asked.status } : {});
+    if (!asked.check) {
+      // A wrong or expired code, or one requested without a typed number: the site's answer says so.
+      if (asked.reply) deps.reply(what.chat, asked.reply);
+      return note(kind, asked.reason === "no_typed_number" ? "no_number" : asked.reply ? "replied" : "no_reply", meta);
+    }
+    // Is the sender that number? WhatsApp knows the LID of every number.
+    /** @type {string | null | undefined} */
+    let lid;
+    try {
+      lid = await deps.lidForPhone(asked.check);
+    } catch {
+      return trouble("lid_lookup_failed");
+    }
+    if (!lid || lidUser(lid) !== lidUser(what.chat)) {
+      if (sayOnce(what.chat, "other_number", 15 * MIN)) deps.reply(what.chat, deps.texts.otherNumber.replace("{number}", maskPhone(asked.check)));
+      return note(kind, "other_number", meta);
+    }
+    meta.via = "lid_check";
+    return deliver(asked.check);
   }
 
   return { handle, recent: () => recent.map((r) => ({ ...r })) };

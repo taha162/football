@@ -3,15 +3,21 @@ import { z } from "zod";
 import { logger } from "@/lib/log";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { bearerMatches, whatsappConfig } from "@/lib/whatsapp";
-import { isStopKeyword, STOPPED_REPLY, verificationReply, type ReceiveResult } from "@/lib/whatsapp-messages";
+import { isStopKeyword, NO_TYPED_NUMBER_REPLY, STOPPED_REPLY, verificationReply, type ReceiveResult } from "@/lib/whatsapp-messages";
 
 export const dynamic = "force-dynamic";
 
-/** What the bot forwards: the sender's real number (it resolved WhatsApp's LID addressing) and the text. */
-const Inbound = z.object({
-  from: z.string().trim().regex(/^\+?[1-9][0-9]{7,14}$/),
-  text: z.string().max(500),
-});
+/**
+ * What the bot forwards: the text, with either the sender's real number
+ * (WhatsApp showed it, or the bot resolved its LID), or `hidden: true` when
+ * WhatsApp hides it. For a hidden sender the site answers with the number
+ * typed for that code (`check`); the bot asks WhatsApp whether the sender is
+ * that number and, only if so, sends the message again with it.
+ */
+const Inbound = z.union([
+  z.object({ from: z.string().trim().regex(/^\+?[1-9][0-9]{7,14}$/), text: z.string().max(500) }),
+  z.object({ hidden: z.literal(true), text: z.string().max(500) }),
+]);
 
 /**
  * The bot's check that SITE_URL leads here and that the secret is the same
@@ -46,6 +52,19 @@ export async function POST(request: NextRequest) {
   if (!parsed.success) return NextResponse.json({ error: "invalid_body" }, { status: 400 });
   const admin = createAdminClient();
   if (!admin) return NextResponse.json({ error: "unavailable" }, { status: 503 });
+
+  if ("hidden" in parsed.data) {
+    const { data, error } = await admin.rpc("wa_bot_claimed_phone", { p_body: parsed.data.text });
+    if (error) {
+      logger.error("whatsapp_claim_failed", { code: error.code });
+      return NextResponse.json({ error: "failed" }, { status: 500 });
+    }
+    const claim = (data ?? {}) as { found?: boolean; phone?: string | null; reason?: string };
+    if (claim.found && claim.phone) return NextResponse.json({ check: claim.phone });
+    if (claim.found && claim.reason === "claimed") return NextResponse.json({ reply: verificationReply({ reason: "claimed" }), reason: "claimed" });
+    if (claim.found) return NextResponse.json({ reply: NO_TYPED_NUMBER_REPLY, reason: "no_typed_number" });
+    return NextResponse.json({ reply: verificationReply({ reason: "no_pending_code" }), reason: "no_pending_code" });
+  }
   const { from, text } = parsed.data;
 
   if (isStopKeyword(text)) {

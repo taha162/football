@@ -176,6 +176,16 @@ export function createConnection({ config, queue, onMessage, log }) {
      * @param {string} lid
      */
     pnForLid: async (lid) => (await sock?.signalRepository?.lidMapping?.getPNForLID?.(lid)) ?? null,
+    /**
+     * The LID of a number, from the session or else from WhatsApp's servers (a lookup that sends
+     * nothing to that number). Null when the number isn't on WhatsApp; throws when WhatsApp can't
+     * be asked.
+     * @param {string} phone
+     */
+    lidForPhone: async (phone) => {
+      if (!sock || state.connection !== "open") throw new Error("not_connected");
+      return (await sock.signalRepository.lidMapping.getLIDForPN(`${phone}@s.whatsapp.net`)) ?? null;
+    },
     /** @type {import("./queue.mjs").Transport} */
     transport: {
       isReady: () => state.connection === "open",

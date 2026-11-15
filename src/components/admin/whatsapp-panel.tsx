@@ -11,7 +11,8 @@ import { Alert, Card, CardBody, DefinitionList } from "@/components/ui/primitive
 const SITE_STATES: SiteCheckState[] = ["checking", "ok", "refused_secret", "blocked", "redirected", "not_found", "old_site", "error", "unreachable"];
 const INBOUND_KINDS = ["code", "stop", "help", "other"];
 const GOOD_OUTCOMES = new Set(["replied", "help_sent"]);
-const BAD_OUTCOMES = new Set(["no_number", "unreadable", "site_refused_secret", "site_refused", "site_error", "site_unreachable"]);
+const BAD_OUTCOMES = new Set(["no_number", "unreadable", "lid_lookup_failed", "site_refused_secret", "site_refused", "site_error", "site_unreachable"]);
+const WARN_OUTCOMES = new Set(["other_number"]);
 
 /**
  * The WhatsApp bot, as a checklist like the Telegram one: are its settings
@@ -26,7 +27,15 @@ export async function WhatsappPanel() {
   const cfg = whatsappConfig();
   const supabase = await createClient();
   const { data: summary, error: summaryError } = await supabase.rpc("admin_whatsapp_summary");
-  const s = summary as { booking_messages: boolean; promo_left_today: number; sent_today: number; failed_today: number; queued: number; sending: number } | null;
+  const s = summary as {
+    schema?: number;
+    booking_messages: boolean;
+    promo_left_today: number;
+    sent_today: number;
+    failed_today: number;
+    queued: number;
+    sending: number;
+  } | null;
   const [health, link] = cfg.canSend ? await Promise.all([bot.health(), bot.link()]) : [null, null];
 
   const bad = (text: React.ReactNode) => <span className="text-danger">{text}</span>;
@@ -81,7 +90,11 @@ export async function WhatsappPanel() {
       if (h.inbound) items.push({ label: t("waInbound"), value: <Inbound notes={h.inbound} locale={locale} /> });
     }
   }
-  items.push({ label: t("waDatabase"), value: summaryError ? bad(t("waDatabaseMissing")) : good(t("tgDatabaseOk")) });
+  items.push({
+    label: t("waDatabase"),
+    // 0029 says so in the summary; before it, WhatsApp sign-up can't ask for the number.
+    value: summaryError ? bad(t("waDatabaseMissing")) : (s?.schema ?? 0) < 29 ? bad(t("waDatabaseOld")) : good(t("tgDatabaseOk")),
+  });
   if (s) {
     items.push({
       label: t("waBookingMessages"),
@@ -175,7 +188,13 @@ async function Inbound({ notes, locale }: { notes: NonNullable<BotHealth["inboun
     <ul className="flex flex-col gap-1" data-testid="wa-inbound">
       {notes.slice(0, 6).map((n, i) => {
         const outcome = `waInboundOutcome.${n.outcome}`;
-        const tone = GOOD_OUTCOMES.has(n.outcome) ? "text-success" : BAD_OUTCOMES.has(n.outcome) ? "text-danger" : "text-muted";
+        const tone = GOOD_OUTCOMES.has(n.outcome)
+          ? "text-success"
+          : BAD_OUTCOMES.has(n.outcome)
+            ? "text-danger"
+            : WARN_OUTCOMES.has(n.outcome)
+              ? "text-warning"
+              : "text-muted";
         return (
           <li key={`${n.at}-${i}`}>
             <span className="num text-muted">{when(n.at)}</span>
