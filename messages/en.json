@@ -1559,6 +1559,9 @@
       "other_number": "Not from the number typed on the site; the sender was told",
       "lid_lookup_failed": "Couldn't ask WhatsApp about the typed number"
     },
+    "waInboundTook": "in {seconds} s",
+    "waInboundLate": "reached the bot {seconds} s after it was sent",
+    "waInboundLateMinutes": "reached the bot {minutes} min after it was sent",
     "waLinkTitle": "Link Al-Malab's number",
     "waQrAlt": "QR code to link WhatsApp",
     "waLinkSteps": "On the phone with Al-Malab's number: WhatsApp → Settings → Linked devices → Link a device, then scan the code. It changes about every half minute; reload the page if it expired.",
