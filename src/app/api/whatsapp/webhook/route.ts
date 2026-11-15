@@ -14,6 +14,18 @@ const Inbound = z.object({
 });
 
 /**
+ * The bot's check that SITE_URL leads here and that the secret is the same
+ * (it shows in Admin → Settings). Nothing is read or written.
+ */
+export async function GET(request: NextRequest) {
+  const cfg = whatsappConfig();
+  if (!cfg.enabled || !bearerMatches(request.headers.get("authorization"), cfg.secret)) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+  return NextResponse.json({ ok: true });
+}
+
+/**
  * Messages from the WhatsApp bot (whatsapp-bot/). It forwards only those that
  * carry a code or ask to stop messages, and sends the sender the `reply`.
  * Only requests with `Authorization: Bearer WHATSAPP_BOT_SECRET` are read.

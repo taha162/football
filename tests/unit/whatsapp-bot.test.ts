@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import { readConfig, siteOrigin } from "../../whatsapp-bot/src/config.mjs";
-import { classify, hourlyLimiter, phoneOfJid, senderPhone, textOf } from "../../whatsapp-bot/src/inbound.mjs";
+import { classify, createInboundHandler, hourlyLimiter, phoneOfJid, senderPhone, textOf } from "../../whatsapp-bot/src/inbound.mjs";
 import { isBanSignal, OutboundQueue, QueueFullError, startOfDay } from "../../whatsapp-bot/src/queue.mjs";
 import { handle } from "../../whatsapp-bot/src/server.mjs";
-import { forwardToSite } from "../../whatsapp-bot/src/site.mjs";
+import { checkSite, forwardToSite, type ForwardResult } from "../../whatsapp-bot/src/site.mjs";
 import { memoryStore } from "../../whatsapp-bot/src/store.mjs";
 import { findCode, isStopKeyword } from "../../whatsapp-bot/src/text.mjs";
 
@@ -259,6 +259,8 @@ describe("reading incoming messages", () => {
     const long = { toNumber: () => Math.floor((NOW - 3 * HOUR) / 1000) };
     expect(classify({ key: person, message: text, messageTimestamp: long }, { now: NOW })).toMatchObject({ action: "ignore", reason: "old" });
     expect(classify(msg(person, null), { now: NOW })).toMatchObject({ action: "ignore", reason: "empty" });
+    // A message that couldn't be decrypted: a CIPHERTEXT stub (WhatsApp is asked to send it again).
+    expect(classify({ ...msg(person, null), messageStubType: 2 }, { now: NOW })).toMatchObject({ action: "ignore", reason: "unreadable" });
   });
 
   it("forwards codes and requests to stop; answers anything else with the help text", () => {
@@ -288,17 +290,25 @@ describe("reading incoming messages", () => {
   it("takes the sender's real number, also behind a LID; never guesses one", async () => {
     expect(phoneOfJid("9647700000001:12@s.whatsapp.net")).toBe("9647700000001");
     expect(phoneOfJid("123456789@lid")).toBeNull();
-    expect(await senderPhone({ remoteJid: "9647700000001@s.whatsapp.net" })).toBe("9647700000001");
+    expect(await senderPhone({ remoteJid: "9647700000001@s.whatsapp.net" })).toEqual({ phone: "9647700000001", via: "chat" });
     // Baileys 7: the alternative address on the key.
-    expect(await senderPhone({ remoteJid: "201234567890123@lid", remoteJidAlt: "9647700000002@s.whatsapp.net" })).toBe("9647700000002");
+    expect(await senderPhone({ remoteJid: "201234567890123@lid", remoteJidAlt: "9647700000002@s.whatsapp.net" })).toEqual({ phone: "9647700000002", via: "alt" });
     // Baileys 6.7: senderPn.
-    expect(await senderPhone({ remoteJid: "201234567890123@lid", senderPn: "9647700000003@s.whatsapp.net" })).toBe("9647700000003");
+    expect(await senderPhone({ remoteJid: "201234567890123@lid", senderPn: "9647700000003@s.whatsapp.net" })).toEqual({ phone: "9647700000003", via: "alt" });
     // The session's LID-to-number mapping.
     const mapping = vi.fn(async () => "9647700000004:3@s.whatsapp.net");
-    expect(await senderPhone({ remoteJid: "201234567890123@lid" }, mapping)).toBe("9647700000004");
+    expect(await senderPhone({ remoteJid: "201234567890123@lid" }, mapping)).toEqual({ phone: "9647700000004", via: "mapping" });
     expect(mapping).toHaveBeenCalledWith("201234567890123@lid");
-    // Unknown: ignored.
-    expect(await senderPhone({ remoteJid: "201234567890123@lid" }, async () => null)).toBeNull();
+    // The mapping can arrive a moment after the message: asked again after each wait.
+    const late = vi.fn().mockResolvedValueOnce(null).mockRejectedValueOnce(new Error("not yet")).mockResolvedValueOnce("9647700000005@s.whatsapp.net");
+    const slept: number[] = [];
+    const sleep = async (ms: number) => void slept.push(ms);
+    expect(await senderPhone({ remoteJid: "201234567890123@lid" }, late, { waits: [2000, 4000], sleep })).toEqual({ phone: "9647700000005", via: "mapping" });
+    expect(slept).toEqual([2000, 4000]);
+    // Unknown: null, after the waits.
+    slept.length = 0;
+    expect(await senderPhone({ remoteJid: "201234567890123@lid" }, async () => null, { waits: [2000], sleep })).toBeNull();
+    expect(slept).toEqual([2000]);
     expect(await senderPhone({ remoteJid: "201234567890123@lid" }, async () => Promise.reject(new Error("no session")))).toBeNull();
     expect(await senderPhone({ remoteJid: "201234567890123@lid" })).toBeNull();
   });
@@ -309,6 +319,136 @@ describe("reading incoming messages", () => {
     expect([limit.allow("a"), limit.allow("a"), limit.allow("a"), limit.allow("b")]).toEqual([true, true, false, true]);
     t += HOUR;
     expect(limit.allow("a")).toBe(true);
+  });
+});
+
+describe("handling incoming messages", () => {
+  const LID = "201234567890123@lid";
+  const PN = "9647700000001@s.whatsapp.net";
+  const TEXTS = { help: "HELP", noNumberCode: "NO NUMBER (code)", noNumberStop: "NO NUMBER (stop)", trouble: "TROUBLE" };
+
+  function bot(opts: { forward?: (from: string, text: string) => Promise<ForwardResult>; pnForLid?: (lid: string) => Promise<string | null>; perHour?: number } = {}) {
+    let t = Date.UTC(2026, 10, 14, 9, 0, 0);
+    let n = 0;
+    const replies: string[] = [];
+    const logs: Record<string, unknown>[] = [];
+    const forward = vi.fn(opts.forward ?? (async (): Promise<ForwardResult> => ({ ok: true, reply: "✅ تم تأكيد رقمك" })));
+    const dropFor = vi.fn(() => ["m-1", "m-2"]);
+    const slept: number[] = [];
+    const handler = createInboundHandler({
+      texts: TEXTS,
+      inboundPerHour: opts.perHour ?? 10,
+      pnForLid: opts.pnForLid ?? (async () => null),
+      forward,
+      reply: (chat: string, text: string) => replies.push(`${chat} ${text}`),
+      dropFor,
+      log: (event: string, meta?: Record<string, unknown>) => logs.push({ event, ...meta }),
+      now: () => t,
+      sleep: async (ms: number) => {
+        slept.push(ms);
+      },
+    });
+    const message = (text: string | null, key: Record<string, unknown> = {}, extra: Record<string, unknown> = {}) => ({
+      key: { remoteJid: PN, fromMe: false, id: `id-${++n}`, ...key },
+      message: text === null ? null : { conversation: text },
+      messageTimestamp: Math.floor(t / 1000),
+      ...extra,
+    });
+    return { handler, replies, logs, forward, dropFor, slept, message, pass: (ms: number) => (t += ms) };
+  }
+
+  it("forwards a code with the sender's number, and sends back the site's reply", async () => {
+    const b = bot();
+    expect(await b.handler.handle(b.message("رمزي ABCD-EFGH"))).toBe("replied");
+    expect(b.forward).toHaveBeenCalledWith("9647700000001", "رمزي ABCD-EFGH");
+    expect(b.replies).toEqual([`${PN} ✅ تم تأكيد رقمك`]);
+    // Behind a LID: the number from the message's alternative address; the reply goes to the chat it came from.
+    expect(await b.handler.handle(b.message("ABCD-EFGH", { remoteJid: LID, remoteJidAlt: "9647700000002@s.whatsapp.net" }))).toBe("replied");
+    expect(b.forward).toHaveBeenLastCalledWith("9647700000002", "ABCD-EFGH");
+    expect(b.replies.at(-1)).toBe(`${LID} ✅ تم تأكيد رقمك`);
+  });
+
+  it("handles a code sent while it was reconnecting, once, even if WhatsApp delivers it twice", async () => {
+    const b = bot();
+    const msg = b.message("ABCD-EFGH");
+    expect(await b.handler.handle(msg, "append")).toBe("replied");
+    expect(await b.handler.handle(msg, "notify")).toBe("duplicate");
+    expect(b.forward).toHaveBeenCalledTimes(1);
+    expect(b.logs.find((l) => l.event === "inbound")).toMatchObject({ kind: "code", outcome: "replied", upsert: "append", chat: "pn", via: "chat" });
+  });
+
+  it("waits a moment for the LID's number, then tells the sender instead of staying silent", async () => {
+    const late = vi.fn().mockResolvedValueOnce(null).mockResolvedValueOnce("9647700000003@s.whatsapp.net");
+    const found = bot({ pnForLid: late });
+    expect(await found.handler.handle(found.message("ABCD-EFGH", { remoteJid: LID }))).toBe("replied");
+    expect(found.forward).toHaveBeenCalledWith("9647700000003", "ABCD-EFGH");
+    expect(found.slept).toEqual([2000]);
+
+    const b = bot();
+    expect(await b.handler.handle(b.message("ABCD-EFGH", { remoteJid: LID }))).toBe("no_number");
+    expect(b.slept).toEqual([2000, 4000]);
+    expect(b.forward).not.toHaveBeenCalled(); // never guessed
+    expect(b.replies).toEqual([`${LID} NO NUMBER (code)`]);
+    // Said once per 15 minutes, not to every message.
+    expect(await b.handler.handle(b.message("ABCD-EFGH", { remoteJid: LID }))).toBe("no_number");
+    expect(b.replies).toHaveLength(1);
+    b.pass(16 * MIN);
+    expect(await b.handler.handle(b.message("0", { remoteJid: LID }))).toBe("no_number");
+    expect(b.replies.at(-1)).toBe(`${LID} NO NUMBER (stop)`);
+  });
+
+  it("a stop word drops what waits for that number, and goes to the site", async () => {
+    const b = bot({ forward: async () => ({ ok: true, reply: "STOPPED" }) });
+    expect(await b.handler.handle(b.message("إلغاء"))).toBe("replied");
+    expect(b.dropFor).toHaveBeenCalledWith("9647700000001");
+    expect(b.forward).toHaveBeenCalledWith("9647700000001", "إلغاء");
+    expect(b.logs.find((l) => l.event === "inbound")).toMatchObject({ kind: "stop", outcome: "replied", dropped: 2 });
+  });
+
+  it("when the site can't take the message, the sender hears of a problem (once per 15 minutes)", async () => {
+    const b = bot({ forward: async () => ({ ok: false, problem: "refused_secret", status: 401 }) });
+    expect(await b.handler.handle(b.message("ABCD-EFGH"))).toBe("site_refused_secret");
+    expect(await b.handler.handle(b.message("ABCD-EFGH"))).toBe("site_refused_secret");
+    expect(b.replies).toEqual([`${PN} TROUBLE`]);
+    const down = bot({ forward: async () => ({ ok: false, problem: "unreachable" }) });
+    expect(await down.handler.handle(down.message("ABCD-EFGH"))).toBe("site_unreachable");
+    const silent = bot({ forward: async () => ({ ok: true, reply: null }) });
+    expect(await silent.handler.handle(silent.message("ABCD-EFGH"))).toBe("no_reply");
+    expect(silent.replies).toEqual([]);
+  });
+
+  it("answers other text with the help message at most every 6 hours, and limits each chat per hour", async () => {
+    const b = bot({ perHour: 3 });
+    expect(await b.handler.handle(b.message("Ho"))).toBe("help_sent");
+    expect(await b.handler.handle(b.message("مرحبا"))).toBe("help_recent");
+    expect(b.replies).toEqual([`${PN} HELP`]);
+    expect(await b.handler.handle(b.message("ABCD-EFGH"))).toBe("replied");
+    expect(await b.handler.handle(b.message("ABCD-EFGH"))).toBe("limited");
+    b.pass(HOUR);
+    expect(await b.handler.handle(b.message("ABCD-EFGH"))).toBe("replied");
+    b.pass(6 * HOUR);
+    expect(await b.handler.handle(b.message("Ho"))).toBe("help_sent");
+  });
+
+  it("keeps the latest outcomes for the admin page, without numbers or text; our own and group messages aren't noted", async () => {
+    const b = bot();
+    expect(await b.handler.handle(b.message("ABCD-EFGH", { fromMe: true }))).toBe("outgoing");
+    expect(await b.handler.handle(b.message("ABCD-EFGH", { remoteJid: "120363025555555555@g.us" }))).toBe("not_a_person");
+    expect(b.handler.recent()).toEqual([]);
+    await b.handler.handle(b.message(null, {}, { messageStubType: 2 }));
+    await b.handler.handle(b.message("ABCD-EFGH"));
+    b.pass(MIN);
+    await b.handler.handle(b.message("Ho"));
+    expect(b.handler.recent()).toEqual([
+      { at: "2026-11-14T09:01:00.000Z", kind: "help", outcome: "help_sent" },
+      { at: "2026-11-14T09:00:00.000Z", kind: "code", outcome: "replied" },
+      { at: "2026-11-14T09:00:00.000Z", kind: "other", outcome: "unreadable" },
+    ]);
+    for (let i = 0; i < 10; i++) await b.handler.handle(b.message("ABCD-EFGH", { remoteJid: `96477000001${String(i).padStart(2, "0")}@s.whatsapp.net` }));
+    expect(b.handler.recent()).toHaveLength(8);
+    const shown = JSON.stringify([b.handler.recent(), b.logs]);
+    expect(shown).not.toContain("9647700000");
+    expect(shown).not.toContain("ABCD");
   });
 });
 
@@ -324,6 +464,14 @@ describe("the HTTP API the site calls", () => {
     expect(call(queue, "GET", "/health", null, `Bearer ${"x".repeat(40)}`).status).toBe(401);
     expect(call(queue, "POST", "/send", { to: "9647700000001", text: "hi" }, SECRET).status).toBe(401);
     expect(call(queue, "GET", "/health").body).toMatchObject({ connection: "open", linked: true, number: "9647700000009", queue: { total: 0 }, caps: { perHour: 3 } });
+  });
+
+  it("the health report says whether the bot reaches the site, and what became of the latest messages", () => {
+    const { queue } = setup();
+    const site = () => ({ url: "https://al-malab.example", state: "refused_secret" as const, status: 401, at: "2026-11-14T09:00:00.000Z" });
+    const inbound = () => [{ at: "2026-11-14T09:00:00.000Z", kind: "code" as const, outcome: "site_refused_secret" }];
+    const out = handle({ method: "GET", path: "/health", authorization: `Bearer ${SECRET}`, body: null }, { secret: SECRET, queue, connection: connected, site, inbound });
+    expect(out.body).toMatchObject({ linked: true, site: site(), inbound: inbound() });
   });
 
   it("queues messages, checks what it is given, and refuses while WhatsApp restricts the number", () => {
@@ -370,23 +518,71 @@ describe("forwarding to the site", () => {
 
   it("posts the number and text with the secret, and returns the site's reply", async () => {
     const fetchImpl = vi.fn(async () => ok("✅ تم"));
-    expect(await forwardToSite({ ...base, text: "x".repeat(600), fetchImpl })).toBe("✅ تم");
+    expect(await forwardToSite({ ...base, text: "x".repeat(600), fetchImpl })).toEqual({ ok: true, reply: "✅ تم" });
     const [url, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe("https://al-malab.example/api/whatsapp/webhook");
     expect((init.headers as Record<string, string>).Authorization).toBe(`Bearer ${SECRET}`);
     expect(JSON.parse(String(init.body))).toEqual({ from: "9647700000001", text: "x".repeat(500) });
+    expect(await forwardToSite({ ...base, text: "ABCD-EFGH", fetchImpl: async () => ok(" ") })).toEqual({ ok: true, reply: null });
   });
 
-  it("tries again after a server error, but not after a refusal", async () => {
+  it("tries again after a server error, but not after a refusal, and says which went wrong", async () => {
     const flaky = vi.fn().mockResolvedValueOnce(new Response("", { status: 502 })).mockResolvedValueOnce(ok("again"));
-    expect(await forwardToSite({ ...base, text: "ABCD-EFGH", fetchImpl: flaky })).toBe("again");
+    expect(await forwardToSite({ ...base, text: "ABCD-EFGH", fetchImpl: flaky })).toEqual({ ok: true, reply: "again" });
     expect(flaky).toHaveBeenCalledTimes(2);
     const refused = vi.fn(async () => new Response("", { status: 401 }));
-    expect(await forwardToSite({ ...base, text: "ABCD-EFGH", fetchImpl: refused })).toBeNull();
+    expect(await forwardToSite({ ...base, text: "ABCD-EFGH", fetchImpl: refused })).toEqual({ ok: false, problem: "refused_secret", status: 401 });
     expect(refused).toHaveBeenCalledTimes(1);
+    expect(await forwardToSite({ ...base, text: "ABCD-EFGH", fetchImpl: async () => new Response("", { status: 404 }) })).toEqual({
+      ok: false,
+      problem: "refused",
+      status: 404,
+    });
+    const failing = vi.fn(async () => new Response("", { status: 500 }));
+    expect(await forwardToSite({ ...base, text: "ABCD-EFGH", fetchImpl: failing, tries: 2 })).toEqual({ ok: false, problem: "error", status: 500 });
+    expect(failing).toHaveBeenCalledTimes(2);
     const down = vi.fn(async () => Promise.reject(new Error("ECONNREFUSED")));
-    expect(await forwardToSite({ ...base, text: "ABCD-EFGH", fetchImpl: down, tries: 3 })).toBeNull();
+    expect(await forwardToSite({ ...base, text: "ABCD-EFGH", fetchImpl: down, tries: 3 })).toEqual({ ok: false, problem: "unreachable" });
     expect(down).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe("checking that SITE_URL leads to the site", () => {
+  const json = (status: number, body: unknown, headers: Record<string, string> = {}) =>
+    new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json", ...headers } });
+  const html = (status: number, headers: Record<string, string> = {}) => new Response("<html></html>", { status, headers: { "Content-Type": "text/html", ...headers } });
+  const check = (res: Response | Error) =>
+    checkSite({
+      siteUrl: "https://al-malab.example",
+      secret: SECRET,
+      now: () => Date.UTC(2026, 10, 14, 9, 0, 0),
+      fetchImpl: vi.fn(async () => (res instanceof Error ? Promise.reject(res) : res)) as unknown as typeof fetch,
+    });
+
+  it("asks the webhook with the secret, without following redirects, and changes nothing", async () => {
+    const fetchImpl = vi.fn(async () => json(200, { ok: true }));
+    expect(await checkSite({ siteUrl: "https://al-malab.example", secret: SECRET, fetchImpl, now: () => 0 })).toEqual({ state: "ok", at: "1970-01-01T00:00:00.000Z" });
+    const [url, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe("https://al-malab.example/api/whatsapp/webhook");
+    expect(init).toMatchObject({ method: "GET", redirect: "manual", headers: { Authorization: `Bearer ${SECRET}` } });
+    expect(init.body).toBeUndefined();
+  });
+
+  it("tells apart every way it can go wrong", async () => {
+    expect(await check(json(401, { error: "unauthorized" }))).toMatchObject({ state: "refused_secret", status: 401 });
+    // Something else answered: Vercel's deployment protection, a firewall…
+    expect(await check(html(401))).toMatchObject({ state: "blocked", status: 401 });
+    expect(await check(html(403))).toMatchObject({ state: "blocked", status: 403 });
+    expect(await check(html(308, { Location: "https://www.al-malab.example/api/whatsapp/webhook" }))).toMatchObject({
+      state: "redirected",
+      status: 308,
+      to: "https://www.al-malab.example",
+    });
+    expect(await check(html(404))).toMatchObject({ state: "not_found", status: 404 });
+    expect(await check(html(200))).toMatchObject({ state: "not_found", status: 200 }); // some other site
+    expect(await check(html(405))).toMatchObject({ state: "old_site", status: 405 });
+    expect(await check(html(502))).toMatchObject({ state: "error", status: 502 });
+    expect(await check(new Error("getaddrinfo ENOTFOUND"))).toEqual({ state: "unreachable", at: "2026-11-14T09:00:00.000Z" });
   });
 });
 

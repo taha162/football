@@ -1,18 +1,24 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { publicEnv } from "@/lib/env";
-import { formatDateTime, formatNumber } from "@/lib/format";
+import { formatDate, formatDateTime, formatNumber, formatTime } from "@/lib/format";
 import { displayPhone } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/server";
-import { bot, whatsappConfig } from "@/lib/whatsapp";
+import { bot, whatsappConfig, type BotHealth, type SiteCheckState } from "@/lib/whatsapp";
 import { resumeWhatsappAction } from "@/server/whatsapp";
 import { ActionForm, SubmitButton } from "@/components/ui/action-form";
 import { Alert, Card, CardBody, DefinitionList } from "@/components/ui/primitives";
 
+const SITE_STATES: SiteCheckState[] = ["checking", "ok", "refused_secret", "blocked", "redirected", "not_found", "old_site", "error", "unreachable"];
+const INBOUND_KINDS = ["code", "stop", "help", "other"];
+const GOOD_OUTCOMES = new Set(["replied", "help_sent"]);
+const BAD_OUTCOMES = new Set(["no_number", "unreadable", "site_refused_secret", "site_refused", "site_error", "site_unreachable"]);
+
 /**
  * The WhatsApp bot, as a checklist like the Telegram one: are its settings
  * there, does the bot answer and is the number linked (with the QR code to
- * link it), is sending paused, and is the database ready. Each line says what
- * to fix.
+ * link it), is sending paused, can the bot reach this site, what became of
+ * the latest messages people sent it, and is the database ready. Each line
+ * says what to fix.
  */
 export async function WhatsappPanel() {
   const t = await getTranslations("admin");
@@ -71,6 +77,8 @@ export async function WhatsappPanel() {
           perDay: formatNumber(h.caps.perDay, locale),
         }),
       });
+      items.push({ label: t("waSiteReach"), value: <SiteReach site={h.site} /> });
+      if (h.inbound) items.push({ label: t("waInbound"), value: <Inbound notes={h.inbound} locale={locale} /> });
     }
   }
   items.push({ label: t("waDatabase"), value: summaryError ? bad(t("waDatabaseMissing")) : good(t("tgDatabaseOk")) });
@@ -131,5 +139,53 @@ export async function WhatsappPanel() {
         {!cfg.enabled ? <Alert tone="warning" title={t("waNotConfigured")}>{t("waNotConfiguredHint")}</Alert> : null}
       </CardBody>
     </Card>
+  );
+}
+
+/** Can the bot reach this site with the secret (its SITE_URL check), and what to change when it can't. */
+async function SiteReach({ site }: { site: BotHealth["site"] }) {
+  const t = await getTranslations("admin");
+  if (!site) return <span className="text-warning">{t("waSiteUnknown")}</span>;
+  const state = SITE_STATES.includes(site.state) ? site.state : "error";
+  const addr = (c: React.ReactNode) => (
+    <span dir="ltr" className="break-all font-mono text-xs">
+      {c}
+    </span>
+  );
+  const text = state === "ok" ? t("waSiteOk") : t.rich(`waSiteState.${state}`, { status: String(site.status ?? "—"), to: site.to ?? "—", addr });
+  return (
+    <div className="flex flex-col gap-0.5" data-testid="wa-site">
+      <span className={state === "ok" ? "text-success" : state === "checking" ? "text-muted" : "text-danger"}>{text}</span>
+      <span className="text-xs text-muted">
+        {t("waSiteUses")} {addr(site.url)}
+      </span>
+    </div>
+  );
+}
+
+/** The latest messages people sent the bot: when, what kind, and what became of them. */
+async function Inbound({ notes, locale }: { notes: NonNullable<BotHealth["inbound"]>; locale: string }) {
+  const t = await getTranslations("admin");
+  if (notes.length === 0) return <span className="text-muted">{t("waInboundNone")}</span>;
+  // Today's messages by the time alone; older ones with the day.
+  const today = formatDate(new Date(), locale, "Asia/Baghdad");
+  const when = (at: string) =>
+    formatDate(at, locale, "Asia/Baghdad") === today ? formatTime(at, locale, "Asia/Baghdad") : formatDateTime(at, locale, "Asia/Baghdad", { weekday: undefined });
+  return (
+    <ul className="flex flex-col gap-1" data-testid="wa-inbound">
+      {notes.slice(0, 6).map((n, i) => {
+        const outcome = `waInboundOutcome.${n.outcome}`;
+        const tone = GOOD_OUTCOMES.has(n.outcome) ? "text-success" : BAD_OUTCOMES.has(n.outcome) ? "text-danger" : "text-muted";
+        return (
+          <li key={`${n.at}-${i}`}>
+            <span className="num text-muted">{when(n.at)}</span>
+            {" · "}
+            {t(`waInboundKind.${INBOUND_KINDS.includes(n.kind) ? n.kind : "other"}`)}
+            {" · "}
+            <span className={tone}>{t.has(outcome) ? t(outcome) : n.outcome}</span>
+          </li>
+        );
+      })}
+    </ul>
   );
 }

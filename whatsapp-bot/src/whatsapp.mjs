@@ -21,7 +21,7 @@ import { isPersonChat, phoneOfJid } from "./inbound.mjs";
  * @param {{
  *   config: { dataDir: string, logLevel: string, pairingNumber: string | null },
  *   queue: import("./queue.mjs").OutboundQueue,
- *   onMessage: (msg: any) => Promise<void>,
+ *   onMessage: (msg: any, upsert: string) => Promise<unknown>,
  *   log: (event: string, meta?: Record<string, unknown>) => void,
  * }} deps
  */
@@ -151,10 +151,13 @@ export function createConnection({ config, queue, onMessage, log }) {
       }
     });
 
+    // "notify": live messages. "append": what WhatsApp kept while the bot was away (a restart, a
+    // redeploy, a dropped connection) and delivers on reconnecting; a code sent in that gap is one of
+    // them. Our own messages, old ones and anything but text are left out by the handler.
     current.ev.on("messages.upsert", async (/** @type {{ messages: any[], type: string }} */ { messages, type }) => {
-      if (type !== "notify") return;
+      if (type !== "notify" && type !== "append") return;
       for (const msg of messages) {
-        await onMessage(msg).catch((e) => log("message_failed", { message: String(e?.message ?? e).slice(0, 120) }));
+        await onMessage(msg, type).catch((e) => log("message_failed", { message: String(e?.message ?? e).slice(0, 120) }));
       }
     });
   }
@@ -167,8 +170,12 @@ export function createConnection({ config, queue, onMessage, log }) {
       if (timer) clearTimeout(timer);
       sock?.end?.(undefined);
     },
-    /** The number behind a LID, as far as the session knows it. @param {string} lid */
-    pnForLid: async (lid) => sock?.signalRepository?.lidMapping?.getPNForLID?.(lid) ?? null,
+    /**
+     * The number behind a LID, as far as the session knows it: learnt from earlier messages, from
+     * the phone's own records (synced to linked devices), and from numbers the bot has written to.
+     * @param {string} lid
+     */
+    pnForLid: async (lid) => (await sock?.signalRepository?.lidMapping?.getPNForLID?.(lid)) ?? null,
     /** @type {import("./queue.mjs").Transport} */
     transport: {
       isReady: () => state.connection === "open",

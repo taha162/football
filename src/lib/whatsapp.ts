@@ -63,6 +63,9 @@ async function callBot<T>(method: "GET" | "POST", path: string, body?: unknown, 
 
 export type BotState = "queued" | "sent" | "failed" | "cancelled" | "opted_out" | "unknown";
 
+/** What the bot found when it checked SITE_URL (whatsapp-bot/src/site.mjs, checkSite). */
+export type SiteCheckState = "checking" | "ok" | "refused_secret" | "blocked" | "redirected" | "not_found" | "old_site" | "error" | "unreachable";
+
 export interface BotHealth {
   connection: "open" | "connecting" | "close";
   linked: boolean;
@@ -71,6 +74,10 @@ export interface BotHealth {
   queue: { total: number; replies: number; booking: number; promo: number };
   sent: { lastHour: number; today: number };
   caps: { perHour: number; perDay: number };
+  /** Can the bot reach this site's webhook with the secret? (Missing from bots older than this check.) */
+  site?: { url: string; state: SiteCheckState; status?: number; to?: string | null; at: string | null };
+  /** The latest incoming messages: when, what kind, what became of them. Never the number or the text. */
+  inbound?: { at: string; kind: "code" | "stop" | "help" | "other"; outcome: string }[];
 }
 
 export const bot = {
