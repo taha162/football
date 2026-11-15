@@ -1509,7 +1509,7 @@
     "waDatabaseMissing": "Not applied. Run the file in the SQL Editor.",
     "waBookingMessages": "Booking messages",
     "waOn": "On",
-    "waBookingMessagesOff": "Off. To turn them on, set <code>whatsapp.booking_messages</code> to <code>true</code> in the policies below.",
+    "waBookingMessagesOff": "Off. To turn them on, set <code>whatsapp.booking_messages</code> to <code>true</code> in “Platform policies” below.",
     "waSiteQueue": "In the site",
     "waSiteQueueValue": "{queued} waiting · {sending} with the bot · {sent} sent today · {failed} failed",
     "waExpectedUrl": "The bot posts messages to:",

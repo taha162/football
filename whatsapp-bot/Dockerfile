@@ -9,10 +9,12 @@ RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
 
 COPY src ./src
 
-# The session (the link to the number) and the queue live here: mount a volume,
-# or every restart asks for the QR code again. The bot starts as root only to
-# give this folder to the "node" user, then runs as that user (src/start.mjs).
-VOLUME ["/data"]
+# The session (the link to the number) and the queue live in /data. Give it
+# persistent storage from the host (on Railway: attached storage mounted at
+# /data; with Docker: docker run -v name:/data), or every restart asks for the
+# QR code again. That is declared on the host only: Railway refuses a
+# Dockerfile that declares it. The bot starts as root only to give /data to
+# the "node" user, then runs as that user (src/start.mjs).
 
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s CMD wget -qO- "http://127.0.0.1:${PORT}/healthz" >/dev/null || exit 1
