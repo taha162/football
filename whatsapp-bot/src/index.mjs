@@ -1,9 +1,9 @@
 import { join } from "node:path";
 import { readConfig } from "./config.mjs";
-import { classify, hourlyLimiter, senderPhone } from "./inbound.mjs";
+import { createInboundHandler } from "./inbound.mjs";
 import { OutboundQueue } from "./queue.mjs";
 import { createApiServer } from "./server.mjs";
-import { forwardToSite } from "./site.mjs";
+import { checkSite, forwardToSite } from "./site.mjs";
 import { jsonFile } from "./store.mjs";
 import { createConnection } from "./whatsapp.mjs";
 
@@ -41,47 +41,52 @@ const queue = new OutboundQueue({
 });
 await queue.restore();
 
-// One chat may only make the bot work so much per hour, and gets the help text at most every 6 hours.
-const perChat = hourlyLimiter(config.inboundPerHour);
-/** @type {Map<string, number>} */
-const helpedAt = new Map();
-const HELP_EVERY_MS = 6 * 3_600_000;
+// Can the bot reach the site (SITE_URL) with the secret? Checked at start, every 15 minutes, and
+// after a message couldn't be handed over; the site's admin page shows the answer.
+/** @type {import("./site.mjs").SiteCheck} */
+let site = { state: "checking", at: null };
+/** @type {Promise<void> | null} */
+let checking = null;
+function refreshSite() {
+  checking ??= checkSite({ siteUrl: config.siteUrl, secret: config.secret })
+    .then((next) => {
+      if (next.state !== site.state) log("site_check", { state: next.state, ...(next.status ? { status: next.status } : {}), ...(next.to ? { to: next.to } : {}) });
+      site = next;
+    })
+    .finally(() => {
+      checking = null;
+    });
+  return checking;
+}
 
-connection = createConnection({
-  config,
-  queue,
-  log,
-  async onMessage(msg) {
-    const what = classify(msg, { now: Date.now() });
-    if (what.action === "ignore") return;
-    if (!perChat.allow(what.chat)) {
-      log("inbound_limited");
-      return;
-    }
-    if (what.action === "help") {
-      if (Date.now() - (helpedAt.get(what.chat) ?? 0) < HELP_EVERY_MS) return;
-      helpedAt.set(what.chat, Date.now());
-      queue.reply(what.chat, config.helpText);
-      return;
-    }
-    // The verified number is the sender's own: never guessed when WhatsApp hides it behind a LID.
-    const from = await senderPhone(msg.key, connection.pnForLid);
-    if (!from) {
-      log("sender_number_unknown", { kind: what.kind });
-      return;
-    }
-    if (what.kind === "stop") {
-      const dropped = queue.dropFor(from);
-      log("stop_requested", { dropped: dropped.length });
-    }
-    const reply = await forwardToSite({ siteUrl: config.siteUrl, secret: config.secret, from, text: what.text, log });
-    if (reply) queue.reply(what.chat, reply);
+const inbound = createInboundHandler({
+  texts: { help: config.helpText, noNumberCode: config.noNumberCodeText, noNumberStop: config.noNumberStopText, trouble: config.troubleText },
+  inboundPerHour: config.inboundPerHour,
+  pnForLid: (lid) => connection?.pnForLid(lid) ?? Promise.resolve(null),
+  async forward(from, text) {
+    const result = await forwardToSite({ siteUrl: config.siteUrl, secret: config.secret, from, text, log });
+    if (!result.ok) void refreshSite();
+    return result;
   },
+  reply: (chat, text) => queue.reply(chat, text),
+  dropFor: (phone) => queue.dropFor(phone),
+  log,
 });
 
-const server = createApiServer({ secret: config.secret, queue, connection: () => connection.state, log });
+connection = createConnection({ config, queue, log, onMessage: (msg, upsert) => inbound.handle(msg, upsert) });
+
+const server = createApiServer({
+  secret: config.secret,
+  queue,
+  connection: () => connection.state,
+  site: () => ({ url: config.siteUrl, ...site }),
+  inbound: () => inbound.recent(),
+  log,
+});
 server.listen(config.port, () => log("listening", { port: config.port }));
 void queue.start();
+void refreshSite();
+setInterval(() => void refreshSite(), 15 * 60_000).unref();
 await connection.start();
 
 let stopping = false;

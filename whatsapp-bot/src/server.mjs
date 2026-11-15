@@ -9,7 +9,7 @@ import { QueueFullError } from "./queue.mjs";
  *   POST /send    {id?, to, text, kind?}  queue a message (same id = same message)
  *   POST /status  {ids}                   what became of messages
  *   POST /cancel  {ids, reason?}          drop messages that haven't gone out
- *   GET  /health                          connection, pause, queue, caps
+ *   GET  /health                          connection, pause, queue, caps, can it reach the site, latest incoming messages
  *   GET  /link                            QR code or pairing code while unlinked
  *   POST /resume                          send again after a pause
  *   GET  /healthz                         "ok", for the host's health check
@@ -37,10 +37,12 @@ export function authorized(header, secret) {
  *   secret: string,
  *   queue: import("./queue.mjs").OutboundQueue,
  *   connection: () => { connection: string, linked: boolean, number: string | null, qrSvg: string | null, pairingCode: string | null, loggedOut: boolean },
+ *   site?: () => { url: string } & import("./site.mjs").SiteCheck,
+ *   inbound?: () => import("./inbound.mjs").InboundNote[],
  * }} deps
  * @returns {{ status: number, body: unknown }}
  */
-export function handle({ method, path, authorization, body }, { secret, queue, connection }) {
+export function handle({ method, path, authorization, body }, { secret, queue, connection, site, inbound }) {
   if (method === "GET" && path === "/healthz") return { status: 200, body: { ok: true } };
   if (!authorized(authorization, secret)) return { status: 401, body: { error: "unauthorized" } };
   const ids = (/** @type {unknown} */ list) =>
@@ -76,7 +78,17 @@ export function handle({ method, path, authorization, body }, { secret, queue, c
   }
   if (method === "GET" && path === "/health") {
     const c = connection();
-    return { status: 200, body: { connection: c.connection, linked: c.linked, number: c.number, ...queue.summary() } };
+    return {
+      status: 200,
+      body: {
+        connection: c.connection,
+        linked: c.linked,
+        number: c.number,
+        ...queue.summary(),
+        ...(site ? { site: site() } : {}),
+        ...(inbound ? { inbound: inbound() } : {}),
+      },
+    };
   }
   if (method === "GET" && path === "/link") {
     const c = connection();

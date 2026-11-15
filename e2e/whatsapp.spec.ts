@@ -19,6 +19,8 @@ const SECRET = process.env.WHATSAPP_BOT_SECRET ?? "";
 /** The site's side of the bot: /send, /status, /cancel, /health and /link. */
 class StandInBot {
   received: { id: string; to: string; text: string; kind: string }[] = [];
+  /** Added to /health: what the bot found when it checked SITE_URL, and its latest incoming messages. */
+  healthExtra: Record<string, unknown> = {};
   private server: Server | null = null;
 
   async start() {
@@ -44,6 +46,7 @@ class StandInBot {
         return reply(200, {
           connection: "open", linked: true, number: BOT_NUMBER, paused: null,
           queue: { total: 0, replies: 0, booking: 0, promo: 0 }, sent: { lastHour: 0, today: this.received.length }, caps: { perHour: 30, perDay: 200 },
+          ...this.healthExtra,
         });
       }
       if (req.url === "/link") return reply(200, { state: "linked" });
@@ -336,5 +339,61 @@ test.describe("WhatsApp promotions", () => {
     await signIn(page, player);
     await page.goto("/ar/admin/promotions");
     await expect(page).not.toHaveURL(/\/admin\/promotions/);
+  });
+});
+
+test.describe("WhatsApp bot status for admins", () => {
+  test.afterEach(() => {
+    bot.healthExtra = {};
+  });
+
+  test("the bot can check that SITE_URL leads here with the same secret; nothing is read or written", async ({ baseURL }) => {
+    const check = (secret: string) => fetch(`${baseURL}/api/whatsapp/webhook`, { headers: { Authorization: `Bearer ${secret}` }, redirect: "manual" });
+    const ok = await check(SECRET);
+    expect(ok.status).toBe(200);
+    expect(await ok.json()).toEqual({ ok: true });
+    const wrong = await check("x".repeat(40));
+    expect(wrong.status).toBe(401);
+    expect(await wrong.json()).toEqual({ error: "unauthorized" });
+    expect((await fetch(`${baseURL}/api/whatsapp/webhook`, { redirect: "manual" })).status).toBe(401);
+  });
+
+  test("Settings shows whether the bot reaches the site, and what became of the latest messages people sent it", async ({ page }) => {
+    const boss = await createAuthUser("Boss", { admin: true });
+    await signIn(page, boss);
+    const siteUrl = "https://al-malab.example";
+    bot.healthExtra = {
+      site: { url: siteUrl, state: "ok", at: new Date().toISOString() },
+      inbound: [
+        { at: new Date().toISOString(), kind: "code", outcome: "replied" },
+        { at: new Date(Date.now() - 60_000).toISOString(), kind: "code", outcome: "no_number" },
+        { at: new Date(Date.now() - 120_000).toISOString(), kind: "help", outcome: "help_sent" },
+      ],
+    };
+    await page.goto("/ar/admin/settings");
+    const site = page.getByTestId("wa-site");
+    await expect(site).toContainText("يصل، والسر نفسه في الجهتين");
+    await expect(site).toContainText(siteUrl);
+    const inbound = page.getByTestId("wa-inbound");
+    await expect(inbound.getByRole("listitem")).toHaveCount(3);
+    await expect(inbound.getByRole("listitem").nth(0)).toContainText("رمز · وصلت الموقع ورُدّ على المرسل");
+    await expect(inbound.getByRole("listitem").nth(1)).toContainText("لم يظهر رقم المرسل، فأُخبر بذلك");
+    await expect(inbound.getByRole("listitem").nth(2)).toContainText("رسالة أخرى · أُرسلت رسالة المساعدة");
+
+    // A secret that differs between Railway and Vercel says so, and where the bot posts.
+    bot.healthExtra = { site: { url: siteUrl, state: "refused_secret", status: 401, at: new Date().toISOString() }, inbound: [] };
+    await page.reload();
+    await expect(page.getByTestId("wa-site")).toContainText("WHATSAPP_BOT_SECRET في Railway ليس نفس القيمة في Vercel");
+    await expect(page.getByText("لم تصل أي رسالة منذ آخر تشغيل للبوت")).toBeVisible();
+
+    // A redirect names the final address to use.
+    bot.healthExtra = { site: { url: siteUrl, state: "redirected", status: 308, to: "https://www.al-malab.example", at: new Date().toISOString() } };
+    await page.reload();
+    await expect(page.getByTestId("wa-site")).toContainText("https://www.al-malab.example");
+
+    // A bot older than this check.
+    bot.healthExtra = {};
+    await page.reload();
+    await expect(page.getByText("نسخة البوت أقدم من هذا الفحص")).toBeVisible();
   });
 });

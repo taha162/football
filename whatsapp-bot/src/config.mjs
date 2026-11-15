@@ -6,6 +6,14 @@
 export const DEFAULT_HELP =
   "هذا رقم «الملعب» للتحقق ورسائل الحجوزات. لإنشاء حساب أو استعادة كلمة المرور ابدأ من الموقع، ثم أرسل هنا الرمز الذي يظهر لك.";
 
+/** When WhatsApp hides the sender's number (LID) and the session doesn't know it either. */
+export const NO_NUMBER_CODE =
+  "لم يظهر لنا رقم هاتفك في هذه المحادثة، فلا يمكن تأكيده من هنا. أكمل من الموقع بالبريد الإلكتروني أو تيليغرام.";
+export const NO_NUMBER_STOP =
+  "لم يظهر لنا رقم هاتفك في هذه المحادثة، فلم نستطع تسجيل طلب الإيقاف. أوقف الرسائل من إعدادات حسابك في الموقع.";
+/** When the site can't be reached or refuses the bot. */
+export const TROUBLE = "حدث خلل عندنا فلم نستطع قراءة رسالتك الآن. أرسلها مرة أخرى بعد دقائق.";
+
 const LOCAL = new Set(["localhost", "127.0.0.1", "[::1]"]);
 
 /** The site's origin ("https://x.vercel.app/ar" → "https://x.vercel.app"), or null. */
@@ -58,6 +66,9 @@ export function readConfig(env) {
     maxQueue: int("MAX_QUEUE", 500, 10, 10000),
     inboundPerHour: int("INBOUND_PER_HOUR", 10, 1, 1000),
     helpText: String(env.HELP_TEXT || DEFAULT_HELP),
+    noNumberCodeText: NO_NUMBER_CODE,
+    noNumberStopText: NO_NUMBER_STOP,
+    troubleText: TROUBLE,
     timeZone: "Asia/Baghdad",
     logLevel: String(env.LOG_LEVEL || "info"),
   };
