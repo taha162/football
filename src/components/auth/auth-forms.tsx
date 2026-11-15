@@ -87,11 +87,14 @@ function PhoneSignUpForm({
   note,
   submit,
   offerPromos,
+  askPhone = false,
 }: {
   action: typeof startTelegramSignupAction;
   note: string;
   submit: string;
   offerPromos: boolean;
+  /** WhatsApp: the number is typed here, and the code must come from it. */
+  askPhone?: boolean;
 }) {
   const t = useTranslations("auth");
   return (
@@ -100,6 +103,17 @@ function PhoneSignUpForm({
       <FormField name="display_name" label={t("displayName")} hint={t("displayNameHint")} required>
         {(a) => <Input {...a} autoComplete="nickname" required minLength={2} maxLength={40} />}
       </FormField>
+      {askPhone ? (
+        <FormField
+          name="phone"
+          label={t("waPhone")}
+          // The example number stays left to right inside the Arabic sentence.
+          hint={t.rich("waPhoneHint", { num: (c) => <bdi dir="ltr">{c}</bdi> })}
+          required
+        >
+          {(a) => <WhatsappNumberInput {...a} />}
+        </FormField>
+      ) : null}
       <FormField name="password" label={t("password")} hint={t("passwordHint")} required>
         {(a) => <Input {...a} type="password" autoComplete="new-password" required minLength={8} maxLength={72} dir="ltr" />}
       </FormField>
@@ -131,10 +145,17 @@ export function TelegramSignUpForm({ offerPromos = false }: { offerPromos?: bool
   return <PhoneSignUpForm action={startTelegramSignupAction} note={t("telegramSignupNote")} submit={t("continueTelegram")} offerPromos={offerPromos} />;
 }
 
-/** The phone number is the one the user sends the code from. */
+/** The number is typed here, and the code must then come from that number's WhatsApp. */
 export function WhatsappSignUpForm({ offerPromos = false }: { offerPromos?: boolean }) {
   const t = useTranslations("auth");
-  return <PhoneSignUpForm action={startWhatsappSignupAction} note={t("whatsappSignupNote")} submit={t("continueWhatsapp")} offerPromos={offerPromos} />;
+  return (
+    <PhoneSignUpForm action={startWhatsappSignupAction} note={t("whatsappSignupNote")} submit={t("continueWhatsapp")} offerPromos={offerPromos} askPhone />
+  );
+}
+
+/** A WhatsApp number as people write it in Iraq (07…), or with its country code. */
+function WhatsappNumberInput(props: ComponentProps<typeof Input>) {
+  return <Input {...props} type="tel" inputMode="tel" autoComplete="tel" required maxLength={20} dir="ltr" placeholder="07XX XXX XXXX" />;
 }
 
 export function VerifyEmailForm() {
@@ -211,6 +232,9 @@ export function WhatsappResetForm() {
   return (
     <ActionForm action={startWhatsappResetAction}>
       <p className="text-sm text-muted">{t("forgotWhatsappNote")}</p>
+      <FormField name="phone" label={t("waPhone")} hint={t("waPhoneResetHint")} required>
+        {(a) => <WhatsappNumberInput {...a} />}
+      </FormField>
       <SubmitButton size="lg" variant="secondary">{t("forgotWhatsapp")}</SubmitButton>
     </ActionForm>
   );

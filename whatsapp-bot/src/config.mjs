@@ -6,9 +6,12 @@
 export const DEFAULT_HELP =
   "هذا رقم «الملعب» للتحقق ورسائل الحجوزات. لإنشاء حساب أو استعادة كلمة المرور ابدأ من الموقع، ثم أرسل هنا الرمز الذي يظهر لك.";
 
-/** When WhatsApp hides the sender's number (LID) and the session doesn't know it either. */
+/** When WhatsApp hides the sender's number (LID) and there's no typed number to check it against. */
 export const NO_NUMBER_CODE =
-  "لم يظهر لنا رقم هاتفك في هذه المحادثة، فلا يمكن تأكيده من هنا. أكمل من الموقع بالبريد الإلكتروني أو تيليغرام.";
+  "لم يظهر لنا رقم هاتفك في هذه المحادثة. ابدأ من جديد في الموقع واكتب رقمك، ثم أرسل الرمز الجديد من واتساب هذا الرقم.";
+/** A code requested for another number than the sender's ({number}: the typed one, partly hidden). */
+export const OTHER_NUMBER =
+  "⚠️ هذا الرمز طُلب للرقم {number}، لكن رسالتك ليست من واتساب هذا الرقم. أرسله من واتساب الرقم الذي كتبته، أو ابدأ من جديد في الموقع واكتب رقمك الصحيح.";
 export const NO_NUMBER_STOP =
   "لم يظهر لنا رقم هاتفك في هذه المحادثة، فلم نستطع تسجيل طلب الإيقاف. أوقف الرسائل من إعدادات حسابك في الموقع.";
 /** When the site can't be reached or refuses the bot. */
@@ -68,6 +71,7 @@ export function readConfig(env) {
     helpText: String(env.HELP_TEXT || DEFAULT_HELP),
     noNumberCodeText: NO_NUMBER_CODE,
     noNumberStopText: NO_NUMBER_STOP,
+    otherNumberText: OTHER_NUMBER,
     troubleText: TROUBLE,
     timeZone: "Asia/Baghdad",
     logLevel: String(env.LOG_LEVEL || "info"),

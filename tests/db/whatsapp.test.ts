@@ -28,19 +28,27 @@ async function pendingUser(): Promise<{ id: string; email: string }> {
   return { id, email };
 }
 
-async function start(purpose: "signup" | "reset", userId: string | null) {
+/** Starts a verification; `typed` is the number typed on the site (WhatsApp, since 0029). */
+async function start(purpose: "signup" | "reset", userId: string | null, typed: string | null = null) {
   const c = code();
   const hash = ticketHash();
-  await admin("select public.phone_verify_start($1, $2, $3, $4, $5)", [purpose, c, hash, userId, randomUUID()]);
+  await admin("select public.phone_verify_start($1, $2, $3, $4, $5, $6)", [purpose, c, hash, userId, randomUUID(), typed]);
   return { code: c, hash };
 }
 
-type Answer = { matched?: boolean; reason?: string; purpose?: string; status?: string; repeat?: boolean };
+type Answer = { matched?: boolean; reason?: string; purpose?: string; status?: string; repeat?: boolean; claimed?: string };
 const receive = async (from: string, body: string) =>
   (await admin<{ r: Answer }>("select public.wa_bot_receive($1, $2) as r", [from, body]))[0].r;
 
+/** For a sender WhatsApp hides: the number the code was requested for. */
+const claimedFor = async (body: string) =>
+  (await admin<{ r: { found: boolean; phone?: string | null; reason?: string } }>("select public.wa_bot_claimed_phone($1) as r", [body]))[0].r;
+
 const verification = async (hash: string) =>
-  (await admin<{ status: string; phone: string | null }>("select status, phone from public.phone_verify_lookup($1)", [hash]))[0];
+  (await admin<{ status: string; phone: string | null; claimed_phone: string | null }>(
+    "select status, phone, claimed_phone from public.phone_verify_lookup($1)",
+    [hash],
+  ))[0];
 
 const attemptsOf = async (from: string) =>
   Number(
@@ -70,6 +78,9 @@ describe("WhatsApp verification: the user sends the code from their own number",
     const user = await createUser();
     for (const sql of [
       "select public.wa_bot_receive('9647700000000', 'ABCD-EFGH')",
+      "select public.wa_bot_claimed_phone('ABCD-EFGH')",
+      `select public.phone_verify_start('reset', 'ABCD-EFGH', '${"0".repeat(64)}', null, 'x', '9647700000000')`,
+      `select * from public.phone_verify_lookup('${"0".repeat(64)}')`,
       "select public.wa_bot_unsubscribe('9647700000000')",
       `select public.wa_signup_consent('${user}', true)`,
       "select * from public.wa_outbox_claim(1)",
@@ -173,6 +184,56 @@ describe("WhatsApp verification: the user sends the code from their own number",
     expect((await admin<{ r: { linked: boolean } }>("select public.tg_link_code($1, $2) as r", [v.code, tgUser]))[0].r).toMatchObject({ linked: true });
     expect(await receive(phone(), v.code)).toEqual({ matched: false, reason: "claimed" });
     expect((await verification(v.hash)).status).toBe("pending");
+  });
+
+  it("a code requested for a typed number counts only from that number", async () => {
+    const user = await pendingUser();
+    const typed = phone();
+    const v = await start("signup", user.id, `+${typed}`);
+    expect(await verification(v.hash)).toMatchObject({ status: "pending", claimed_phone: typed });
+    // From another number: refused, and it stays open for the typed one.
+    const other = phone();
+    expect(await receive(other, v.code)).toEqual({ matched: false, reason: "other_number", claimed: typed });
+    expect(await verification(v.hash)).toMatchObject({ status: "pending", phone: null });
+    expect(await receive(typed, v.code)).toEqual({ matched: true, purpose: "signup", status: "verified" });
+    expect(await verification(v.hash)).toMatchObject({ status: "verified", phone: typed, claimed_phone: typed });
+    // The same for a password reset: someone typing another person's number gets nowhere.
+    const reset = await start("reset", null, typed);
+    expect(await receive(other, reset.code)).toMatchObject({ matched: false, reason: "other_number" });
+    expect(await receive(typed, reset.code)).toEqual({ matched: true, purpose: "reset", status: "verified" });
+  });
+
+  it("for a sender WhatsApp hides, it says which number the code was requested for", async () => {
+    const user = await pendingUser();
+    const typed = phone();
+    const v = await start("signup", user.id, typed);
+    expect(await claimedFor(`رمزي ${v.code.toLowerCase()}`)).toEqual({ found: true, phone: typed });
+    // After the check (the bot then calls wa_bot_receive with that number), and for the same message again.
+    expect(await receive(typed, v.code)).toMatchObject({ status: "verified" });
+    expect(await claimedFor(v.code)).toEqual({ found: true, phone: typed });
+    expect(await receive(typed, v.code)).toMatchObject({ repeat: true, status: "verified" });
+    // Unknown or expired codes, and messages without a code: nothing.
+    expect(await claimedFor(code())).toEqual({ found: false });
+    expect(await claimedFor("hello")).toEqual({ found: false });
+    const late = await start("reset", null, typed);
+    await admin("update public.phone_verifications set expires_at = now() - interval '1 minute' where ticket_hash = $1", [late.hash]);
+    expect(await claimedFor(late.code)).toEqual({ found: false });
+    // Started without a typed number (Telegram, or before 0029): no number to check.
+    const untyped = await start("reset", null);
+    expect(await claimedFor(untyped.code)).toEqual({ found: true, phone: null });
+    // Opened in Telegram first.
+    const tg = await start("reset", null, typed);
+    await admin("select public.tg_link_code($1, $2)", [tg.code, randomInt(1, 2 ** 47)]);
+    expect(await claimedFor(tg.code)).toEqual({ found: true, reason: "claimed" });
+  });
+
+  it("refuses a typed number that isn't one", async () => {
+    for (const bad of ["123", "abc", "0770123456789012345"]) {
+      expect(await errorOf(start("reset", null, bad))).toBe("invalid_phone");
+    }
+    // Spaces, dashes and a "+" are fine.
+    const ok = await start("reset", null, "+964 770-123-4567");
+    expect((await verification(ok.hash)).claimed_phone).toBe("9647701234567");
   });
 
   it("limits how many codes one number may try per hour", async () => {

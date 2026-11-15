@@ -13,6 +13,18 @@ test.describe.configure({ mode: "serial" });
 
 const phone = () => `9647${String(Math.floor(Math.random() * 1e9)).padStart(9, "0")}`;
 const localFormat = (e164: string) => `0${e164.slice(3)}`;
+const display = (e164: string) => `+964 ${e164.slice(3, 6)} ${e164.slice(6, 9)} ${e164.slice(9)}`;
+
+/** What the bot posts when WhatsApp hides the sender's number. */
+async function hiddenMessage(baseURL: string, text: string): Promise<Record<string, unknown>> {
+  const res = await fetch(`${baseURL}/api/whatsapp/webhook`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.WHATSAPP_BOT_SECRET ?? ""}` },
+    body: JSON.stringify({ hidden: true, text }),
+  });
+  expect(res.status).toBe(200);
+  return (await res.json()) as Record<string, unknown>;
+}
 const BOT_NUMBER = process.env.WHATSAPP_BOT_NUMBER ?? "";
 const SECRET = process.env.WHATSAPP_BOT_SECRET ?? "";
 
@@ -106,6 +118,9 @@ test.describe("WhatsApp verification", () => {
     await page.getByRole("link", { name: "واتساب", exact: true }).click();
     await page.waitForURL(/method=whatsapp/);
     await page.getByRole("textbox", { name: "الاسم الظاهر" }).fill("WhatsApp Player");
+    // The number is typed too: a wrong one is refused on the form.
+    const number = page.getByRole("textbox", { name: "رقم واتساب" });
+    await number.fill("123");
     await page.getByRole("textbox", { name: "كلمة المرور" }).fill(PASSWORD);
     await page.getByRole("checkbox", { name: /شروط الاستخدام/ }).check();
     // Offers only with a tick, and the box starts unticked.
@@ -113,15 +128,31 @@ test.describe("WhatsApp verification", () => {
     await expect(promos).not.toBeChecked();
     await promos.check();
     await page.getByRole("button", { name: "متابعة عبر واتساب" }).click();
+    await expect(page.getByText("رقم الهاتف غير صحيح.")).toBeVisible();
+    await number.fill(localFormat(from));
+    await page.getByRole("textbox", { name: "كلمة المرور" }).fill(PASSWORD);
+    await page.getByRole("button", { name: "متابعة عبر واتساب" }).click();
     await page.waitForURL(/\/ar\/verify-whatsapp/);
 
     const code = (await page.getByTestId("verify-code").textContent())!.trim();
     expect(code).toMatch(/^[A-HJKMNP-Z2-9]{4}-[A-HJKMNP-Z2-9]{4}$/);
     await expect(page.getByRole("link", { name: "افتح واتساب" })).toHaveAttribute("data-href", `https://wa.me/${BOT_NUMBER}?text=${code}`);
+    await expect(page.getByTestId("whatsapp-from")).toContainText(display(from));
 
     // Requests without the bot's secret are refused, and the body is checked.
     expect((await whatsappMessage(baseURL!, from, code, "wrong")).status).toBe(401);
     expect((await whatsappMessage(baseURL!, "not-a-number", code)).status).toBe(400);
+
+    // From another number than the typed one: refused, naming the typed number partly hidden; the page keeps waiting.
+    const elsewhere = await whatsappMessage(baseURL!, phone(), code);
+    expect(elsewhere.reply).toContain("هذا الرمز طُلب للرقم");
+    expect(elsewhere.reply).toContain(`+964 ${from.slice(3, 6)} ••• ${from.slice(-4)}`);
+    await expect(page.getByTestId("whatsapp-from")).toBeVisible();
+
+    // WhatsApp hides the sender's number: the site says which number to check (the bot then asks
+    // WhatsApp whether the sender is that number, and only then sends the message on with it).
+    expect(await hiddenMessage(baseURL!, `رمزي ${code}`)).toEqual({ check: from });
+    expect(await hiddenMessage(baseURL!, "ZZZZ-ZZZZ")).toMatchObject({ reason: "no_pending_code" });
 
     // The bot forwards the message with the sender's number: verified, and the page carries on by itself.
     const verified = await whatsappMessage(baseURL!, from, `رمزي ${code}`);
@@ -149,9 +180,10 @@ test.describe("WhatsApp verification", () => {
     await page.getByRole("button", { name: "تسجيل الدخول" }).click();
     await page.waitForURL(/\/ar\/dashboard/);
 
-    // Forgot password → recover with WhatsApp, from the same number.
+    // Forgot password → recover with WhatsApp: the number typed, the code from that number.
     await page.context().clearCookies();
     await page.goto("/ar/forgot-password");
+    await page.getByRole("textbox", { name: "رقم واتساب" }).fill(`+${from}`);
     await page.getByRole("button", { name: "استعادة عبر واتساب" }).click();
     await page.waitForURL(/\/ar\/verify-whatsapp/);
     const resetCode = (await page.getByTestId("verify-code").textContent())!.trim();
@@ -175,6 +207,7 @@ test.describe("WhatsApp verification", () => {
     const signUp = async (p: typeof page) => {
       await p.goto("/ar/sign-up?method=whatsapp");
       await p.getByRole("textbox", { name: "الاسم الظاهر" }).fill("مرتين");
+      await p.getByRole("textbox", { name: "رقم واتساب" }).fill(localFormat(from));
       await p.getByRole("textbox", { name: "كلمة المرور" }).fill(PASSWORD);
       await p.getByRole("checkbox", { name: /شروط الاستخدام/ }).check();
       await p.getByRole("button", { name: "متابعة عبر واتساب" }).click();
@@ -368,6 +401,7 @@ test.describe("WhatsApp bot status for admins", () => {
         { at: new Date().toISOString(), kind: "code", outcome: "replied" },
         { at: new Date(Date.now() - 60_000).toISOString(), kind: "code", outcome: "no_number" },
         { at: new Date(Date.now() - 120_000).toISOString(), kind: "help", outcome: "help_sent" },
+        { at: new Date(Date.now() - 180_000).toISOString(), kind: "code", outcome: "other_number" },
       ],
     };
     await page.goto("/ar/admin/settings");
@@ -375,10 +409,13 @@ test.describe("WhatsApp bot status for admins", () => {
     await expect(site).toContainText("يصل، والسر نفسه في الجهتين");
     await expect(site).toContainText(siteUrl);
     const inbound = page.getByTestId("wa-inbound");
-    await expect(inbound.getByRole("listitem")).toHaveCount(3);
+    await expect(inbound.getByRole("listitem")).toHaveCount(4);
     await expect(inbound.getByRole("listitem").nth(0)).toContainText("رمز · وصلت الموقع ورُدّ على المرسل");
     await expect(inbound.getByRole("listitem").nth(1)).toContainText("لم يظهر رقم المرسل، فأُخبر بذلك");
     await expect(inbound.getByRole("listitem").nth(2)).toContainText("رسالة أخرى · أُرسلت رسالة المساعدة");
+    await expect(inbound.getByRole("listitem").nth(3)).toContainText("ليست من الرقم الذي كُتب في الموقع، فأُخبر المرسل");
+    // Both database files applied (0029 says so in the summary).
+    await expect(page.getByText("تحديث قاعدة البيانات (الملفان …0028 و…0029)")).toBeVisible();
 
     // A secret that differs between Railway and Vercel says so, and where the bot posts.
     bot.healthExtra = { site: { url: siteUrl, state: "refused_secret", status: 401, at: new Date().toISOString() }, inbound: [] };

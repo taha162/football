@@ -16,7 +16,18 @@ export const BRAND_LINE = "— «الملعب»";
 
 // ---- Answers to the codes people send ----------------------------------------
 
-export type ReceiveResult = { matched?: boolean; reason?: string; purpose?: string; status?: string } | null | undefined;
+export type ReceiveResult = { matched?: boolean; reason?: string; purpose?: string; status?: string; claimed?: string } | null | undefined;
+
+/** "+964 770 ••• 4567", kept left-to-right inside Arabic text. */
+const masked = (phone: string) => `⁦+${phone.slice(0, 3)} ${phone.slice(3, 6)} ••• ${phone.slice(-4)}⁩`;
+
+/** A code requested for another number than the sender's (the bot sends the same words). */
+export const otherNumberReply = (claimed: string) =>
+  `⚠️ هذا الرمز طُلب للرقم ${masked(claimed)}، لكن رسالتك ليست من واتساب هذا الرقم. أرسله من واتساب الرقم الذي كتبته، أو ابدأ من جديد في الموقع واكتب رقمك الصحيح.`;
+
+/** A hidden sender (WhatsApp shows no number) with a code requested without a typed number. */
+export const NO_TYPED_NUMBER_REPLY =
+  "لم يظهر لنا رقم هاتفك في هذه المحادثة. ابدأ من جديد في الموقع واكتب رقمك، ثم أرسل الرمز الجديد من واتساب هذا الرقم.";
 
 const REPLIES: Record<string, string> = {
   "signup:verified": "✅ تم تأكيد رقمك. ارجع إلى الموقع لإكمال حسابك.",
@@ -37,6 +48,7 @@ export const STOPPED_REPLY =
 /** The reply to a message that carried a code (wa_bot_receive's answer). */
 export function verificationReply(result: ReceiveResult): string {
   if (result?.matched) return REPLIES[`${result.purpose}:${result.status}`] ?? HELP_REPLY;
+  if (result?.reason === "other_number" && result.claimed && /^[1-9][0-9]{7,14}$/.test(result.claimed)) return otherNumberReply(result.claimed);
   return REPLIES[result?.reason ?? ""] ?? HELP_REPLY;
 }
 

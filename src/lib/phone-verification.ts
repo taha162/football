@@ -3,6 +3,7 @@ import { createHash, randomBytes, randomInt } from "node:crypto";
 import { cookies, headers } from "next/headers";
 import { dbErrorCode } from "@/lib/actions";
 import { clientIp } from "@/lib/client-ip";
+import { logger } from "@/lib/log";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
@@ -58,13 +59,14 @@ export async function clientKey(): Promise<string> {
  * Starts a verification and keeps its ticket in the browser, retrying on the
  * (unlikely) clash with another pending code. Returns an error code, or null.
  * The same row serves Telegram and WhatsApp: the code is what the user takes
- * to either bot.
+ * to either bot. `phone` (WhatsApp) is the number the user typed: the code is
+ * then accepted only from that number.
  */
-export async function createVerification(purpose: "signup" | "reset", userId: string | null): Promise<string | null> {
+export async function createVerification(purpose: "signup" | "reset", userId: string | null, phone: string | null = null): Promise<string | null> {
   const admin = createAdminClient();
   if (!admin) return "generic";
   const key = await clientKey();
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 0; attempt < 4; attempt++) {
     const { ticket, hash } = newTicket();
     const { error } = await admin.rpc("phone_verify_start", {
       p_purpose: purpose,
@@ -73,10 +75,18 @@ export async function createVerification(purpose: "signup" | "reset", userId: st
       // Null for a reset (the generated types don't model nullable arguments).
       p_user_id: userId as string,
       p_client_key: key,
+      ...(phone ? { p_phone: phone } : {}),
     });
     if (!error) {
       await setVerifyTicket(ticket);
       return null;
+    }
+    if (phone && error.code === "PGRST202") {
+      // A database without migration 0029 has no typed number: start as before (the sender's
+      // number, when WhatsApp shows it, is the verified one). Admin → Settings says to apply 0029.
+      logger.warn("phone_verify_start_without_typed_number");
+      phone = null;
+      continue;
     }
     if (error.code !== "23505") return dbErrorCode(error, "phone_verify_start");
   }

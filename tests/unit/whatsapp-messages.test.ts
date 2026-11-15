@@ -2,9 +2,19 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-const { bookingLink, bookingMessage, findCode, HELP_REPLY, isStopKeyword, PROMO_STOP_LINE, promoMessage, STOPPED_REPLY, verificationReply } = await import(
-  "@/lib/whatsapp-messages"
-);
+const {
+  bookingLink,
+  bookingMessage,
+  findCode,
+  HELP_REPLY,
+  isStopKeyword,
+  NO_TYPED_NUMBER_REPLY,
+  otherNumberReply,
+  PROMO_STOP_LINE,
+  promoMessage,
+  STOPPED_REPLY,
+  verificationReply,
+} = await import("@/lib/whatsapp-messages");
 const { readWhatsappSettings } = await import("@/lib/whatsapp-settings");
 const { outcomeOf, renderMessage } = await import("@/lib/whatsapp-outbox");
 
@@ -89,6 +99,22 @@ describe("WhatsApp replies to people who write", () => {
     expect(verificationReply({ matched: false, reason: "no_code" })).toBe(HELP_REPLY);
     expect(verificationReply(null)).toBe(HELP_REPLY);
     expect(STOPPED_REPLY).toContain("لن تصلك أي رسالة");
+  });
+
+  it("a code sent from another number than the typed one names that number, partly hidden", () => {
+    const reply = verificationReply({ matched: false, reason: "other_number", claimed: "9647701234567" });
+    expect(reply).toContain("⁦+964 770 ••• 4567⁩");
+    expect(reply).not.toContain("123");
+    // Without a usable number it is just the help text, never a broken sentence.
+    expect(verificationReply({ matched: false, reason: "other_number" })).toBe(HELP_REPLY);
+  });
+
+  it("the bot and the site say the same words (they are separate services and can't share the file)", async () => {
+    const bot = await import("../../whatsapp-bot/src/config.mjs");
+    const { maskPhone } = await import("../../whatsapp-bot/src/inbound.mjs");
+    expect(bot.OTHER_NUMBER.replace("{number}", maskPhone("9647701234567"))).toBe(otherNumberReply("9647701234567"));
+    expect(bot.NO_NUMBER_CODE).toBe(NO_TYPED_NUMBER_REPLY);
+    expect(bot.DEFAULT_HELP).toBe(HELP_REPLY);
   });
 
   it("read codes and stop words the same way as the bot (one shared file)", () => {

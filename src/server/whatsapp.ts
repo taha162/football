@@ -10,7 +10,7 @@ import { isLocale, type Locale } from "@/i18n/routing";
 import { bool, dbErrorCode, fail, ok, str, uuid, zodFieldErrors, type ActionState } from "@/lib/actions";
 import { getCurrentUser } from "@/lib/auth";
 import { logger } from "@/lib/log";
-import { PHONE_ACCOUNT_DOMAIN } from "@/lib/phone";
+import { normalizePhone, PHONE_ACCOUNT_DOMAIN } from "@/lib/phone";
 import { createVerification } from "@/lib/phone-verification";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -24,19 +24,32 @@ async function currentLocale(): Promise<Locale> {
   return isLocale(l) ? l : "ar";
 }
 
+/** The WhatsApp number typed on the form (07…, +964…, Arabic digits all fine), as E.164 digits. */
+const typedPhone = z
+  .string()
+  .trim()
+  .refine((v) => normalizePhone(v) !== null, "invalid_phone")
+  .transform((v) => normalizePhone(v)!);
+
 /**
- * Sign-up without e-mail: the account is activated when the user sends the
- * code from their own WhatsApp (the sender's number is the verified number).
+ * Sign-up without e-mail: the user types their WhatsApp number, and the
+ * account is activated when they send the code from that number's WhatsApp.
  */
 export async function startWhatsappSignupAction(_: ActionState, fd: FormData): Promise<ActionState> {
   if (!whatsappConfig().enabled) return fail("whatsapp_unavailable");
   const parsed = z
     .object({
       display_name: z.string().trim().min(2, "too_short").max(40, "too_long"),
+      phone: typedPhone,
       password: z.string().min(8, "password_too_short").max(72, "password_too_long"),
       accept_terms: z.literal("on", { message: "must_accept_terms" }),
     })
-    .safeParse({ display_name: fd.get("display_name"), password: fd.get("password"), accept_terms: fd.get("accept_terms") ?? undefined });
+    .safeParse({
+      display_name: fd.get("display_name"),
+      phone: fd.get("phone") ?? "",
+      password: fd.get("password"),
+      accept_terms: fd.get("accept_terms") ?? undefined,
+    });
   if (!parsed.success) return fail("validation", zodFieldErrors(parsed.error));
   // The same per-device limit as the other sign-ups, counted before any account exists.
   if (!(await count(await buckets(["signupDevice"])))) return fail("too_many_attempts");
@@ -57,7 +70,7 @@ export async function startWhatsappSignupAction(_: ActionState, fd: FormData): P
     const { error: consentError } = await admin.rpc("wa_signup_consent", { p_user_id: data.user.id, p_promos: true });
     if (consentError) logger.warn("whatsapp_signup_consent_failed", { code: consentError.code });
   }
-  const failure = await createVerification("signup", data.user.id);
+  const failure = await createVerification("signup", data.user.id, parsed.data.phone);
   if (failure) {
     await admin.auth.admin.deleteUser(data.user.id);
     return fail(failure);
@@ -66,10 +79,15 @@ export async function startWhatsappSignupAction(_: ActionState, fd: FormData): P
   return ok();
 }
 
-/** Password recovery for phone accounts: the number the code comes from identifies the account. */
-export async function startWhatsappResetAction(): Promise<ActionState> {
+/**
+ * Password recovery for phone accounts: the user types the account's number
+ * and sends the code from that number's WhatsApp, which identifies the account.
+ */
+export async function startWhatsappResetAction(_: ActionState, fd: FormData): Promise<ActionState> {
   if (!whatsappConfig().enabled) return fail("whatsapp_unavailable");
-  const failure = await createVerification("reset", null);
+  const phone = typedPhone.safeParse(fd.get("phone") ?? "");
+  if (!phone.success) return fail("validation", { phone: "invalid_phone" });
+  const failure = await createVerification("reset", null, phone.data);
   if (failure) return fail(failure);
   redirect({ href: "/verify-whatsapp", locale: await currentLocale() });
   return ok();

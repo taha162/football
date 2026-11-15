@@ -34,6 +34,7 @@ export default async function VerifyWhatsappPage({ params }: PageProps<"/[locale
     >
       <WhatsappWaiter
         code={row!.code}
+        from={row!.claimed_phone ? displayPhone(row!.claimed_phone) : null}
         number={displayPhone(cfg.number)}
         link={chatLink(cfg.number, row!.code)}
         expiresAt={row!.expires_at}

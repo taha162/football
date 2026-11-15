@@ -15,16 +15,19 @@ const POLL_MS = 3000;
 /**
  * Opens WhatsApp on the platform's number with the code typed in, and waits
  * until the bot has received it. Polling is the Telegram page's: both bots
- * complete the same verification row.
+ * complete the same verification row. `from` is the number the user typed:
+ * the code counts only from that number's WhatsApp.
  */
 export function WhatsappWaiter({
   code,
+  from = null,
   number,
   link,
   expiresAt,
   purpose,
 }: {
   code: string;
+  from?: string | null;
   number: string;
   link: string;
   expiresAt: string;
@@ -96,6 +99,21 @@ export function WhatsappWaiter({
 
   return (
     <div className="flex flex-col gap-5">
+      {from ? (
+        <p className="rounded-xl border border-line bg-surface-2 px-4 py-3 text-center text-sm" data-testid="whatsapp-from">
+          {t.rich("waFrom", {
+            phone: from,
+            num: (c) => (
+              <span className="font-semibold whitespace-nowrap text-ink" dir="ltr">
+                {c}
+              </span>
+            ),
+          })}{" "}
+          <Link href={restart} className="whitespace-nowrap text-accent underline">
+            {t("waNotMyNumber")}
+          </Link>
+        </p>
+      ) : null}
       <ol className="flex flex-col gap-2 text-sm text-muted">
         <li>1. {t("waStep1")}</li>
         <li>2. {t("waStep2")}</li>
