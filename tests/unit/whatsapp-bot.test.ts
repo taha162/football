@@ -31,14 +31,17 @@ function setup(opts: { config?: Partial<typeof CONFIG>; random?: () => number; s
   // Saturday 14 November 2026, 12:00 in Baghdad (09:00 UTC).
   let t = Date.UTC(2026, 10, 14, 9, 0, 0);
   const events: string[] = [];
+  /** How long each "typing…" lasted, in order. */
+  const typed: number[] = [];
   const transport = {
     ready: true,
     isReady() {
       return this.ready;
     },
     lookup: vi.fn(async (phone: string) => (phone.startsWith("964") ? `${phone}@s.whatsapp.net` : null)),
-    typing: vi.fn(async (jid: string) => {
+    typing: vi.fn(async (jid: string, ms: number) => {
       events.push(`typing ${jid}`);
+      typed.push(ms);
     }),
     send: vi.fn(async (jid: string, text: string) => {
       events.push(`send ${jid} ${text}`);
@@ -62,7 +65,7 @@ function setup(opts: { config?: Partial<typeof CONFIG>; random?: () => number; s
     }
     return sent;
   }
-  return { queue, transport, events, sendNext, now: () => t, advance: (ms: number) => (t += ms) };
+  return { queue, transport, events, typed, sendNext, now: () => t, advance: (ms: number) => (t += ms) };
 }
 
 describe("the outbound queue", () => {
@@ -102,6 +105,56 @@ describe("the outbound queue", () => {
     queue.enqueue({ id: "booking-1", kind: "booking", to: "9647700000002", text: "confirmed" });
     const reply = queue.reply("123@lid", "thanks");
     expect(await sendNext(3)).toEqual([reply.id, "booking-1", "promo-1"]);
+  });
+
+  it("a reply goes out at once, a second after the previous message at most, with a short “typing…”", async () => {
+    const { queue, transport, typed, now, advance } = setup();
+    // Someone sends a code while nothing else is going out: answered straight away.
+    const first = queue.reply("123@lid", "✅ تم تأكيد رقمك. ارجع إلى الموقع لإكمال حسابك.");
+    expect((await queue.step()).sent).toBe(first.id);
+    expect(transport.typing).toHaveBeenLastCalledWith("123@lid", expect.any(Number));
+    expect(typed.at(-1)).toBeLessThanOrEqual(1500);
+
+    // A booking message just went out: the next reply waits a second, not the 8–25 s gap.
+    advance(60_000);
+    queue.enqueue({ id: "booking-1", kind: "booking", to: "9647700000002", text: "تم تأكيد حجزك" });
+    expect((await queue.step()).sent).toBe("booking-1");
+    expect(typed.at(-1)).toBeGreaterThan(1500); // as long as a person would take
+    const sentAt = now();
+    const second = queue.reply("456@lid", "✅ تم التحقق.");
+    const wait = (await queue.step()).waitMs;
+    expect(wait).toBe(1000);
+    advance(wait);
+    expect((await queue.step()).sent).toBe(second.id);
+    expect(now() - sentAt).toBe(1000);
+
+    // Booking messages and promotions still keep the long gap after a reply.
+    queue.enqueue({ id: "promo-1", kind: "promo", to: "9647700000003", text: "offer" });
+    expect((await queue.step()).waitMs).toBeGreaterThanOrEqual(8000);
+    for (const text of ["ok", "x".repeat(500)]) {
+      expect(queue.typingMs(text, "reply")).toBeGreaterThanOrEqual(600);
+      expect(queue.typingMs(text, "reply")).toBeLessThanOrEqual(1500);
+    }
+  });
+
+  it("a queued reply wakes the sending loop instead of waiting out its sleep", async () => {
+    const { queue } = setup();
+    const naps: number[] = [];
+    /** A sleep that only ends when the test says so, or when the queue wakes up. */
+    let finishNap: () => void = () => {};
+    const sleep = (ms: number) =>
+      new Promise<void>((resolve) => {
+        naps.push(ms);
+        finishNap = resolve;
+      });
+    const loop = queue.start({ sleep });
+    await vi.waitFor(() => expect(naps).toHaveLength(1)); // idle, asleep
+    queue.reply("123@lid", "✅");
+    // Woken without the sleep ending: the reply is sent on the next turn of the loop.
+    await vi.waitFor(() => expect(queue.items).toHaveLength(0));
+    queue.running = false;
+    finishNap();
+    await loop;
   });
 
   it("keeps booking messages and promotions under the hourly and daily caps; replies don't count", async () => {
@@ -388,7 +441,7 @@ describe("handling incoming messages", () => {
     expect(b.logs.find((l) => l.event === "inbound")).toMatchObject({ kind: "code", outcome: "replied", upsert: "append", chat: "pn", via: "chat" });
   });
 
-  it("waits a moment for the LID's number, then tells the sender instead of staying silent", async () => {
+  it("without the typed-number check, waits a moment for the LID's number, then tells the sender instead of staying silent", async () => {
     const late = vi.fn().mockResolvedValueOnce(null).mockResolvedValueOnce("9647700000003@s.whatsapp.net");
     const found = bot({ pnForLid: late });
     expect(await found.handler.handle(found.message("ABCD-EFGH", { remoteJid: LID }))).toBe("replied");
@@ -426,6 +479,8 @@ describe("handling incoming messages", () => {
       expect(lidForPhone).toHaveBeenCalledWith(TYPED);
       expect(b.replies).toEqual([`${LID} ✅ تم تأكيد رقمك`]);
       expect(b.logs.find((l) => l.event === "inbound")).toMatchObject({ outcome: "replied", via: "lid_check", chat: "lid" });
+      // Straight to the check: no waiting for the session to learn the number first.
+      expect(b.slept).toEqual([]);
       // The same account on another device is still the same account.
       const device = bot({ forward: site({ ok: true, reply: null, check: TYPED }), lidForPhone: async () => "201234567890123:7@lid" });
       expect(await device.handler.handle(device.message("ABCD-EFGH", { remoteJid: LID }))).toBe("replied");
@@ -461,12 +516,23 @@ describe("handling incoming messages", () => {
       expect(lidForPhone).not.toHaveBeenCalled();
     });
 
-    it("only codes are checked this way; a hidden stop request is answered here", async () => {
+    it("when the session already knows the hidden number, the code goes on at once with one call to the site", async () => {
+      const forward = site({ ok: true, reply: null, check: TYPED });
+      const lidForPhone = vi.fn(async () => "201234567890123@lid");
+      const b = bot({ forward, lidForPhone, pnForLid: async () => `${TYPED}@s.whatsapp.net` });
+      expect(await b.handler.handle(b.message("ABCD-EFGH", { remoteJid: LID }))).toBe("replied");
+      expect(forward.mock.calls).toEqual([[TYPED, "ABCD-EFGH"]]);
+      expect(lidForPhone).not.toHaveBeenCalled();
+      expect(b.slept).toEqual([]);
+    });
+
+    it("only codes are checked this way; a hidden stop request waits a moment for the number, then is answered here", async () => {
       const forward = site({ ok: true, reply: null, check: TYPED });
       const b = bot({ forward, lidForPhone: async () => "201234567890123@lid" });
       expect(await b.handler.handle(b.message("0", { remoteJid: LID }))).toBe("no_number");
       expect(forward).not.toHaveBeenCalled();
       expect(b.replies).toEqual([`${LID} NO NUMBER (stop)`]);
+      expect(b.slept).toEqual([2000, 4000]);
     });
   });
 
@@ -513,15 +579,32 @@ describe("handling incoming messages", () => {
     b.pass(MIN);
     await b.handler.handle(b.message("Ho"));
     expect(b.handler.recent()).toEqual([
-      { at: "2026-11-14T09:01:00.000Z", kind: "help", outcome: "help_sent" },
-      { at: "2026-11-14T09:00:00.000Z", kind: "code", outcome: "replied" },
-      { at: "2026-11-14T09:00:00.000Z", kind: "other", outcome: "unreadable" },
+      { at: "2026-11-14T09:01:00.000Z", kind: "help", outcome: "help_sent", lateMs: 0 },
+      { at: "2026-11-14T09:00:00.000Z", kind: "code", outcome: "replied", tookMs: 0, lateMs: 0 },
+      { at: "2026-11-14T09:00:00.000Z", kind: "other", outcome: "unreadable", lateMs: 0 },
     ]);
     for (let i = 0; i < 10; i++) await b.handler.handle(b.message("ABCD-EFGH", { remoteJid: `96477000001${String(i).padStart(2, "0")}@s.whatsapp.net` }));
     expect(b.handler.recent()).toHaveLength(8);
     const shown = JSON.stringify([b.handler.recent(), b.logs]);
     expect(shown).not.toContain("9647700000");
     expect(shown).not.toContain("ABCD");
+  });
+
+  it("notes how long WhatsApp held a message back and how long the answer took", async () => {
+    const b = bot({
+      forward: async () => {
+        b.pass(1200); // the site takes 1.2 s
+        return { ok: true, reply: "✅" };
+      },
+    });
+    // Sent a minute and a half ago, while the bot was reconnecting.
+    const msg = b.message("ABCD-EFGH", {}, { messageTimestamp: Math.floor(Date.UTC(2026, 10, 14, 9, 0, 0) / 1000) - 90 });
+    expect(await b.handler.handle(msg, "append")).toBe("replied");
+    expect(b.handler.recent()[0]).toMatchObject({ kind: "code", outcome: "replied", tookMs: 1200, lateMs: 90_000 });
+    expect(b.logs.find((l) => l.event === "inbound")).toMatchObject({ tookMs: 1200, lateMs: 90_000, upsert: "append" });
+    // A message without a send time has no delay to tell.
+    await b.handler.handle(b.message("Ho", {}, { messageTimestamp: undefined }));
+    expect(b.handler.recent()[0]).not.toHaveProperty("lateMs");
   });
 });
 

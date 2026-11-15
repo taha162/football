@@ -55,6 +55,14 @@ export function textOf(message) {
   return typeof text === "string" && text.trim() !== "" ? text : null;
 }
 
+/** When WhatsApp says the message was sent, in milliseconds (0 when it doesn't say). @param {any} msg */
+export function sentAtOf(msg) {
+  // Seconds; Baileys gives a number or a protobuf Long.
+  const ts = msg?.messageTimestamp;
+  const s = typeof ts?.toNumber === "function" ? ts.toNumber() : Number(ts ?? 0);
+  return Number.isFinite(s) && s > 0 ? s * 1000 : 0;
+}
+
 /**
  * What to do with a message:
  *   ignore  — groups, our own messages, anything but text, very old messages;
@@ -72,9 +80,7 @@ export function classify(msg, { now, maxAgeMs = 2 * 3_600_000 }) {
   if (!isPersonChat(chat)) return { action: "ignore", reason: "not_a_person" };
   // A message that couldn't be decrypted arrives as a stub (CIPHERTEXT, 2); WhatsApp is asked to send it again.
   if (!msg.message) return { action: "ignore", reason: msg.messageStubType === 2 ? "unreadable" : "empty" };
-  // Seconds; Baileys gives a number or a protobuf Long.
-  const ts = msg.messageTimestamp;
-  const sentAt = (typeof ts?.toNumber === "function" ? ts.toNumber() : Number(ts ?? 0)) * 1000;
+  const sentAt = sentAtOf(msg);
   // Messages that waited while the bot was down for long: answering them now would only confuse.
   if (sentAt > 0 && now - sentAt > maxAgeMs) return { action: "ignore", reason: "old" };
   const text = textOf(msg.message);
@@ -152,7 +158,11 @@ const QUIET = new Set(["no_key", "outgoing", "not_a_person"]);
 const RECENT = 8;
 
 /**
- * @typedef {{ at: string, kind: "code" | "stop" | "help" | "other", outcome: string }} InboundNote
+ * One message, as the site's admin page shows it: when, what kind, what
+ * became of it, how long the bot and the site took to answer it (`tookMs`,
+ * from its arrival to the site's answer), and how long WhatsApp held it before
+ * the bot got it (`lateMs`: long when the bot was offline or reconnecting).
+ * @typedef {{ at: string, kind: "code" | "stop" | "help" | "other", outcome: string, tookMs?: number, lateMs?: number }} InboundNote
  */
 
 /**
@@ -163,14 +173,15 @@ const RECENT = 8;
  *     says which number the user typed for that code, WhatsApp says which LID
  *     that number has, and only if it is the sender's does the code go on with
  *     that number. Otherwise the sender is told the code was asked for another
- *     number. Nothing is guessed;
+ *     number. Nothing is guessed, and nothing waits: this check starts as soon
+ *     as the code arrives;
  *   - when the number can't be known, or the site can't be reached, the
  *     sender is told so (at most every 15 minutes) instead of hearing nothing;
  *   - any other text gets the help message, at most every 6 hours per chat.
  * The same message delivered twice (for example once while the bot was
- * reconnecting) is handled once. The latest outcomes are kept, with the time
- * and the kind of message only (never the number or the text), for the
- * site's admin page.
+ * reconnecting) is handled once. The latest outcomes are kept, with the time,
+ * the kind of message and how long it took only (never the number or the
+ * text), for the site's admin page.
  *
  * @param {{
  *   texts: { help: string, noNumberCode: string, noNumberStop: string, trouble: string, otherNumber: string },
@@ -209,7 +220,11 @@ export function createInboundHandler(deps) {
   };
 
   const note = (/** @type {InboundNote["kind"]} */ kind, /** @type {string} */ outcome, /** @type {Record<string, unknown>} */ meta) => {
-    recent.unshift({ at: new Date(now()).toISOString(), kind, outcome });
+    /** @type {InboundNote} */
+    const entry = { at: new Date(now()).toISOString(), kind, outcome };
+    if (typeof meta.tookMs === "number") entry.tookMs = meta.tookMs;
+    if (typeof meta.lateMs === "number") entry.lateMs = meta.lateMs;
+    recent.unshift(entry);
     if (recent.length > RECENT) recent.length = RECENT;
     log("inbound", { kind, outcome, ...meta });
     return outcome;
@@ -221,9 +236,12 @@ export function createInboundHandler(deps) {
    * @returns {Promise<string>} the outcome
    */
   async function handle(msg, upsert = "notify") {
-    const what = classify(msg, { now: now() });
+    const arrived = now();
+    const what = classify(msg, { now: arrived });
     /** @type {Record<string, unknown>} */
     const meta = { upsert, chat: isLid(msg?.key?.remoteJid) ? "lid" : "pn" };
+    const sentAt = sentAtOf(msg);
+    if (sentAt > 0) meta.lateMs = Math.max(0, arrived - sentAt);
     if (what.action === "ignore") return QUIET.has(what.reason) ? what.reason : note("other", what.reason, meta);
     if (typeof msg.key.id === "string" && msg.key.id) {
       const id = `${what.chat}|${msg.key.id}`;
@@ -238,29 +256,39 @@ export function createInboundHandler(deps) {
       deps.reply(what.chat, deps.texts.help);
       return note(kind, "help_sent", meta);
     }
+    /** The outcome of a message the site was asked about, with how long it took from its arrival. */
+    const finish = (/** @type {string} */ outcome, /** @type {Record<string, unknown>} */ extra = {}) =>
+      note(kind, outcome, { ...meta, ...extra, tookMs: Math.max(0, now() - arrived) });
     const trouble = (/** @type {string} */ outcome, /** @type {Record<string, unknown>} */ extra = {}) => {
       if (sayOnce(what.chat, "trouble", 15 * MIN)) deps.reply(what.chat, deps.texts.trouble);
-      return note(kind, outcome, { ...meta, ...extra });
+      return finish(outcome, extra);
     };
     /** Hands the message to the site with the sender's number, and sends back its answer. */
     const deliver = async (/** @type {string} */ phone) => {
       const result = await deps.forward(phone, what.text);
       if (!result.ok) return trouble(`site_${result.problem}`, result.status ? { status: result.status } : {});
-      if (!result.reply) return note(kind, "no_reply", meta);
+      if (!result.reply) return finish("no_reply");
       deps.reply(what.chat, result.reply);
-      return note(kind, "replied", meta);
+      return finish("replied");
     };
 
+    // A code from a sender WhatsApp hides goes straight to the typed-number check below: waiting
+    // for the session to learn the number would only delay the answer. A stop request has no typed
+    // number to check, so it waits a few seconds for that.
+    const checkHidden = what.kind === "code" && Boolean(deps.lidForPhone) && isLid(what.chat);
     // The verified number is the sender's own: never guessed when WhatsApp hides it behind a LID.
-    const sender = await senderPhone(msg.key, deps.pnForLid ?? null, { waits: deps.lidWaits ?? [2000, 4000], ...(deps.sleep ? { sleep: deps.sleep } : {}) });
+    const sender = await senderPhone(msg.key, deps.pnForLid ?? null, {
+      waits: checkHidden ? [] : (deps.lidWaits ?? [2000, 4000]),
+      ...(deps.sleep ? { sleep: deps.sleep } : {}),
+    });
     if (sender) {
       meta.via = sender.via;
       if (what.kind === "stop") meta.dropped = deps.dropFor(sender.phone).length;
       return deliver(sender.phone);
     }
-    if (what.kind !== "code" || !deps.lidForPhone || !isLid(what.chat)) {
+    if (!checkHidden) {
       if (sayOnce(what.chat, "no_number", 15 * MIN)) deps.reply(what.chat, what.kind === "stop" ? deps.texts.noNumberStop : deps.texts.noNumberCode);
-      return note(kind, "no_number", meta);
+      return finish("no_number");
     }
 
     // Hidden sender: which number was this code requested for?
@@ -269,7 +297,7 @@ export function createInboundHandler(deps) {
     if (!asked.check) {
       // A wrong or expired code, or one requested without a typed number: the site's answer says so.
       if (asked.reply) deps.reply(what.chat, asked.reply);
-      return note(kind, asked.reason === "no_typed_number" ? "no_number" : asked.reply ? "replied" : "no_reply", meta);
+      return finish(asked.reason === "no_typed_number" ? "no_number" : asked.reply ? "replied" : "no_reply");
     }
     // Is the sender that number? WhatsApp knows the LID of every number.
     /** @type {string | null | undefined} */
@@ -281,7 +309,7 @@ export function createInboundHandler(deps) {
     }
     if (!lid || lidUser(lid) !== lidUser(what.chat)) {
       if (sayOnce(what.chat, "other_number", 15 * MIN)) deps.reply(what.chat, deps.texts.otherNumber.replace("{number}", maskPhone(asked.check)));
-      return note(kind, "other_number", meta);
+      return finish("other_number");
     }
     meta.via = "lid_check";
     return deliver(asked.check);

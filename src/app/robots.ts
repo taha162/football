@@ -27,7 +27,6 @@ export default function robots(): MetadataRoute.Robots {
         "/ar/teams/new",
         "/ar/tournaments/new",
         "/ar/verify-email",
-        "/ar/verify-telegram",
         "/ar/verify-whatsapp",
         "/ar/reset-password",
         "/ar/venues/*/book",

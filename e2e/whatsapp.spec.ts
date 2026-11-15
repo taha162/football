@@ -112,9 +112,9 @@ test.describe("WhatsApp verification", () => {
   test("sign up by sending the code from one's own WhatsApp, then sign in, recover the password, and stop messages", async ({ page, baseURL }) => {
     const from = phone();
     await page.goto("/ar/sign-up");
-    // Every way that is set up is offered.
+    // E-mail and WhatsApp; Telegram is gone.
     await expect(page.getByRole("link", { name: "البريد", exact: true })).toBeVisible();
-    await expect(page.getByRole("link", { name: "تيليغرام", exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: "تيليغرام", exact: true })).toHaveCount(0);
     await page.getByRole("link", { name: "واتساب", exact: true }).click();
     await page.waitForURL(/method=whatsapp/);
     await page.getByRole("textbox", { name: "الاسم الظاهر" }).fill("WhatsApp Player");
@@ -223,6 +223,47 @@ test.describe("WhatsApp verification", () => {
 
     expect((await whatsappMessage(baseURL!, phone(), "ZZZZ-ZZZZ")).reply).toContain("غير صالح أو انتهت صلاحيته");
     expect((await whatsappMessage(baseURL!, phone(), "مرحبا")).reply).toContain("ابدأ من الموقع");
+  });
+
+  test("the waiting page carries on the moment the user comes back from WhatsApp, even if its first request is dropped", async ({ page, baseURL }) => {
+    const from = phone();
+    await page.goto("/ar/sign-up?method=whatsapp");
+    await page.getByRole("textbox", { name: "الاسم الظاهر" }).fill("رجوع سريع");
+    await page.getByRole("textbox", { name: "رقم واتساب" }).fill(localFormat(from));
+    await page.getByRole("textbox", { name: "كلمة المرور" }).fill(PASSWORD);
+    await page.getByRole("checkbox", { name: /شروط الاستخدام/ }).check();
+    await page.getByRole("button", { name: "متابعة عبر واتساب" }).click();
+    await page.waitForURL(/\/ar\/verify-whatsapp/);
+    const code = (await page.getByTestId("verify-code").textContent())!.trim();
+
+    /** The phone puts the page in the background (WhatsApp in front) or brings it back. */
+    const screen = (state: "hidden" | "visible") =>
+      page.evaluate((s) => {
+        Object.defineProperty(document, "visibilityState", { configurable: true, get: () => s });
+        document.dispatchEvent(new Event("visibilitychange"));
+      }, state);
+
+    // In WhatsApp: the code is sent and verified while the page is in the background, where it asks only now and then.
+    await screen("hidden");
+    expect((await whatsappMessage(baseURL!, from, code)).reply).toContain("تم تأكيد رقمك");
+    await page.waitForTimeout(2500);
+    await expect(page).toHaveURL(/\/ar\/verify-whatsapp/);
+
+    // Back on the page: it asks at once. That first request is dropped (the connection didn't survive the
+    // switch), and the page simply asks again, well before its next background check would have.
+    let dropped = 0;
+    await page.route("**/ar/verify-whatsapp", (route) => {
+      if (route.request().method() === "POST" && dropped === 0) {
+        dropped += 1;
+        return route.abort("connectionreset");
+      }
+      return route.continue();
+    });
+    const back = Date.now();
+    await screen("visible");
+    await page.waitForURL(/\/ar\/onboarding/, { timeout: 8000 });
+    expect(dropped).toBe(1);
+    expect(Date.now() - back).toBeLessThan(8000);
   });
 });
 
@@ -398,8 +439,9 @@ test.describe("WhatsApp bot status for admins", () => {
     bot.healthExtra = {
       site: { url: siteUrl, state: "ok", at: new Date().toISOString() },
       inbound: [
-        { at: new Date().toISOString(), kind: "code", outcome: "replied" },
-        { at: new Date(Date.now() - 60_000).toISOString(), kind: "code", outcome: "no_number" },
+        { at: new Date().toISOString(), kind: "code", outcome: "replied", tookMs: 1240, lateMs: 0 },
+        // Sent while the bot was restarting: WhatsApp handed it over two minutes later.
+        { at: new Date(Date.now() - 60_000).toISOString(), kind: "code", outcome: "no_number", tookMs: 300, lateMs: 125_000 },
         { at: new Date(Date.now() - 120_000).toISOString(), kind: "help", outcome: "help_sent" },
         { at: new Date(Date.now() - 180_000).toISOString(), kind: "code", outcome: "other_number" },
       ],
@@ -410,8 +452,10 @@ test.describe("WhatsApp bot status for admins", () => {
     await expect(site).toContainText(siteUrl);
     const inbound = page.getByTestId("wa-inbound");
     await expect(inbound.getByRole("listitem")).toHaveCount(4);
-    await expect(inbound.getByRole("listitem").nth(0)).toContainText("رمز · وصلت الموقع ورُدّ على المرسل");
-    await expect(inbound.getByRole("listitem").nth(1)).toContainText("لم يظهر رقم المرسل، فأُخبر بذلك");
+    await expect(inbound.getByRole("listitem").nth(0)).toContainText("رمز · وصلت الموقع ورُدّ على المرسل · خلال ١٫٢ ث");
+    // A message that reached the bot right away says nothing more.
+    await expect(inbound.getByRole("listitem").nth(0)).not.toContainText("وصلت البوت بعد");
+    await expect(inbound.getByRole("listitem").nth(1)).toContainText("لم يظهر رقم المرسل، فأُخبر بذلك · خلال ٠٫٣ ث · وصلت البوت بعد ٢ د من إرسالها");
     await expect(inbound.getByRole("listitem").nth(2)).toContainText("رسالة أخرى · أُرسلت رسالة المساعدة");
     await expect(inbound.getByRole("listitem").nth(3)).toContainText("ليست من الرقم الذي كُتب في الموقع، فأُخبر المرسل");
     // Both database files applied (0029 says so in the summary).

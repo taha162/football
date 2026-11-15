@@ -11,7 +11,7 @@ import { bool, dbErrorCode, fail, ok, str, uuid, zodFieldErrors, type ActionStat
 import { getCurrentUser } from "@/lib/auth";
 import { logger } from "@/lib/log";
 import { normalizePhone, PHONE_ACCOUNT_DOMAIN } from "@/lib/phone";
-import { createVerification } from "@/lib/phone-verification";
+import { clearVerifyTicket, createVerification, getVerifyTicket, hashTicket } from "@/lib/phone-verification";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import type { Json } from "@/lib/supabase/types";
@@ -91,6 +91,52 @@ export async function startWhatsappResetAction(_: ActionState, fd: FormData): Pr
   if (failure) return fail(failure);
   redirect({ href: "/verify-whatsapp", locale: await currentLocale() });
   return ok();
+}
+
+export type VerificationPoll =
+  | { state: "pending" }
+  | { state: "expired" | "phone_taken" | "no_account" | "missing" }
+  | { state: "done"; href: string };
+
+/**
+ * Polled by the waiting page. Once the bot has verified the number, opens a
+ * session for the account (one-time) and returns where to continue.
+ */
+export async function pollWhatsappAction(): Promise<VerificationPoll> {
+  const ticket = await getVerifyTicket();
+  const admin = createAdminClient();
+  if (!ticket || !admin) return { state: "missing" };
+  const hash = hashTicket(ticket);
+  const { data, error: lookupError } = await admin.rpc("phone_verify_lookup", { p_ticket_hash: hash });
+  if (lookupError) {
+    // A passing database hiccup shouldn't end the wait: the page asks again in a moment.
+    logger.warn("phone_verify_poll_failed", { code: lookupError.code });
+    return { state: "pending" };
+  }
+  const row = data?.[0];
+  if (!row) return { state: "missing" };
+  if (row.status === "pending") return new Date(row.expires_at) <= new Date() ? { state: "expired" } : { state: "pending" };
+  if (row.status === "phone_taken" || row.status === "no_account") return { state: row.status };
+  if (row.status !== "verified") return { state: "missing" };
+
+  const { data: consumed, error } = await admin.rpc("phone_verify_consume", { p_ticket_hash: hash });
+  const account = consumed?.[0];
+  if (error || !account?.email) return { state: "missing" };
+  const link = await admin.auth.admin.generateLink({ type: "magiclink", email: account.email });
+  const tokenHash = link.data?.properties?.hashed_token;
+  if (link.error || !tokenHash) {
+    logger.error("phone_verify_session_failed", { status: link.error?.status });
+    return { state: "missing" };
+  }
+  const supabase = await createClient();
+  const { error: verifyError } = await supabase.auth.verifyOtp({ type: "email", token_hash: tokenHash });
+  if (verifyError) {
+    logger.error("phone_verify_session_failed", { status: verifyError.status });
+    return { state: "missing" };
+  }
+  await clearVerifyTicket();
+  const locale = await currentLocale();
+  return { state: "done", href: account.purpose === "signup" ? `/${locale}/onboarding` : `/${locale}/reset-password` };
 }
 
 /** Settings: booking messages and offers on WhatsApp, each on or off. */

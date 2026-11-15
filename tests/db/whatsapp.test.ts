@@ -177,15 +177,6 @@ describe("WhatsApp verification: the user sends the code from their own number",
     expect(handoff).toMatchObject({ email: user.email, user_id: user.id });
   });
 
-  it("a code a Telegram account opened first cannot be completed from WhatsApp", async () => {
-    const user = await pendingUser();
-    const v = await start("signup", user.id);
-    const tgUser = randomInt(1, 2 ** 47);
-    expect((await admin<{ r: { linked: boolean } }>("select public.tg_link_code($1, $2) as r", [v.code, tgUser]))[0].r).toMatchObject({ linked: true });
-    expect(await receive(phone(), v.code)).toEqual({ matched: false, reason: "claimed" });
-    expect((await verification(v.hash)).status).toBe("pending");
-  });
-
   it("a code requested for a typed number counts only from that number", async () => {
     const user = await pendingUser();
     const typed = phone();
@@ -218,13 +209,9 @@ describe("WhatsApp verification: the user sends the code from their own number",
     const late = await start("reset", null, typed);
     await admin("update public.phone_verifications set expires_at = now() - interval '1 minute' where ticket_hash = $1", [late.hash]);
     expect(await claimedFor(late.code)).toEqual({ found: false });
-    // Started without a typed number (Telegram, or before 0029): no number to check.
+    // Started without a typed number (before 0029): no number to check.
     const untyped = await start("reset", null);
     expect(await claimedFor(untyped.code)).toEqual({ found: true, phone: null });
-    // Opened in Telegram first.
-    const tg = await start("reset", null, typed);
-    await admin("select public.tg_link_code($1, $2)", [tg.code, randomInt(1, 2 ** 47)]);
-    expect(await claimedFor(tg.code)).toEqual({ found: true, reason: "claimed" });
   });
 
   it("refuses a typed number that isn't one", async () => {

@@ -3,7 +3,7 @@
  * (e.g. 9647701234567).
  */
 
-/** Internal auth e-mail domain for phone accounts, verified with Telegram (reserved TLD, never delivered). */
+/** Internal auth e-mail domain for phone accounts (WhatsApp, and Telegram before it was removed; reserved TLD, never delivered). */
 export const PHONE_ACCOUNT_DOMAIN = "phone.malaab.invalid";
 
 export function isPhoneAccountEmail(email: string | null | undefined): boolean {

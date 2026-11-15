@@ -3,10 +3,10 @@
 ## Principles
 
 1. **The database enforces the rules.** Clients, including our own Next.js server, get read access through RLS and write only through RPCs that validate everything.
-2. **No secrets in the browser.** Only `NEXT_PUBLIC_SUPABASE_URL`, the anon key, the site URL and an optional URL-restricted Mapbox token are public. `SUPABASE_SERVICE_ROLE_KEY` is imported only by `src/lib/supabase/admin.ts`, which is guarded by `server-only`. A scan of the production build's browser files (`.next/static`) finds none of the values of the service-role key, `CRON_SECRET` or the Telegram token. The word `service_role` appears there once, as the name of an admin message (`service_role_missing`), never as a key. The server uses that client only where the caller was checked first or no person can reach it:
-   - `/api/cron` (bearer secret), the Telegram webhook (secret header) and the WhatsApp webhook (bearer secret);
+2. **No secrets in the browser.** Only `NEXT_PUBLIC_SUPABASE_URL`, the anon key, the site URL and an optional URL-restricted Mapbox token are public. `SUPABASE_SERVICE_ROLE_KEY` is imported only by `src/lib/supabase/admin.ts`, which is guarded by `server-only`. A scan of the production build's browser files (`.next/static`) finds none of the values of the service-role key, `CRON_SECRET` or `WHATSAPP_BOT_SECRET`. The word `service_role` appears there once, as the name of an admin message (`service_role_missing`), never as a key. The server uses that client only where the caller was checked first or no person can reach it:
+   - `/api/cron` (bearer secret) and the WhatsApp webhook (bearer secret);
    - the sign-in limits (`auth_throttle`, executable by `service_role` only) and the phone-to-address lookup at sign-in, after the limit check;
-   - the Telegram verification page, for the caller's own httpOnly ticket;
+   - the WhatsApp verification page and its polling, for the caller's own httpOnly ticket;
    - conversation pictures and voice notes: uploaded after RLS shows the caller belongs to the conversation, removed only after the database accepted the deletion;
    - moderator tools, under `requireModerator`, and only after the database accepted the action (removing a message, banning a suspended account at the auth layer); admin settings readiness checks, admins only.
 
@@ -61,13 +61,13 @@
 
 - Per-user rate limits (advisory-locked) for messages, invitations, reports, team creation and organizer limits. Values are in `platform_settings`.
 - **Sign-in, sign-up, password reset and e-mail codes are limited per device and per account** (`public.auth_throttle`, settings `auth.*`). Supabase Auth sees every request coming from our server, so its own per-IP limits can't tell attackers apart; the app counts instead.
-  - Wrong passwords: 50 per device and 10 per account in 15 minutes. Wrong codes (e-mailed or from the authenticator app): 10 per account in 15 minutes. Sign-ups, by e-mail or by Telegram: 20 per device an hour. Reset e-mails: 10 per device and 5 per account an hour. Code resends: 5 per account an hour. Past a limit the form says to wait; the correct password is refused too until the window passes.
-  - A Telegram sign-up is counted **before** its account is created, so requests past the limit create nothing (E2E: with the limit at 2, a third sign-up from one device is refused and exactly two accounts exist).
+  - Wrong passwords: 50 per device and 10 per account in 15 minutes. Wrong codes (e-mailed or from the authenticator app): 10 per account in 15 minutes. Sign-ups, by e-mail or by WhatsApp: 20 per device an hour. Reset e-mails: 10 per device and 5 per account an hour. Code resends: 5 per account an hour. Past a limit the form says to wait; the correct password is refused too until the window passes.
+  - A WhatsApp sign-up is counted **before** its account is created, so requests past the limit create nothing (E2E: with the limit at 2, a third sign-up from one device is refused and exactly two accounts exist).
   - The device is the client IP, read in one place (`clientIp()` in `src/lib/client-ip.ts`). It prefers `x-real-ip`, which Vercel sets to the connecting address. The first `x-forwarded-for` hop is used only as a fallback, because a visitor can put anything first there (unit test). Mobile networks in Iraq can put many people behind one address, so the device limits are generous and admins can raise them.
   - Keys are HMAC-SHA256 of the IP or account (keyed by the service-role key), so the table holds no addresses. Rows older than a day are deleted.
   - The limits need `SUPABASE_SERVICE_ROLE_KEY`; without it they are off and sign-in works unlimited. If the database call fails (for example before migration 0021 is run), sign-in still works and a warning is logged.
   - DB tests: only the server may count; limits, check-only and separate keys; an admin setting overrides the default. E2E: ten wrong passwords, then the right one is refused with the waiting message.
-- **Outgoing WhatsApp messages are paced to protect the number** (the bot's one queue): a random 8–25 s gap between messages, "typing…" first, hourly and daily caps, no sending to numbers that aren't on WhatsApp, an automatic pause after repeated errors, and a stop until an admin resumes at any sign that WhatsApp restricts the number (refusals, rate limits, the "reach-out" lock, new-chat caps). Promotions also stay under a daily limit that starts low and grows each day (`whatsapp.promo_daily_*`), one campaign at a time. The bot answers each chat's other messages with the help text at most every 6 hours, and handles at most `INBOUND_PER_HOUR` messages per chat.
+- **Outgoing WhatsApp messages are paced to protect the number** (the bot's one queue): booking messages and promotions wait a random 8–25 s after any message, show "typing…" first and stay under hourly and daily caps; replies to someone who just wrote (their code, their stop request, the help text) go out within a second, after a short "typing…", and don't count against the caps. Also: no sending to numbers that aren't on WhatsApp, an automatic pause after repeated errors, and a stop until an admin resumes at any sign that WhatsApp restricts the number (refusals, rate limits, the "reach-out" lock, new-chat caps). Promotions also stay under a daily limit that starts low and grows each day (`whatsapp.promo_daily_*`), one campaign at a time. The bot answers each chat's other messages with the help text at most every 6 hours, and handles at most `INBOUND_PER_HOUR` messages per chat.
 - Reports snapshot the reported content. Moderators can hide (and restore) matches, teams, venues, tournaments and reviews. They can remove a reported chat message: the text is erased and the report keeps a copy. They can also suspend users and resolve reports. Every action is audited and the affected owner is notified. Moderators cannot read conversations; they only see the snapshot attached to a report.
 - Contact details (phone and WhatsApp) are shown only for venues, as business contacts. Player e-mails are never exposed (DB test).
 - **Booking deposits** move between the customer and the venue directly; the platform only records them.
@@ -107,7 +107,7 @@ E2E (`e2e/security.spec.ts`) checks:
 - that an `onerror=` handler injected into a page is refused, and the violation is reported;
 - that a walk through the landing page, venues, matches, notifications and a live conversation reports no CSP violation.
 
-CSRF: server actions are POSTs that Next.js accepts only from the site's own origin. The session cookies are `SameSite=Lax`. The only other POST endpoints, the Telegram and WhatsApp webhooks, require their secrets.
+CSRF: server actions are POSTs that Next.js accepts only from the site's own origin. The session cookies are `SameSite=Lax`. The only other POST endpoint, the WhatsApp webhook, requires its secret.
 
 Server Action body size is capped at 6 MB.
 
@@ -115,26 +115,22 @@ Server Action body size is capped at 6 MB.
 
 - **E-mail code:** Supabase Auth issues and checks the code (`verifyOtp`, type `email`). It expires (1 h by default) and resends are throttled. The pending address is kept in an httpOnly cookie, not in the URL.
 - **Password reset replies** are the same whether or not an account exists, because Supabase answers unknown addresses without sending anything. The one exception is an e-mail that fails to send. That can only happen for an existing account, and the site reports it rather than claiming the link is on its way.
-- **Phone number, confirmed by a Telegram bot (no Meta account):**
-  - The webhook accepts only updates whose `X-Telegram-Bot-Api-Secret-Token` header matches the secret registered with Telegram. That secret is derived from `TELEGRAM_BOT_TOKEN` and compared in constant time; the token never leaves the server.
-  - The verified number is the contact card Telegram delivers. It counts only when the card's `user_id` is the sender's own and the message isn't forwarded. The user never types the number, so nobody can claim someone else's.
-  - A code belongs to the Telegram account that opens it first. Another account sending the same code is refused, and its contact completes nothing.
-  - Each Telegram account may try a limited number of codes per hour (setting `telegram.max_codes_per_hour`).
+- **Phone verification, the shared rules** (sign-up and password reset with WhatsApp, below):
   - Codes are 8 characters from a 31-symbol alphabet (~40 bits), valid for 15 minutes and usable once.
   - The browser holds only a random ticket in an httpOnly cookie, and the database stores its SHA-256.
   - Each client (IP) may hold a limited number of *unfinished* verifications per hour (setting `verify.max_open_per_hour`). Finished ones don't count, so people who share a connection don't block each other.
   - A number can belong to one account only.
-  - Registering the webhook (Admin → Settings) is limited to administrators, checked on the server.
   - All verification functions are executable by `service_role` only, and `private.user_phones` is never exposed.
   - Phone accounts use an internal address on the reserved `.invalid` TLD, so no e-mail is ever sent to them.
   - Never-verified sign-ups are deleted by the scheduled job after a day.
-- **Phone number, confirmed by WhatsApp (no Meta account):** the platform's own number runs a bot (`whatsapp-bot/`, built on the unofficial Baileys library, so the number can be restricted or banned by WhatsApp; e-mail and Telegram stay available).
+- **Telegram sign-up and verification were removed from the site:** no webhook (`/api/telegram/webhook` answers 404), no pages, no admin panel, and the site no longer reads `TELEGRAM_*`. Accounts made with Telegram keep signing in with their number and password, and recover it with WhatsApp. Telegram's database functions (`tg_link_code`, `tg_receive_contact`) are still there, executable by `service_role` only (DB test), and nothing calls them.
+- **Phone number, confirmed by WhatsApp (no Meta account):** the platform's own number runs a bot (`whatsapp-bot/`, built on the unofficial Baileys library, so the number can be restricted or banned by WhatsApp; e-mail stays available).
   - The user types their number on the site, then sends the code shown there from that number's WhatsApp. The code is accepted only from the typed number (`phone_verifications.claimed_phone`, migration 0029), so nobody can claim someone else's number:
     - When WhatsApp shows the sender's number (directly, or through `remoteJidAlt` / `senderPn` / the session's LID mapping), `wa_bot_receive` refuses any number but the typed one (`other_number`), and the verification stays open for it.
     - When WhatsApp hides it behind a LID, the bot asks the site which number the code was typed for (`wa_bot_claimed_phone`, server only), asks WhatsApp's servers for that number's LID (a lookup that sends nothing to the number), and goes on only if it is the sender's LID. A mismatch, or a number not on WhatsApp, goes no further.
-    - Verifications without a typed number (Telegram, or WhatsApp before 0029) keep the earlier rule: the sender's number, when WhatsApp shows it.
+    - Verifications without a typed number (started before 0029) keep the earlier rule: the sender's number, when WhatsApp shows it.
   - The bot forwards only messages that carry a code-shaped token or ask to stop messages, as `{from, text}` (text at most 500 characters) to `/api/whatsapp/webhook` with `Authorization: Bearer WHATSAPP_BOT_SECRET` (32+ characters, compared in constant time; zod-validated body). Groups, broadcasts, its own messages and anything that isn't text are ignored.
-  - `wa_bot_receive` (service role only) matches only codes from the code alphabet; limits each number to `whatsapp.max_codes_per_hour` attempts (`private.rate_events`); refuses a verification a Telegram account opened first; answers a repeated delivery of the same message the same way without counting it again; and keeps the "number taken" and "no account" rules. DB tests cover each of these and the anonymous refusal.
+  - `wa_bot_receive` (service role only) matches only codes from the code alphabet; limits each number to `whatsapp.max_codes_per_hour` attempts (`private.rate_events`); answers a repeated delivery of the same message the same way without counting it again; and keeps the "number taken" and "no account" rules. DB tests cover each of these and the anonymous refusal.
   - The bot's own HTTP API (send, status, cancel, health, link, resume) needs the same bearer secret; only `/healthz` is open and says nothing. The site refuses a plain-http bot address (except on this machine), because the secret travels with every request.
 
 ## Cron endpoint
@@ -146,7 +142,6 @@ Server Action body size is capped at 6 MB.
 The server writes one JSON line per event (`src/lib/log.ts`), visible in Vercel → Logs. The logger drops values whose key looks like a password, token, secret, authorization, cookie, key, body, e-mail or phone. These events are logged:
 - `auth_limit_reached` (warn): a sign-in, sign-up, reset or code limit was hit. Logged with the limits' names only, never the address or account.
 - `cron_unauthorized` (warn): `/api/cron` called without the right secret. Logs whether a header was sent, never its value (unit test).
-- `telegram_webhook_rejected` (warn): an update without the right secret header, while the bot is set up.
 - `admin_action_refused` (warn): a moderator or admin action refused for lack of the role or the second step. Logs the action, the reason and the account id.
 - `second_factor_enabled`, `second_factor_disabled`, `second_factor_reset` (info), and failures of these (error).
 - `whatsapp_webhook_rejected` (warn): a request to the WhatsApp webhook without the right secret, while WhatsApp is set up. `whatsapp_bot_refused_secret` (error): the bot refused the site's secret. `whatsapp_unsubscribed` (info, no number). `whatsapp_campaign_started` / `whatsapp_campaign_stopped` (info), also in the audit log with the admin, the time and the number of recipients. The bot logs one JSON line per event, without message text or full numbers.

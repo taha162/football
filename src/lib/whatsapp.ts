@@ -76,8 +76,12 @@ export interface BotHealth {
   caps: { perHour: number; perDay: number };
   /** Can the bot reach this site's webhook with the secret? (Missing from bots older than this check.) */
   site?: { url: string; state: SiteCheckState; status?: number; to?: string | null; at: string | null };
-  /** The latest incoming messages: when, what kind, what became of them. Never the number or the text. */
-  inbound?: { at: string; kind: "code" | "stop" | "help" | "other"; outcome: string }[];
+  /**
+   * The latest incoming messages: when, what kind, what became of them, how long the bot and this
+   * site took to answer (`tookMs`), and how long WhatsApp held the message before the bot got it
+   * (`lateMs`; long when the bot was offline). Never the number or the text.
+   */
+  inbound?: { at: string; kind: "code" | "stop" | "help" | "other"; outcome: string; tookMs?: number; lateMs?: number }[];
 }
 
 export const bot = {

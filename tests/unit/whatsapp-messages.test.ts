@@ -94,7 +94,9 @@ describe("WhatsApp replies to people who write", () => {
     expect(verificationReply({ matched: true, purpose: "reset", status: "verified" })).toContain("كلمة مرور جديدة");
     expect(verificationReply({ matched: true, purpose: "reset", status: "no_account" })).toContain("لا يوجد حساب");
     expect(verificationReply({ matched: false, reason: "no_pending_code" })).toContain("غير صالح");
-    expect(verificationReply({ matched: false, reason: "claimed" })).toContain("تيليغرام");
+    // Opened in Telegram before Telegram sign-up was removed: start again, without sending anyone to Telegram.
+    expect(verificationReply({ matched: false, reason: "claimed" })).toContain("ابدأ من جديد");
+    expect(verificationReply({ matched: false, reason: "claimed" })).not.toContain("تيليغرام");
     expect(verificationReply({ matched: false, reason: "rate_limited" })).toContain("بعد ساعة");
     expect(verificationReply({ matched: false, reason: "no_code" })).toBe(HELP_REPLY);
     expect(verificationReply(null)).toBe(HELP_REPLY);

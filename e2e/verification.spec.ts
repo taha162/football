@@ -1,5 +1,5 @@
 import { randomInt, randomUUID } from "node:crypto";
-import { admin, createAuthUser, emailedCode, emailedHtml, expect, PASSWORD, telegramMessage, telegramUser, test, verifyWithTelegram } from "./fixtures";
+import { admin, createAuthUser, emailedCode, emailedHtml, expect, PASSWORD, test } from "./fixtures";
 
 const phone = () => `9647${String(Math.floor(Math.random() * 1e9)).padStart(9, "0")}`;
 const localFormat = (e164: string) => `0${e164.slice(3)}`;
@@ -77,99 +77,7 @@ test.describe("Account verification", () => {
     await page.waitForURL(/\/ar\/onboarding/);
   });
 
-  test("Telegram: sign up by sharing the number with the bot, then sign in and recover the password with it", async ({ page, baseURL }) => {
-    const from = phone();
-    const me = telegramUser();
-    await page.goto("/ar/sign-up");
-    await page.getByRole("link", { name: "تيليغرام", exact: true }).click();
-    await page.waitForURL(/method=telegram/);
-    await page.getByRole("textbox", { name: "الاسم الظاهر" }).fill("Telegram Player");
-    await page.getByRole("textbox", { name: "كلمة المرور" }).fill(PASSWORD);
-    await page.getByRole("checkbox", { name: /شروط الاستخدام/ }).check();
-    await page.getByRole("button", { name: "متابعة عبر تيليغرام" }).click();
-    await page.waitForURL(/\/ar\/verify-telegram/);
-
-    const code = (await page.getByTestId("verify-code").textContent())!.trim();
-    expect(code).toMatch(/^[A-Z0-9]{4}-[A-Z0-9]{4}$/);
-    await expect(page.getByRole("link", { name: "افتح تيليغرام" })).toHaveAttribute("data-href", `https://t.me/AlMalabTestBot?start=${code}`);
-
-    // Requests without the webhook's secret token are refused.
-    expect((await telegramMessage(baseURL!, me, { text: `/start ${code}` }, "wrong-secret")).status).toBe(401);
-
-    // The start link opens the bot, which asks for the number with a button, and the page notices.
-    const started = await telegramMessage(baseURL!, me, { text: `/start ${code}` });
-    expect(started).toMatchObject({ status: 200, method: "sendMessage", chat_id: me });
-    expect(started.reply_markup?.keyboard?.[0]?.[0]).toMatchObject({ request_contact: true });
-    await expect(page.getByText("فتحت البوت.", { exact: false })).toBeVisible({ timeout: 10_000 });
-
-    // Someone else's contact card proves nothing.
-    const foreign = await telegramMessage(baseURL!, me, { contact: { phone_number: phone(), first_name: "Friend", user_id: telegramUser() } });
-    expect(foreign.text).toContain("شارك رقمك أنت");
-
-    // Their own contact: the number is verified and the page carries on by itself.
-    const shared = await telegramMessage(baseURL!, me, { contact: { phone_number: `+${from}`, first_name: "E2E", user_id: me } });
-    expect(shared.text).toContain("تم تأكيد رقمك");
-    expect(shared.reply_markup).toMatchObject({ remove_keyboard: true });
-    await page.waitForURL(/\/ar\/onboarding/, { timeout: 15_000 });
-
-    await page.getByRole("combobox", { name: "المدينة" }).selectOption({ label: "البصرة" });
-    await page.getByText("حارس مرمى", { exact: true }).click();
-    await page.getByText("متوسط", { exact: true }).click();
-    await page.getByRole("button", { name: "ابدأ اللعب" }).click();
-    await page.waitForURL(/\/ar\/dashboard/);
-    await page.goto("/ar/settings");
-    await expect(page.getByText(`+${from}`)).toBeVisible();
-
-    // Sign out, then sign in with the local number format and the password.
-    await page.context().clearCookies();
-    await page.goto("/ar/sign-in");
-    await page.getByRole("textbox", { name: "البريد الإلكتروني أو رقم الهاتف" }).fill(localFormat(from));
-    await page.getByRole("textbox", { name: "كلمة المرور" }).fill(PASSWORD);
-    await page.getByRole("button", { name: "تسجيل الدخول" }).click();
-    await page.waitForURL(/\/ar\/dashboard/);
-
-    // Forgot password → recover with Telegram, sharing the same number.
-    await page.context().clearCookies();
-    await page.goto("/ar/forgot-password");
-    await page.getByRole("button", { name: "استعادة عبر تيليغرام" }).click();
-    await page.waitForURL(/\/ar\/verify-telegram/);
-    const resetCode = (await page.getByTestId("verify-code").textContent())!.trim();
-    expect((await verifyWithTelegram(baseURL!, me, resetCode, from)).text).toContain("لاختيار كلمة مرور جديدة");
-    await page.waitForURL(/\/ar\/reset-password/, { timeout: 15_000 });
-    await page.getByRole("textbox", { name: "كلمة المرور الجديدة" }).fill("N3w-pass-4567");
-    await page.getByRole("textbox", { name: "تأكيد كلمة المرور" }).fill("N3w-pass-4567");
-    await page.getByRole("button", { name: "حفظ كلمة المرور" }).click();
-    await page.waitForURL(/\/ar\/dashboard/);
-
-    await page.context().clearCookies();
-    await page.goto("/ar/sign-in");
-    await page.getByRole("textbox", { name: "البريد الإلكتروني أو رقم الهاتف" }).fill(`+${from}`);
-    await page.getByRole("textbox", { name: "كلمة المرور" }).fill("N3w-pass-4567");
-    await page.getByRole("button", { name: "تسجيل الدخول" }).click();
-    await page.waitForURL(/\/ar\/dashboard/);
-  });
-
-  test("Telegram: a number that already has an account cannot be used to create another", async ({ page, baseURL, browser }) => {
-    const from = phone();
-    const signUp = async (p: typeof page) => {
-      await p.goto("/ar/sign-up?method=telegram");
-      await p.getByRole("textbox", { name: "الاسم الظاهر" }).fill("مرتين");
-      await p.getByRole("textbox", { name: "كلمة المرور" }).fill(PASSWORD);
-      await p.getByRole("checkbox", { name: /شروط الاستخدام/ }).check();
-      await p.getByRole("button", { name: "متابعة عبر تيليغرام" }).click();
-      await p.waitForURL(/\/ar\/verify-telegram/);
-      return (await p.getByTestId("verify-code").textContent())!.trim();
-    };
-    await verifyWithTelegram(baseURL!, telegramUser(), await signUp(page), from);
-    await page.waitForURL(/\/ar\/onboarding/, { timeout: 15_000 });
-
-    const other = await (await browser.newContext()).newPage();
-    const reply = await verifyWithTelegram(baseURL!, telegramUser(), await signUp(other), from);
-    expect(reply.text).toContain("هذا الرقم مرتبط بحساب آخر");
-    await expect(other.getByText("هذا الرقم مرتبط بحساب آخر في «الملعب».")).toBeVisible({ timeout: 15_000 });
-  });
-
-  test("Telegram sign-up: past the per-device limit, no account is created at all", async ({ browser }) => {
+  test("phone sign-up: past the per-device limit, no account is created at all", async ({ browser }) => {
     // A device of its own (an address only this test uses), and a limit of two sign-ups for it.
     const ip = `203.0.113.${randomInt(1, 255)}`;
     const tag = `Throttle ${randomUUID().slice(0, 8)}`;
@@ -179,12 +87,13 @@ test.describe("Account verification", () => {
     try {
       for (let i = 1; i <= 3; i++) {
         const page = await context.newPage();
-        await page.goto("/ar/sign-up?method=telegram");
+        await page.goto("/ar/sign-up?method=whatsapp");
         await page.getByRole("textbox", { name: "الاسم الظاهر" }).fill(tag);
+        await page.getByRole("textbox", { name: "رقم واتساب" }).fill(localFormat(phone()));
         await page.getByRole("textbox", { name: "كلمة المرور" }).fill(PASSWORD);
         await page.getByRole("checkbox", { name: /شروط الاستخدام/ }).check();
-        await page.getByRole("button", { name: "متابعة عبر تيليغرام" }).click();
-        if (i <= 2) await page.waitForURL(/\/ar\/verify-telegram/);
+        await page.getByRole("button", { name: "متابعة عبر واتساب" }).click();
+        if (i <= 2) await page.waitForURL(/\/ar\/verify-whatsapp/);
         else await expect(page.getByText("محاولات كثيرة من هذا الجهاز")).toBeVisible();
         await page.close();
       }
@@ -197,15 +106,16 @@ test.describe("Account verification", () => {
     }
   });
 
-  test("Telegram bot: refuses unsigned updates and guides people who arrive without a valid code", async ({ baseURL }) => {
-    const me = telegramUser();
-    expect((await telegramMessage(baseURL!, me, { text: "/start" }, "")).status).toBe(401);
-    const help = await telegramMessage(baseURL!, me, { text: "/start" });
-    expect(help).toMatchObject({ status: 200, method: "sendMessage", chat_id: me });
-    expect(help.text).toContain("بوت التحقق");
-    expect((await telegramMessage(baseURL!, me, { text: "/start ZZZZ-ZZZZ" })).text).toContain("غير صالح أو انتهت صلاحيته");
-    // A contact with no code opened first completes nothing.
-    const stray = await telegramMessage(baseURL!, me, { contact: { phone_number: phone(), first_name: "E2E", user_id: me } });
-    expect(stray.text).toContain("افتح رابط تيليغرام");
+  test("Telegram is gone: no sign-up option, no recovery button, no waiting page, no webhook", async ({ page, baseURL }) => {
+    await page.goto("/ar/sign-up?method=telegram");
+    await expect(page.getByRole("textbox", { name: "البريد الإلكتروني" })).toBeVisible(); // the e-mail form instead
+    await expect(page.getByText("تيليغرام")).toHaveCount(0);
+    await page.goto("/ar/forgot-password");
+    await expect(page.getByRole("button", { name: "استعادة عبر واتساب" })).toBeVisible();
+    await expect(page.getByText("تيليغرام")).toHaveCount(0);
+    // The site's not-found page (streamed, so like every unknown page it is sent with status 200).
+    await page.goto("/ar/verify-telegram");
+    await expect(page.getByText("الصفحة غير موجودة")).toBeVisible();
+    expect((await fetch(`${baseURL}/api/telegram/webhook`, { method: "POST", body: "{}" })).status).toBe(404);
   });
 });

@@ -7,9 +7,9 @@ import { logger } from "@/lib/log";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
- * Pieces shared by the phone verification flows (sign-up and password reset
- * with Telegram or WhatsApp): the code the user takes to the bot, and the
- * browser's ticket that identifies the verification (only its hash is stored).
+ * Pieces of the phone verification flows (sign-up and password reset with
+ * WhatsApp): the code the user sends to the bot, and the browser's ticket
+ * that identifies the verification (only its hash is stored).
  */
 
 const ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; // no 0/O, 1/I/L
@@ -58,9 +58,8 @@ export async function clientKey(): Promise<string> {
 /**
  * Starts a verification and keeps its ticket in the browser, retrying on the
  * (unlikely) clash with another pending code. Returns an error code, or null.
- * The same row serves Telegram and WhatsApp: the code is what the user takes
- * to either bot. `phone` (WhatsApp) is the number the user typed: the code is
- * then accepted only from that number.
+ * `phone` is the number the user typed: the code is then accepted only from
+ * that number's WhatsApp.
  */
 export async function createVerification(purpose: "signup" | "reset", userId: string | null, phone: string | null = null): Promise<string | null> {
   const admin = createAdminClient();

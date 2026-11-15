@@ -8,15 +8,21 @@ import { buttonClass } from "@/components/ui/button";
 import { Alert } from "@/components/ui/primitives";
 import { ExternalLinkButton } from "@/components/ui/link-button";
 import { MoreOptions } from "@/components/ui/more-options";
-import { pollTelegramAction, type TelegramPoll } from "@/server/telegram";
+import { pollWhatsappAction, type VerificationPoll } from "@/server/whatsapp";
 
-const POLL_MS = 3000;
+const POLL_MS = 2000;
+const HIDDEN_POLL_MS = 15_000;
 
 /**
  * Opens WhatsApp on the platform's number with the code typed in, and waits
- * until the bot has received it. Polling is the Telegram page's: both bots
- * complete the same verification row. `from` is the number the user typed:
- * the code counts only from that number's WhatsApp.
+ * until the bot has received it. `from` is the number the user typed: the
+ * code counts only from that number's WhatsApp.
+ *
+ * The page asks every 2 seconds while it is on screen. On a phone it is in
+ * the background while the user is in WhatsApp: it then asks only now and
+ * then, and again the moment it is back, so it carries on as soon as the user
+ * returns. A failed request (common right after switching apps) is simply
+ * asked again.
  */
 export function WhatsappWaiter({
   code,
@@ -34,27 +40,56 @@ export function WhatsappWaiter({
   purpose: "signup" | "reset";
 }) {
   const t = useTranslations("auth");
-  const [state, setState] = useState<TelegramPoll["state"]>("pending");
+  const [state, setState] = useState<VerificationPoll["state"]>("pending");
   const [copied, setCopied] = useState<"code" | "number" | null>(null);
   const [minutesLeft, setMinutesLeft] = useState<number | null>(null);
 
   useEffect(() => {
     let active = true;
-    const tick = async () => {
-      const result = await pollTelegramAction();
+    let asking = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const visible = () => document.visibilityState === "visible";
+    const later = () => {
+      clearTimeout(timer);
+      if (active) timer = setTimeout(ask, visible() ? POLL_MS : HIDDEN_POLL_MS);
+    };
+    async function ask() {
+      // Server actions go one at a time: a second request would only queue behind this one.
+      if (!active || asking) return;
+      asking = true;
+      let result: VerificationPoll | null = null;
+      try {
+        result = await pollWhatsappAction();
+      } catch {
+        // No answer (the connection dropped while the page was hidden): ask again.
+      }
+      asking = false;
       if (!active) return;
-      if (result.state === "done") {
+      if (result?.state === "done") {
+        active = false;
         setState("done");
         window.location.assign(result.href);
         return;
       }
-      setState(result.state);
-      if (result.state === "pending") timer = setTimeout(tick, POLL_MS);
+      if (result) setState(result.state);
+      if (!result || result.state === "pending") later();
+    }
+    // Back on screen: ask at once. Gone to the background: ask only now and then.
+    const back = () => {
+      if (!visible()) return later();
+      clearTimeout(timer);
+      void ask();
     };
-    let timer = setTimeout(tick, POLL_MS);
+    document.addEventListener("visibilitychange", back);
+    window.addEventListener("focus", back);
+    window.addEventListener("pageshow", back);
+    later();
     return () => {
       active = false;
       clearTimeout(timer);
+      document.removeEventListener("visibilitychange", back);
+      window.removeEventListener("focus", back);
+      window.removeEventListener("pageshow", back);
     };
   }, []);
 

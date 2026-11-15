@@ -35,7 +35,8 @@ const REPLIES: Record<string, string> = {
   "reset:verified": "✅ تم التحقق. ارجع إلى «الملعب» لاختيار كلمة مرور جديدة.",
   "reset:no_account": "⚠️ لا يوجد حساب في «الملعب» مرتبط بهذا الرقم.",
   no_pending_code: "⚠️ هذا الرمز غير صالح أو انتهت صلاحيته. ارجع إلى الموقع وابدأ من جديد.",
-  claimed: "⚠️ هذا الرمز فُتح في تيليغرام. أكمل التحقق هناك، أو ابدأ من جديد في الموقع.",
+  // A code opened in Telegram before Telegram sign-up was removed: it can't be finished there any more.
+  claimed: "⚠️ هذا الرمز لم يعد صالحاً. ارجع إلى الموقع وابدأ من جديد.",
   rate_limited: "⚠️ محاولات كثيرة. حاول مرة أخرى بعد ساعة.",
 };
 

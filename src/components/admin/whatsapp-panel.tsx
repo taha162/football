@@ -13,13 +13,15 @@ const INBOUND_KINDS = ["code", "stop", "help", "other"];
 const GOOD_OUTCOMES = new Set(["replied", "help_sent"]);
 const BAD_OUTCOMES = new Set(["no_number", "unreadable", "lid_lookup_failed", "site_refused_secret", "site_refused", "site_error", "site_unreachable"]);
 const WARN_OUTCOMES = new Set(["other_number"]);
+/** WhatsApp gives send times to the second: below this, a message reached the bot right away. */
+const LATE_MS = 5000;
 
 /**
- * The WhatsApp bot, as a checklist like the Telegram one: are its settings
- * there, does the bot answer and is the number linked (with the QR code to
- * link it), is sending paused, can the bot reach this site, what became of
- * the latest messages people sent it, and is the database ready. Each line
- * says what to fix.
+ * The WhatsApp bot, as a checklist: are its settings there, does the bot
+ * answer and is the number linked (with the QR code to link it), is sending
+ * paused, can the bot reach this site, what became of the latest messages
+ * people sent it (and how fast), and is the database ready. Each line says
+ * what to fix.
  */
 export async function WhatsappPanel() {
   const t = await getTranslations("admin");
@@ -48,7 +50,7 @@ export async function WhatsappPanel() {
       cfg.problems.length || !cfg.serviceRole ? (
         <ul className="flex flex-col gap-0.5">
           {cfg.problems.map((p) => <li key={p}>{bad(t(`waProblem.${p}`))}</li>)}
-          {!cfg.serviceRole ? <li>{bad(t("tgProblem.service_role_missing"))}</li> : null}
+          {!cfg.serviceRole ? <li>{bad(t("waProblem.service_role_missing"))}</li> : null}
         </ul>
       ) : (
         good(<span dir="ltr">{displayPhone(cfg.number)}</span>)
@@ -93,7 +95,7 @@ export async function WhatsappPanel() {
   items.push({
     label: t("waDatabase"),
     // 0029 says so in the summary; before it, WhatsApp sign-up can't ask for the number.
-    value: summaryError ? bad(t("waDatabaseMissing")) : (s?.schema ?? 0) < 29 ? bad(t("waDatabaseOld")) : good(t("tgDatabaseOk")),
+    value: summaryError ? bad(t("waDatabaseMissing")) : (s?.schema ?? 0) < 29 ? bad(t("waDatabaseOld")) : good(t("waDatabaseOk")),
   });
   if (s) {
     items.push({
@@ -176,7 +178,11 @@ async function SiteReach({ site }: { site: BotHealth["site"] }) {
   );
 }
 
-/** The latest messages people sent the bot: when, what kind, and what became of them. */
+/**
+ * The latest messages people sent the bot: when, what kind, what became of
+ * them, how long the answer took, and whether WhatsApp held them back (the
+ * bot was offline or reconnecting).
+ */
 async function Inbound({ notes, locale }: { notes: NonNullable<BotHealth["inbound"]>; locale: string }) {
   const t = await getTranslations("admin");
   if (notes.length === 0) return <span className="text-muted">{t("waInboundNone")}</span>;
@@ -184,6 +190,11 @@ async function Inbound({ notes, locale }: { notes: NonNullable<BotHealth["inboun
   const today = formatDate(new Date(), locale, "Asia/Baghdad");
   const when = (at: string) =>
     formatDate(at, locale, "Asia/Baghdad") === today ? formatTime(at, locale, "Asia/Baghdad") : formatDateTime(at, locale, "Asia/Baghdad", { weekday: undefined });
+  const took = (ms: number) => t("waInboundTook", { seconds: formatNumber(Math.round(ms / 100) / 10, locale) });
+  const late = (ms: number) =>
+    ms < 60_000
+      ? t("waInboundLate", { seconds: formatNumber(Math.round(ms / 1000), locale) })
+      : t("waInboundLateMinutes", { minutes: formatNumber(Math.round(ms / 60_000), locale) });
   return (
     <ul className="flex flex-col gap-1" data-testid="wa-inbound">
       {notes.slice(0, 6).map((n, i) => {
@@ -202,6 +213,8 @@ async function Inbound({ notes, locale }: { notes: NonNullable<BotHealth["inboun
             {t(`waInboundKind.${INBOUND_KINDS.includes(n.kind) ? n.kind : "other"}`)}
             {" · "}
             <span className={tone}>{t.has(outcome) ? t(outcome) : n.outcome}</span>
+            {typeof n.tookMs === "number" ? <span className="text-muted"> · {took(n.tookMs)}</span> : null}
+            {typeof n.lateMs === "number" && n.lateMs >= LATE_MS ? <span className="text-warning"> · {late(n.lateMs)}</span> : null}
           </li>
         );
       })}
