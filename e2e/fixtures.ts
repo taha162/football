@@ -4,7 +4,7 @@
  * the journey under test are created through the same RPCs the app uses,
  * executed as the relevant user.
  */
-import { createHash, randomInt, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { admin, localTime, mosul, rpc } from "../tests/shared/db";
@@ -56,7 +56,7 @@ export async function createAuthUser(name: string, opts: { onboard?: boolean; ad
 
 export async function signIn(page: Page, user: TestUser) {
   await page.goto("/ar/sign-in");
-  // The label also mentions phone numbers when Telegram sign-up is enabled.
+  // "البريد الإلكتروني أو رقم الهاتف": accounts made with a phone number sign in with it.
   await page.getByRole("textbox", { name: /^البريد الإلكتروني/ }).fill(user.email);
   await page.getByRole("textbox", { name: "كلمة المرور" }).fill(PASSWORD);
   await page.getByRole("button", { name: "تسجيل الدخول" }).click();
@@ -105,44 +105,6 @@ export async function emailedHtml(email: string, timeoutMs = 15_000): Promise<st
     await new Promise((r) => setTimeout(r, 500));
   }
   throw new Error(`no e-mail sent to ${email}`);
-}
-
-/** The secret Telegram sends with every update (same derivation as src/lib/telegram.ts). */
-const telegramSecret = (token = process.env.TELEGRAM_BOT_TOKEN ?? "") =>
-  createHash("sha256").update(`al-malab-telegram-webhook:${token}`).digest("hex");
-
-/** A Telegram account in tests: its user id is also its private chat id. */
-export const telegramUser = () => randomInt(1, 2 ** 47);
-
-/** What the bot answered (the method call the webhook returns), with the HTTP status. */
-export interface BotReply {
-  status: number;
-  method?: string;
-  chat_id?: number;
-  text?: string;
-  reply_markup?: { keyboard?: { text: string; request_contact?: boolean }[][]; remove_keyboard?: boolean };
-}
-
-/** Posts a private-chat message to the app's webhook, as Telegram delivers it. */
-export async function telegramMessage(baseURL: string, from: number, message: Record<string, unknown>, secret = telegramSecret()): Promise<BotReply> {
-  const update = {
-    update_id: randomInt(1, 2 ** 31),
-    message: { message_id: randomInt(1, 1e6), date: Math.floor(Date.now() / 1000), chat: { id: from, type: "private" }, from: { id: from, is_bot: false, first_name: "E2E" }, ...message },
-  };
-  const res = await fetch(`${baseURL}/api/telegram/webhook`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-Telegram-Bot-Api-Secret-Token": secret },
-    body: JSON.stringify(update),
-  });
-  const body = res.headers.get("content-type")?.includes("json") ? ((await res.json()) as Omit<BotReply, "status">) : {};
-  return { status: res.status, ...body };
-}
-
-/** The user opens the start link (the bot receives "/start CODE"), then shares their own contact. */
-export async function verifyWithTelegram(baseURL: string, from: number, code: string, phone: string): Promise<BotReply> {
-  const started = await telegramMessage(baseURL, from, { text: `/start ${code}` });
-  expect(started.reply_markup?.keyboard?.[0]?.[0]?.request_contact).toBe(true);
-  return telegramMessage(baseURL, from, { contact: { phone_number: phone, first_name: "E2E", user_id: from } });
 }
 
 /** What the site answered the WhatsApp bot, with the HTTP status. */

@@ -112,9 +112,9 @@ test.describe("WhatsApp verification", () => {
   test("sign up by sending the code from one's own WhatsApp, then sign in, recover the password, and stop messages", async ({ page, baseURL }) => {
     const from = phone();
     await page.goto("/ar/sign-up");
-    // Every way that is set up is offered.
+    // E-mail and WhatsApp; Telegram is gone.
     await expect(page.getByRole("link", { name: "البريد", exact: true })).toBeVisible();
-    await expect(page.getByRole("link", { name: "تيليغرام", exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: "تيليغرام", exact: true })).toHaveCount(0);
     await page.getByRole("link", { name: "واتساب", exact: true }).click();
     await page.waitForURL(/method=whatsapp/);
     await page.getByRole("textbox", { name: "الاسم الظاهر" }).fill("WhatsApp Player");

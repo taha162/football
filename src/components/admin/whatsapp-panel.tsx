@@ -50,7 +50,7 @@ export async function WhatsappPanel() {
       cfg.problems.length || !cfg.serviceRole ? (
         <ul className="flex flex-col gap-0.5">
           {cfg.problems.map((p) => <li key={p}>{bad(t(`waProblem.${p}`))}</li>)}
-          {!cfg.serviceRole ? <li>{bad(t("tgProblem.service_role_missing"))}</li> : null}
+          {!cfg.serviceRole ? <li>{bad(t("waProblem.service_role_missing"))}</li> : null}
         </ul>
       ) : (
         good(<span dir="ltr">{displayPhone(cfg.number)}</span>)
@@ -95,7 +95,7 @@ export async function WhatsappPanel() {
   items.push({
     label: t("waDatabase"),
     // 0029 says so in the summary; before it, WhatsApp sign-up can't ask for the number.
-    value: summaryError ? bad(t("waDatabaseMissing")) : (s?.schema ?? 0) < 29 ? bad(t("waDatabaseOld")) : good(t("tgDatabaseOk")),
+    value: summaryError ? bad(t("waDatabaseMissing")) : (s?.schema ?? 0) < 29 ? bad(t("waDatabaseOld")) : good(t("waDatabaseOk")),
   });
   if (s) {
     items.push({

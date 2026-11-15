@@ -8,7 +8,7 @@ import { buttonClass } from "@/components/ui/button";
 import { Alert } from "@/components/ui/primitives";
 import { ExternalLinkButton } from "@/components/ui/link-button";
 import { MoreOptions } from "@/components/ui/more-options";
-import { pollTelegramAction, type TelegramPoll } from "@/server/telegram";
+import { pollWhatsappAction, type VerificationPoll } from "@/server/whatsapp";
 
 const POLL_MS = 2000;
 const HIDDEN_POLL_MS = 15_000;
@@ -40,7 +40,7 @@ export function WhatsappWaiter({
   purpose: "signup" | "reset";
 }) {
   const t = useTranslations("auth");
-  const [state, setState] = useState<TelegramPoll["state"]>("pending");
+  const [state, setState] = useState<VerificationPoll["state"]>("pending");
   const [copied, setCopied] = useState<"code" | "number" | null>(null);
   const [minutesLeft, setMinutesLeft] = useState<number | null>(null);
 
@@ -57,9 +57,9 @@ export function WhatsappWaiter({
       // Server actions go one at a time: a second request would only queue behind this one.
       if (!active || asking) return;
       asking = true;
-      let result: TelegramPoll | null = null;
+      let result: VerificationPoll | null = null;
       try {
-        result = await pollTelegramAction();
+        result = await pollWhatsappAction();
       } catch {
         // No answer (the connection dropped while the page was hidden): ask again.
       }

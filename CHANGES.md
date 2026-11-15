@@ -1304,3 +1304,37 @@
 
 التعديل: «WhatsApp verification answers faster»
 
+### 77. حذف التسجيل والتحقق عبر تيليغرام
+**السبب:** طلبك.
+
+**ما حُذف:**
+- **من الصفحات:**
+  - خيار «تيليغرام» من صفحة التسجيل.
+  - زر «استعادة عبر تيليغرام» من صفحة نسيت كلمة المرور.
+  - صفحة `/verify-telegram`.
+- **من الإدارة:** قسم «بوت التحقق في تيليغرام».
+- **من الخادم:** عنوان استقبال البوت `/api/telegram/webhook`. صار يجيب 404، فمن يكتب للبوت لا يصله رد.
+- **من الكود:** `src/lib/telegram.ts` و`telegram-settings.ts` و`telegram-update.ts`، و`src/server/telegram.ts`، و`src/components/auth/telegram-waiter.tsx`، واختباراتها.
+- **من النصوص والإعدادات:** نصوص تيليغرام في `messages/`، ومتغيرا `TELEGRAM_*` في `.env.example`.
+
+**ما بقي كما هو:**
+- **من سجّل عبر تيليغرام:** يدخل برقمه وكلمة المرور، ويستعيد كلمة المرور عبر واتساب إن كان واتساب على نفس الرقم.
+- **حقل الدخول** يقبل البريد أو الرقم دائماً، ولو توقف بوت واتساب، فلا يُمنع أصحاب حسابات الأرقام من الدخول.
+- **قاعدة البيانات لم تتغير:**
+  - دوال تيليغرام وإعداده باقية فيها دون استخدام، ولا يستدعيها إلا الخادم.
+  - الإعداد `telegram.max_codes_per_hour` لا يظهر في «سياسات المنصة».
+  - حذفها من القاعدة أيضاً يحتاج ملف SQL منفصلاً، ولا أكتبه إلا بموافقتك.
+- **التحقق بواتساب لم يتغير.** صفحة انتظار الرمز تسأل بدالة واتساب، وكانت تستعير دالة تيليغرام.
+
+الملفات:
+- الموقع: `src/app/[locale]/sign-up` و`sign-in` و`forgot-password` و`admin/settings`، و`src/components/auth/auth-forms.tsx` و`whatsapp-waiter.tsx`، و`src/server/whatsapp.ts`، و`src/components/admin/whatsapp-panel.tsx`، و`src/lib/whatsapp-messages.ts` و`phone-verification.ts` و`phone.ts`، و`src/app/robots.ts`، والنصوص في `messages/`.
+- الاختبارات: `tests/db/phone-verification.test.ts` صار يتحقق عبر واتساب. وتغيّرت أيضاً `tests/db/whatsapp.test.ts` و`tests/unit/whatsapp-messages.test.ts` و`e2e/verification.spec.ts` و`e2e/whatsapp.spec.ts` و`e2e/fixtures.ts`.
+- التوثيق: `DEPLOYMENT.md` (القسم 6) و`SECURITY.md` و`ARCHITECTURE.md` و`DATABASE_DESIGN.md` و`IMPLEMENTATION_STATUS.md` و`whatsapp-bot/README.md`.
+
+**بعد الدمج (اختياري):** احذف `TELEGRAM_BOT_TOKEN` و`TELEGRAM_BOT_USERNAME` من Vercel. ويمكنك حذف البوت من ‎@BotFather بالأمر `/deletebot`.
+
+**لإرجاعه:** أرجع هذا البند وحده، وقاعدة البيانات جاهزة كما هي.
+
+**لا يحتاج** أي ملف SQL.
+
+التعديل: «Remove Telegram sign-up and verification»

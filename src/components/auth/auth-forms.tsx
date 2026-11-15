@@ -15,23 +15,21 @@ import {
   verifyEmailCodeAction,
 } from "@/server/auth";
 import { verifySecondFactorAction } from "@/server/mfa";
-import { startTelegramResetAction, startTelegramSignupAction } from "@/server/telegram";
 import { startWhatsappResetAction, startWhatsappSignupAction } from "@/server/whatsapp";
 import { useActionMessage } from "@/components/ui/use-action-message";
 
-export function SignInForm({ next, allowPhone = false }: { next?: string; allowPhone?: boolean }) {
+/**
+ * E-mail or phone number, and password. The number is for accounts made with
+ * a phone number (WhatsApp, and Telegram before it was removed): those can
+ * always sign in, whether or not the WhatsApp bot is set up.
+ */
+export function SignInForm({ next }: { next?: string }) {
   const t = useTranslations("auth");
   return (
     <ActionForm action={signInAction}>
       <Hidden values={{ next }} />
-      <FormField name="email" label={allowPhone ? t("emailOrPhone") : t("email")} hint={allowPhone ? t("emailOrPhoneHint") : undefined} required>
-        {(a) =>
-          allowPhone ? (
-            <Input {...a} type="text" autoComplete="username" autoCapitalize="none" spellCheck={false} required dir="ltr" />
-          ) : (
-            <Input {...a} type="email" autoComplete="email" inputMode="email" required dir="ltr" />
-          )
-        }
+      <FormField name="email" label={t("emailOrPhone")} hint={t("emailOrPhoneHint")} required>
+        {(a) => <Input {...a} type="text" autoComplete="username" autoCapitalize="none" spellCheck={false} required dir="ltr" />}
       </FormField>
       <FormField name="password" label={t("password")} required>
         {(a) => <Input {...a} type="password" autoComplete="current-password" required dir="ltr" />}
@@ -78,42 +76,28 @@ export function SignUpForm() {
 }
 
 /**
- * Name + password + terms for the sign-ups that verify a phone number (the
- * number itself comes from the bot). With WhatsApp messages set up, an
- * unticked box asks whether to receive offers on WhatsApp.
+ * Sign-up with a WhatsApp number instead of an e-mail: name, the number,
+ * password and terms. The code must then come from that number's WhatsApp.
+ * With WhatsApp messages set up, an unticked box asks whether to receive
+ * offers on WhatsApp.
  */
-function PhoneSignUpForm({
-  action,
-  note,
-  submit,
-  offerPromos,
-  askPhone = false,
-}: {
-  action: typeof startTelegramSignupAction;
-  note: string;
-  submit: string;
-  offerPromos: boolean;
-  /** WhatsApp: the number is typed here, and the code must come from it. */
-  askPhone?: boolean;
-}) {
+export function WhatsappSignUpForm({ offerPromos = false }: { offerPromos?: boolean }) {
   const t = useTranslations("auth");
   return (
-    <ActionForm action={action}>
-      <Alert tone="info">{note}</Alert>
+    <ActionForm action={startWhatsappSignupAction}>
+      <Alert tone="info">{t("whatsappSignupNote")}</Alert>
       <FormField name="display_name" label={t("displayName")} hint={t("displayNameHint")} required>
         {(a) => <Input {...a} autoComplete="nickname" required minLength={2} maxLength={40} />}
       </FormField>
-      {askPhone ? (
-        <FormField
-          name="phone"
-          label={t("waPhone")}
-          // The example number stays left to right inside the Arabic sentence.
-          hint={t.rich("waPhoneHint", { num: (c) => <bdi dir="ltr">{c}</bdi> })}
-          required
-        >
-          {(a) => <WhatsappNumberInput {...a} />}
-        </FormField>
-      ) : null}
+      <FormField
+        name="phone"
+        label={t("waPhone")}
+        // The example number stays left to right inside the Arabic sentence.
+        hint={t.rich("waPhoneHint", { num: (c) => <bdi dir="ltr">{c}</bdi> })}
+        required
+      >
+        {(a) => <WhatsappNumberInput {...a} />}
+      </FormField>
       <FormField name="password" label={t("password")} hint={t("passwordHint")} required>
         {(a) => <Input {...a} type="password" autoComplete="new-password" required minLength={8} maxLength={72} dir="ltr" />}
       </FormField>
@@ -134,22 +118,8 @@ function PhoneSignUpForm({
           {(a) => <Checkbox {...a} label={t("promosOptIn")} />}
         </FormField>
       ) : null}
-      <SubmitButton size="lg">{submit}</SubmitButton>
+      <SubmitButton size="lg">{t("continueWhatsapp")}</SubmitButton>
     </ActionForm>
-  );
-}
-
-/** The phone number comes from Telegram itself. */
-export function TelegramSignUpForm({ offerPromos = false }: { offerPromos?: boolean }) {
-  const t = useTranslations("auth");
-  return <PhoneSignUpForm action={startTelegramSignupAction} note={t("telegramSignupNote")} submit={t("continueTelegram")} offerPromos={offerPromos} />;
-}
-
-/** The number is typed here, and the code must then come from that number's WhatsApp. */
-export function WhatsappSignUpForm({ offerPromos = false }: { offerPromos?: boolean }) {
-  const t = useTranslations("auth");
-  return (
-    <PhoneSignUpForm action={startWhatsappSignupAction} note={t("whatsappSignupNote")} submit={t("continueWhatsapp")} offerPromos={offerPromos} askPhone />
   );
 }
 
@@ -213,16 +183,6 @@ export function SecondStepForm({ next }: { next: string }) {
         {(a) => <AppCodeInput {...a} autoFocus />}
       </FormField>
       <SubmitButton size="lg">{t("verify")}</SubmitButton>
-    </ActionForm>
-  );
-}
-
-export function TelegramResetForm() {
-  const t = useTranslations("auth");
-  return (
-    <ActionForm action={startTelegramResetAction}>
-      <p className="text-sm text-muted">{t("forgotTelegramNote")}</p>
-      <SubmitButton size="lg" variant="secondary">{t("forgotTelegram")}</SubmitButton>
     </ActionForm>
   );
 }

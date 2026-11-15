@@ -3,9 +3,8 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link, redirect } from "@/i18n/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { AuthShell } from "@/components/auth/auth-shell";
-import { SignUpForm, TelegramSignUpForm, WhatsappSignUpForm } from "@/components/auth/auth-forms";
+import { SignUpForm, WhatsappSignUpForm } from "@/components/auth/auth-forms";
 import { buttonClass } from "@/components/ui/button";
-import { telegramConfig } from "@/lib/telegram";
 import { whatsappConfig } from "@/lib/whatsapp";
 import { LinkButton } from "@/components/ui/link-button";
 
@@ -14,14 +13,14 @@ export async function generateMetadata({ params }: PageProps<"/[locale]/sign-up"
   return { title: t("createAccount") };
 }
 
-type Method = "email" | "telegram" | "whatsapp";
-const LABEL = { email: "methodEmail", telegram: "methodTelegram", whatsapp: "methodWhatsapp" } as const;
+type Method = "email" | "whatsapp";
+const LABEL = { email: "methodEmail", whatsapp: "methodWhatsapp" } as const;
 
 export default async function SignUpPage({ params, searchParams }: PageProps<"/[locale]/sign-up">) {
   const { locale } = await params;
   const wa = whatsappConfig();
-  // Only the ways that are set up: e-mail always, Telegram and WhatsApp once their bots are.
-  const methods: Method[] = ["email", ...(telegramConfig().enabled ? (["telegram"] as const) : []), ...(wa.enabled ? (["whatsapp"] as const) : [])];
+  // Only the ways that are set up: e-mail always, WhatsApp once its bot is.
+  const methods: Method[] = ["email", ...(wa.enabled ? (["whatsapp"] as const) : [])];
   const asked = (await searchParams).method;
   const method = methods.find((m) => m !== "email" && m === asked) ?? "email";
   setRequestLocale(locale);
@@ -41,10 +40,7 @@ export default async function SignUpPage({ params, searchParams }: PageProps<"/[
       }
     >
       {methods.length > 1 ? (
-        <nav
-          aria-label={t("verifyMethod")}
-          className={`grid ${methods.length === 3 ? "grid-cols-3" : "grid-cols-2"} gap-1 rounded-xl border border-line bg-surface-2 p-1`}
-        >
+        <nav aria-label={t("verifyMethod")} className="grid grid-cols-2 gap-1 rounded-xl border border-line bg-surface-2 p-1">
           {methods.map((m) => (
             <LinkButton
               key={m}
@@ -57,13 +53,7 @@ export default async function SignUpPage({ params, searchParams }: PageProps<"/[
           ))}
         </nav>
       ) : null}
-      {method === "telegram" ? (
-        <TelegramSignUpForm offerPromos={wa.canSend} />
-      ) : method === "whatsapp" ? (
-        <WhatsappSignUpForm offerPromos={wa.canSend} />
-      ) : (
-        <SignUpForm />
-      )}
+      {method === "whatsapp" ? <WhatsappSignUpForm offerPromos={wa.canSend} /> : <SignUpForm />}
     </AuthShell>
   );
 }
