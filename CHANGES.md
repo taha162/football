@@ -1183,3 +1183,15 @@
 **لا يحتاج** أي ملف SQL.
 
 التعديل: «WhatsApp: how to run the bot, link the number and keep it safe»
+
+### 73. بوت واتساب يُبنى على Railway، واسم القسم كما يظهر
+**ما تغيّر:**
+- **ملف `whatsapp-bot/Dockerfile`:** حُذف منه السطر الذي يعلن مجلد الحفظ الدائم داخل الملف. Railway يرفض أي Dockerfile فيه هذا السطر («The Dockerfile failed validation»)، ويطلب أن يُربط التخزين الدائم من لوحته. المجلد `/data` نفسه لم يتغير، والتخزين يُربط من Railway (أو بـ `-v` مع Docker).
+  - جُرّبت الصورة بعد التعديل: تُبنى وتعمل، ويكتب البوت في `/data`.
+- **النصوص:** تنبيه «بوت واتساب» في الإدارة، والقسم 15 من `DEPLOYMENT.md`، كانا يذكران قسماً اسمه «القواعد». اسمه في الصفحة «سياسات المنصة».
+
+**ما حُذف:** لا شيء آخر.
+
+**لا يحتاج** أي ملف SQL.
+
+التعديلان: «WhatsApp: name the settings section as the page shows it» و«WhatsApp bot: build on Railway (no VOLUME line in the Dockerfile)»
