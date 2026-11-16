@@ -124,10 +124,10 @@ test.describe("WhatsApp verification", () => {
     await number.fill("123");
     await page.getByRole("textbox", { name: "كلمة المرور" }).fill(PASSWORD);
     await page.getByRole("checkbox", { name: /شروط الاستخدام/ }).check();
-    // Offers only with a tick, and the box starts unticked.
+    // Offers come with signing up with WhatsApp: ticked, and they can't be unticked here (Settings turns them off).
     const promos = page.getByRole("checkbox", { name: "أرسلوا لي العروض على واتساب" });
-    await expect(promos).not.toBeChecked();
-    await promos.check();
+    await expect(promos).toBeChecked();
+    await expect(promos).toBeDisabled();
     await page.getByRole("button", { name: "متابعة عبر واتساب" }).click();
     await expect(page.getByText("رقم الهاتف غير صحيح.")).toBeVisible();
     await number.fill(localFormat(from));
@@ -178,11 +178,18 @@ test.describe("WhatsApp verification", () => {
     await page.getByRole("button", { name: "ابدأ اللعب" }).click();
     await page.waitForURL(/\/ar\/dashboard/);
 
-    // Settings: the number, booking messages on, offers on (ticked at sign-up).
+    // Settings: the number, booking messages on, offers on (part of signing up), and offers can be turned off here.
     await page.goto("/ar/settings");
     await expect(page.getByText(`+${from}`)).toBeVisible();
     await expect(page.getByRole("checkbox", { name: /رسائل حجوزاتي/ })).toBeChecked();
-    await expect(page.getByRole("checkbox", { name: "العروض والأخبار" })).toBeChecked();
+    const offers = page.getByRole("checkbox", { name: "العروض والأخبار" });
+    await expect(offers).toBeChecked();
+    await offers.uncheck();
+    await offers.locator("xpath=ancestor::form").getByRole("button", { name: "حفظ" }).click();
+    await expect(page.getByText("تم حفظ إعدادات واتساب.")).toBeVisible();
+    await page.reload();
+    await expect(page.getByRole("checkbox", { name: "العروض والأخبار" })).not.toBeChecked();
+    await expect(page.getByRole("checkbox", { name: /رسائل حجوزاتي/ })).toBeChecked();
 
     // Sign in with the local number format.
     await page.context().clearCookies();

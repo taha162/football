@@ -165,7 +165,7 @@ Supabase backs up the database daily on paid plans. How many days are kept depen
 - Approximate location from "near me" is used for one query and never stored.
 - **WhatsApp messages** go only to verified numbers:
   - booking messages unless the person turned them off in Settings;
-  - promotions only after an explicit opt-in (a box that starts unticked, at phone sign-up and in Settings), recorded in `whatsapp_consent` with the times.
+  - promotions only with consent recorded in `whatsapp_consent` with the times. Signing up with WhatsApp includes it: the form shows a ticked box that can't be unticked there, and says how to stop. Settings and sending 0 turn it off at any time, and nothing promotional goes out after that. E-mail sign-ups have no number, so they never get offers.
   - Every promotion ends with "send 0 to stop". Sending `0`, `stop` or «إلغاء» opts the number out of **everything** at once and drops what still waits for it, in the site and in the bot.
   - Queued messages are re-checked just before they go (opted out, number changed, campaign stopped, booking already started) and skipped with the reason.
   - `outbound_messages` and `whatsapp_campaigns` have row security with no policy and no grants for API roles; admins read campaign totals through role-checked functions. Message rows are deleted after 90 days.

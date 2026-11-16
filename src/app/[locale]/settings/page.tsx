@@ -101,7 +101,7 @@ export default async function SettingsPage({ params }: PageProps<"/[locale]/sett
               <ActionForm action={saveWhatsappSettingsAction}>
                 <p className="text-xs text-muted">{t("whatsappHint")}</p>
                 <Checkbox name="wa_bookings" defaultChecked={!whatsapp.bookings_off_at} label={t("whatsappBookings")} />
-                {/* Offers only with an explicit tick: unticked until the person ticks it themselves. */}
+                {/* Offers: part of signing up with WhatsApp; unticking here turns them off for good (until ticked again). */}
                 <Checkbox name="wa_promos" defaultChecked={Boolean(whatsapp.opted_in_at && !whatsapp.opted_out_at)} label={t("whatsappPromos")} />
                 <p className="text-xs text-muted">{t("whatsappStopHint")}</p>
                 <SubmitButton className="self-start">{t("save")}</SubmitButton>

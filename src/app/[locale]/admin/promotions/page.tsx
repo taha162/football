@@ -26,9 +26,10 @@ type Campaign = {
 
 /**
  * Promotional WhatsApp messages (admins only). They go only to people who
- * ticked the opt-in box, slowly, through the same queue as booking messages,
- * and every one ends with how to stop them. The database checks the role
- * again and audits each campaign.
+ * agreed to them (part of signing up with WhatsApp; Settings or "0" turns
+ * them off), slowly, through the same queue as booking messages, and every
+ * one ends with how to stop them. The database checks the role again and
+ * audits each campaign.
  */
 export default async function AdminPromotionsPage() {
   const locale = await getLocale();

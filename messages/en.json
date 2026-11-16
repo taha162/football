@@ -124,7 +124,7 @@
     "forgotWhatsapp": "Recover with WhatsApp",
     "forgotWhatsappNote": "Signed up with your phone number? Type it, then send the code from WhatsApp on that number and choose a new password.",
     "promosHeading": "Offers on WhatsApp",
-    "promosHint": "Optional. Occasional venue offers and Al-Malab news; stop them anytime by sending 0.",
+    "promosHint": "Occasional venue offers and Al-Malab news on WhatsApp. After signing up you can stop them anytime in Settings, or by sending 0.",
     "promosOptIn": "Send me offers on WhatsApp",
     "waTitle": "Confirm your number with WhatsApp",
     "waSubtitleSignup": "One last step to activate your account and link it to your number.",
@@ -721,7 +721,7 @@
       "sections": [
         {
           "heading": "What we store",
-          "body": "Your e-mail address (private), display name, optional photo, city, optional public neighborhood, playing preferences, the matches, teams and bookings you take part in, messages you send, and reviews and reports you submit."
+          "body": "Your e-mail address or phone number (both private), display name, optional photo, city, optional public neighborhood, playing preferences, the matches, teams and bookings you take part in, messages you send, and reviews and reports you submit."
         },
         {
           "heading": "What others can see",
@@ -734,6 +734,10 @@
         {
           "heading": "Messages",
           "body": "Conversations are visible only to their participants. Moderators can see a copy of a message only when it is reported."
+        },
+        {
+          "heading": "WhatsApp messages",
+          "body": "If you sign up with your phone number, Al-Malab's number messages you on WhatsApp with three kinds of messages: the answer to your verification code, messages about your bookings, and venue offers and Al-Malab news. Offers come with signing up by phone number. You can stop them anytime in Settings or by sending 0, and booking messages in Settings too. We only message numbers their owners have confirmed."
         },
         {
           "heading": "Your choices",

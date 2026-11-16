@@ -36,7 +36,8 @@ const typedPhone = z
  * account is activated when they send the code from that number's WhatsApp.
  */
 export async function startWhatsappSignupAction(_: ActionState, fd: FormData): Promise<ActionState> {
-  if (!whatsappConfig().enabled) return fail("whatsapp_unavailable");
+  const wa = whatsappConfig();
+  if (!wa.enabled) return fail("whatsapp_unavailable");
   const parsed = z
     .object({
       display_name: z.string().trim().min(2, "too_short").max(40, "too_long"),
@@ -65,8 +66,9 @@ export async function startWhatsappSignupAction(_: ActionState, fd: FormData): P
     logger.warn("whatsapp_signup_create_failed", { status: error?.status });
     return fail(error?.message?.toLowerCase().includes("password") ? "weak_password" : "auth_failed");
   }
-  // Offers on WhatsApp only with the box ticked (it starts unticked).
-  if (bool(fd, "wa_promos")) {
+  // Offers on WhatsApp come with signing up with WhatsApp (the form says so, with a ticked box that
+  // can't be unticked), whenever offers can be sent at all. Settings or "0" turns them off later.
+  if (wa.canSend) {
     const { error: consentError } = await admin.rpc("wa_signup_consent", { p_user_id: data.user.id, p_promos: true });
     if (consentError) logger.warn("whatsapp_signup_consent_failed", { code: consentError.code });
   }
