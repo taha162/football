@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage, type Server } from "node:http";
-import { admin, createAuthUser, expect, localTime, mosul, PASSWORD, rpc, signIn, test, whatsappMessage, type TestUser } from "./fixtures";
+import { admin, createAuthUser, expect, localTime, mosul, PASSWORD, quietWhatsapp, rpc, signIn, test, whatsappMessage, type TestUser } from "./fixtures";
 
 /**
  * WhatsApp through the platform's own number (whatsapp-bot/), without
@@ -89,6 +89,7 @@ async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> 
 const bot = new StandInBot();
 test.beforeAll(async () => bot.start());
 test.afterAll(async () => bot.stop());
+test.beforeEach(async ({ context }) => quietWhatsapp(context));
 
 const setSetting = (key: string, value: unknown) =>
   admin("update public.platform_settings set value = $2::jsonb where key = $1", [key, JSON.stringify(value)]);
@@ -131,12 +132,23 @@ test.describe("WhatsApp verification", () => {
     await expect(page.getByText("رقم الهاتف غير صحيح.")).toBeVisible();
     await number.fill(localFormat(from));
     await page.getByRole("textbox", { name: "كلمة المرور" }).fill(PASSWORD);
+    const opened = page.context().waitForEvent("page");
     await page.getByRole("button", { name: "متابعة عبر واتساب" }).click();
     await page.waitForURL(/\/ar\/verify-whatsapp/);
 
     const code = (await page.getByTestId("verify-code").textContent())!.trim();
     expect(code).toMatch(/^[A-HJKMNP-Z2-9]{4}-[A-HJKMNP-Z2-9]{4}$/);
+    // WhatsApp opened by itself, on the platform's number with the code typed in, and the page says so.
+    expect((await opened).url()).toBe(`https://wa.me/${BOT_NUMBER}?text=${code}`);
+    await expect(page.getByText("فتحنا واتساب على رقم «الملعب» والرمز مكتوب فيه.", { exact: false })).toBeVisible();
     await expect(page.getByRole("link", { name: "افتح واتساب" })).toHaveAttribute("data-href", `https://wa.me/${BOT_NUMBER}?text=${code}`);
+    // Coming back to the page doesn't open it again.
+    let reopened = 0;
+    page.context().on("page", () => reopened++);
+    await page.reload();
+    await expect(page.getByTestId("verify-code")).toHaveText(code);
+    await page.waitForTimeout(1000);
+    expect(reopened).toBe(0);
     await expect(page.getByTestId("whatsapp-from")).toContainText(display(from));
 
     // Requests without the bot's secret are refused, and the body is checked.
@@ -217,7 +229,9 @@ test.describe("WhatsApp verification", () => {
     await whatsappMessage(baseURL!, from, await signUp(page));
     await page.waitForURL(/\/ar\/onboarding/, { timeout: 15_000 });
 
-    const other = await (await browser.newContext()).newPage();
+    const otherContext = await browser.newContext();
+    await quietWhatsapp(otherContext);
+    const other = await otherContext.newPage();
     expect((await whatsappMessage(baseURL!, from, await signUp(other))).reply).toContain("مرتبط بحساب آخر");
     await expect(other.getByText("هذا الرقم مرتبط بحساب آخر في «الملعب».")).toBeVisible({ timeout: 15_000 });
 

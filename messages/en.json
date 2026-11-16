@@ -131,6 +131,7 @@
     "waSubtitleReset": "Confirm the number linked to your account to choose a new password.",
     "waStep1": "Tap “Open WhatsApp”: it opens on Al-Malab's number with the code typed in.",
     "waStep2": "Tap send in WhatsApp, then come back here.",
+    "waAutoOpened": "We opened WhatsApp on Al-Malab's number with the code typed in. Tap send there, then come back here.",
     "waOpen": "Open WhatsApp",
     "waNoApp": "WhatsApp didn't open?",
     "waManual": "From WhatsApp on your number, send this code to:",

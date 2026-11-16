@@ -1,5 +1,5 @@
 import { randomInt, randomUUID } from "node:crypto";
-import { admin, createAuthUser, emailedCode, emailedHtml, expect, PASSWORD, test } from "./fixtures";
+import { admin, createAuthUser, emailedCode, emailedHtml, expect, PASSWORD, quietWhatsapp, test } from "./fixtures";
 
 const phone = () => `9647${String(Math.floor(Math.random() * 1e9)).padStart(9, "0")}`;
 const localFormat = (e164: string) => `0${e164.slice(3)}`;
@@ -84,6 +84,7 @@ test.describe("Account verification", () => {
     const [setting] = await admin<{ value: unknown }>("select value from public.platform_settings where key = 'auth.signups_per_device'");
     await admin("update public.platform_settings set value = '2'::jsonb where key = 'auth.signups_per_device'");
     const context = await browser.newContext({ extraHTTPHeaders: { "x-real-ip": ip } });
+    await quietWhatsapp(context);
     try {
       for (let i = 1; i <= 3; i++) {
         const page = await context.newPage();

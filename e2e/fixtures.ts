@@ -5,7 +5,7 @@
  * executed as the relevant user.
  */
 import { randomUUID } from "node:crypto";
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { admin, localTime, mosul, rpc } from "../tests/shared/db";
 import { totp, wrongCode } from "../tests/shared/totp";
@@ -105,6 +105,14 @@ export async function emailedHtml(email: string, timeoutMs = 15_000): Promise<st
     await new Promise((r) => setTimeout(r, 500));
   }
   throw new Error(`no e-mail sent to ${email}`);
+}
+
+/**
+ * The WhatsApp waiting page opens wa.me by itself in a new tab: answered here,
+ * so no test reaches WhatsApp's site.
+ */
+export async function quietWhatsapp(context: BrowserContext) {
+  await context.route("https://wa.me/**", (route) => route.fulfill({ status: 200, contentType: "text/html", body: "<title>WhatsApp</title>" }));
 }
 
 /** What the site answered the WhatsApp bot, with the HTTP status. */

@@ -12,11 +12,21 @@ import { pollWhatsappAction, type VerificationPoll } from "@/server/whatsapp";
 
 const POLL_MS = 2000;
 const HIDDEN_POLL_MS = 15_000;
+/** WhatsApp was opened by itself for this code already: a reload or coming back doesn't open it again. */
+const openedKey = (code: string) => `malaab-wa-opened:${code}`;
+/** Codes it was opened for in this page view (React may run an effect twice while developing). */
+const openedHere = new Set<string>();
 
 /**
  * Opens WhatsApp on the platform's number with the code typed in, and waits
  * until the bot has received it. `from` is the number the user typed: the
  * code counts only from that number's WhatsApp.
+ *
+ * WhatsApp opens by itself right after the form: the tap that sent it still
+ * counts as the user's own action for a few seconds, and browsers let a page
+ * open another site only then. Where that isn't so (an older browser, a
+ * reload), nothing opens and the button does it. WhatsApp itself never lets a
+ * site press "send": the user does.
  *
  * The page asks every 2 seconds while it is on screen. On a phone it is in
  * the background while the user is in WhatsApp: it then asks only now and
@@ -43,6 +53,31 @@ export function WhatsappWaiter({
   const [state, setState] = useState<VerificationPoll["state"]>("pending");
   const [copied, setCopied] = useState<"code" | "number" | null>(null);
   const [minutesLeft, setMinutesLeft] = useState<number | null>(null);
+  const [autoOpened, setAutoOpened] = useState(false);
+
+  useEffect(() => {
+    const say = () => {
+      const shown = setTimeout(() => setAutoOpened(true), 0);
+      return () => clearTimeout(shown);
+    };
+    if (openedHere.has(code)) return say();
+    let before = false;
+    try {
+      before = sessionStorage.getItem(openedKey(code)) === "1";
+    } catch {
+      // Storage refused (private mode): opened at most once anyway, while the tap still counts.
+    }
+    // Without the user's tap still in effect the browser would block it (and say so): the button is there.
+    if (before || !navigator.userActivation?.isActive) return;
+    try {
+      sessionStorage.setItem(openedKey(code), "1");
+    } catch {
+      /* see above */
+    }
+    openedHere.add(code);
+    window.open(link, "_blank", "noopener,noreferrer");
+    return say();
+  }, [code, link]);
 
   useEffect(() => {
     let active = true;
@@ -149,6 +184,7 @@ export function WhatsappWaiter({
           </Link>
         </p>
       ) : null}
+      {autoOpened ? <Alert tone="info">{t("waAutoOpened")}</Alert> : null}
       <ol className="flex flex-col gap-2 text-sm text-muted">
         <li>1. {t("waStep1")}</li>
         <li>2. {t("waStep2")}</li>
