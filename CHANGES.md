@@ -1380,3 +1380,34 @@
 **لا يحتاج** أي ملف SQL.
 
 التعديل: «Offers come with signing up with WhatsApp, and can be turned off after»
+
+### 80. العروض بصورة وموقع ورابط
+**ما تغيّر:**
+- **في الإدارة ← العروض، ثلاثة حقول اختيارية:**
+  - **صورة:** JPG أو PNG حتى 5 ميغابايت، تصل مع النص في رسالة واحدة.
+  - **موقع:** ملعب من ملاعب الموقع لها موقع على الخريطة. يصل بعد الرسالة دبوساً يفتحه المستلم في الخرائط.
+  - **رابط:** يبدأ بـ `https://`، ويظهر تحت النص.
+- **المعاينة** تعرض الرسالة كما تصل: الصورة، والنص، والرابط، وبطاقة الموقع. ونافذة التأكيد تذكر الصورة والموقع.
+- **جدول الحملات** يذكر لكل حملة إن كان معها صورة أو موقع أو رابط.
+- **البوت** يرسل الصورة مع النص، ثم دبوس الموقع. إن فشل الدبوس وحده لا تُعاد الرسالة.
+- **الأمان:**
+  - صور العروض في مكان جديد `promo-images`: عام للقراءة لأن واتساب يجلبها، ولا يرفع إليه إلا المديرون.
+  - لا تُقبل إلا صورة موجودة فيه، ورابط يبدأ بـ `https://`.
+- **الإعدادات ← بوت واتساب:** سطر قاعدة البيانات يفحص الملف …0031 أيضاً.
+
+الملفات:
+- قاعدة البيانات: `supabase/migrations/20261116000031_whatsapp_rich_promos.sql`، و`src/lib/supabase/types.ts`.
+- الموقع: `src/components/admin/campaign-composer.tsx` و`src/app/[locale]/admin/promotions/page.tsx` و`src/server/whatsapp.ts` (بدء الحملة) و`src/lib/whatsapp-outbox.ts` و`src/lib/whatsapp-messages.ts` و`src/lib/whatsapp.ts` و`src/lib/storage.ts` و`src/components/ui/field.tsx` و`src/components/admin/whatsapp-panel.tsx`، والنصوص في `messages/`.
+- البوت: `whatsapp-bot/src/server.mjs` و`queue.mjs` و`whatsapp.mjs` و`index.mjs`.
+- الاختبارات: `tests/db/whatsapp.test.ts` و`tests/unit/whatsapp-bot.test.ts` و`tests/unit/whatsapp-messages.test.ts` و`e2e/whatsapp.spec.ts`.
+- التوثيق: `DEPLOYMENT.md` و`SECURITY.md` و`DATABASE_DESIGN.md` و`IMPLEMENTATION_STATUS.md` و`whatsapp-bot/README.md`.
+
+**الترتيب:** طبّق الملف …0031 في SQL Editor، ثم ادمج. قبل تطبيقه تُرسل العروض نصاً فقط، وتقول صفحة العروض والإعدادات إنه غير مطبّق.
+
+**لم يُجرَّب على واتساب حقيقي:** جُرّب إرسال الصورة والموقع ببوت تجريبي في الاختبارات، لا على واتساب نفسه.
+
+**ما حُذف:** لا شيء.
+
+**يحتاج** ملف SQL: `…0031`.
+
+التعديل: «Offers with a picture, a place and a link»

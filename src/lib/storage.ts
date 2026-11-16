@@ -1,6 +1,6 @@
 import { publicEnv } from "@/lib/env";
 
-export type Bucket = "avatars" | "team-logos" | "venue-images";
+export type Bucket = "avatars" | "team-logos" | "venue-images" | "promo-images";
 
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 

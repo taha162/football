@@ -74,7 +74,7 @@ Legend: ✅ implemented and verified by automated tests · 🟡 implemented, exe
 - ✅ Conversations per match/team/booking/challenge/tournament plus direct messages, with access derived from membership — DB.
 - 🟡 Realtime updates in the thread view (Supabase Realtime with RLS). Implemented; not asserted by E2E.
 - ✅ In-app notifications with dedupe and preferences. Reminders via the scheduled job — E2E A and C, DB.
-- 🟡 WhatsApp booking messages (confirmed, changed, cancelled) and opted-in promotions with an admin page, a recipient-count confirmation, a stop button, a report and audit rows. Queued in the database, paced by the bot. Tested end to end with a stand-in bot (E2E) and in the database; not yet with a real WhatsApp number. Off until the bot is set up and `whatsapp.booking_messages` is turned on.
+- 🟡 WhatsApp booking messages (confirmed, changed, cancelled) and promotions, which can carry a picture, a place (a venue's map pin) and a link, with an admin page, a recipient-count confirmation, a stop button, a report and audit rows. Queued in the database, paced by the bot. Tested end to end with a stand-in bot (E2E) and in the database; not yet with a real WhatsApp number. Off until the bot is set up and `whatsapp.booking_messages` is turned on.
 - ⛔ E-mail, SMS and push notifications. No provider is configured.
 
 ### Trust, safety and admin

@@ -12,6 +12,9 @@ import pino from "pino";
 import QRCode from "qrcode";
 import { isPersonChat, phoneOfJid } from "./inbound.mjs";
 
+/** WhatsApp's longest caption under a picture (characters). */
+const CAPTION_MAX = 1024;
+
 /**
  * The link to WhatsApp: the platform's number, linked like WhatsApp Web (a
  * QR code, or a pairing code with WA_PAIRING_NUMBER), with the session kept
@@ -205,11 +208,30 @@ export function createConnection({ config, queue, onMessage, log }) {
           /* ignored */
         }
       },
-      async send(jid, text) {
-        const msg = await sock.sendMessage(jid, { text });
-        if (msg?.key?.id) {
+      /**
+       * The text, with the picture when there is one (WhatsApp fetches it from its https address;
+       * a text too long for a caption follows the picture on its own), then the place as a map pin.
+       */
+      async send(jid, text, media = {}) {
+        const remember = (/** @type {any} */ msg) => {
+          if (!msg?.key?.id) return;
           sent.set(msg.key.id, msg.message);
           if (sent.size > 500) sent.delete(sent.keys().next().value);
+        };
+        if (media.image && text.length <= CAPTION_MAX) {
+          remember(await sock.sendMessage(jid, { image: { url: media.image.url }, caption: text }));
+        } else {
+          if (media.image) remember(await sock.sendMessage(jid, { image: { url: media.image.url } }));
+          remember(await sock.sendMessage(jid, { text }));
+        }
+        if (media.location) {
+          // The message itself has gone: a pin that fails is logged, never sent again with it.
+          try {
+            const { lat, lng, name, address } = media.location;
+            remember(await sock.sendMessage(jid, { location: { degreesLatitude: lat, degreesLongitude: lng, ...(name ? { name } : {}), ...(address ? { address } : {}) } }));
+          } catch (e) {
+            log("location_failed", { message: String(/** @type {any} */ (e)?.message ?? e).slice(0, 120) });
+          }
         }
       },
     },

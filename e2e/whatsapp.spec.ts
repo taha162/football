@@ -26,11 +26,16 @@ async function hiddenMessage(baseURL: string, text: string): Promise<Record<stri
   return (await res.json()) as Record<string, unknown>;
 }
 const BOT_NUMBER = process.env.WHATSAPP_BOT_NUMBER ?? "";
+/** A 1×1 JPEG, for an offer's picture. */
+const JPEG = Buffer.from(
+  "/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=",
+  "base64",
+);
 const SECRET = process.env.WHATSAPP_BOT_SECRET ?? "";
 
 /** The site's side of the bot: /send, /status, /cancel, /health and /link. */
 class StandInBot {
-  received: { id: string; to: string; text: string; kind: string }[] = [];
+  received: { id: string; to: string; text: string; kind: string; image?: { url: string }; location?: { lat: number; lng: number; name?: string; address?: string } }[] = [];
   /** Added to /health: what the bot found when it checked SITE_URL, and its latest incoming messages. */
   healthExtra: Record<string, unknown> = {};
   private server: Server | null = null;
@@ -399,11 +404,25 @@ test.describe("WhatsApp promotions", () => {
     await expect(page.getByTestId("campaign-row").first()).toContainText("أُوقفت");
     expect(bot.received.filter((m) => m.kind === "promo" && fans.some((f) => f.phone === m.to))).toHaveLength(0);
 
-    // Second campaign: sent, only to the two who opted in, each greeted by name.
+    // Second campaign, with a picture, a place (a venue on the map) and a link: sent only to the two who
+    // opted in, each greeted by name.
     await allowance(10);
+    const owner = await createAuthUser("Owner");
+    const venue = await rpc<string>(owner.id, "create_venue", { p_name: `ملعب العرض ${randomUUID().slice(0, 4)}`, p_city_id: await mosul() });
+    await admin("update public.venues set latitude = 36.34, longitude = 43.13, address = 'حي الزهور' where id = $1", [venue]);
+    const [{ name: venueName }] = await admin<{ name: string }>("select name from public.venues where id = $1", [venue]);
+    await page.reload(); // the venues to choose from are read with the page
     await page.getByRole("textbox", { name: "نص الرسالة" }).fill("ملعب جديد في مدينتك!");
+    await page.getByLabel("صورة (اختياري)").setInputFiles({ name: "offer.jpg", mimeType: "image/jpeg", buffer: JPEG });
+    await page.getByRole("combobox", { name: "موقع (اختياري)" }).selectOption({ label: venueName });
+    await page.getByRole("textbox", { name: "رابط (اختياري)" }).fill("https://al-malab.example/venues");
+    const preview = page.getByTestId("promo-preview");
+    await expect(preview.getByRole("img", { name: "الصورة المرفقة بالعرض" })).toBeVisible();
+    await expect(preview).toContainText("🔗 https://al-malab.example/venues");
+    await expect(preview).toContainText(venueName);
     await page.getByRole("combobox", { name: "إلى" }).selectOption({ label: `${cityName} (٢)` });
     await page.getByRole("button", { name: "إرسال", exact: true }).click();
+    await expect(page.getByRole("dialog")).toContainText("مع صورة");
     await page.getByRole("button", { name: "أرسل الآن" }).click();
     await expect(page.getByText("بدأ الإرسال", { exact: false })).toBeVisible();
     await expect.poll(() => fans.map((f) => bot.to(f.phone).length), { timeout: 15_000 }).toEqual([1, 1]);
@@ -412,14 +431,22 @@ test.describe("WhatsApp promotions", () => {
       const [m] = bot.to(f.phone);
       expect(m.kind).toBe("promo");
       expect(m.text).toContain("ملعب جديد في مدينتك!");
+      expect(m.text).toContain("🔗 https://al-malab.example/venues");
       expect(m.text.split("\n")[0]).toContain("Fan");
       expect(m.text.trim().split("\n").at(-1)).toBe("لإيقاف هذه الرسائل أرسل 0");
+      expect(m.image?.url).toMatch(/\/storage\/v1\/object\/public\/promo-images\/[0-9a-f-]{36}\.jpg$/);
+      expect(m.location).toEqual({ lat: 36.34, lng: 43.13, name: venueName, address: "حي الزهور" });
     }
+    // The picture is really there for WhatsApp to fetch.
+    expect((await fetch(bot.to(fans[0].phone)[0].image!.url)).ok).toBe(true);
     await runCron(baseURL!);
     await page.reload();
     const second = page.getByTestId("campaign-row").first();
     await expect(second).toContainText("انتهت");
     await expect(second).toContainText("أُرسل ٢");
+    await expect(second).toContainText("مع صورة");
+    await expect(second).toContainText(venueName);
+    await expect(second).toContainText("مع رابط");
 
     // Every campaign is in the audit log, with who did it.
     const audit = await admin<{ action: string; actor_id: string }>(

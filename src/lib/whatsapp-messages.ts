@@ -116,11 +116,12 @@ function pick(id: string, n: number): number {
 
 /**
  * A promotional message: a greeting with the recipient's first name (it
- * varies a little from one message to the next), the admin's text, and the
- * line that says how to stop them.
+ * varies a little from one message to the next), the admin's text, the
+ * campaign's link if it has one, and the line that says how to stop them.
+ * (A picture goes with it as the same message; a place follows as its own.)
  */
-export function promoMessage({ id, body, name }: { id: string; body: string; name?: string | null }): string {
+export function promoMessage({ id, body, name, link }: { id: string; body: string; name?: string | null; link?: string | null }): string {
   const first = (name ?? "").trim().split(/\s+/)[0] ?? "";
   const greeting = GREETINGS[pick(id, GREETINGS.length)];
-  return [`${greeting}${first ? ` ${first}` : ""}،`, body.trim(), "", BRAND_LINE, PROMO_STOP_LINE].join("\n");
+  return [`${greeting}${first ? ` ${first}` : ""}،`, body.trim(), ...(link ? [`🔗 ${link}`] : []), "", BRAND_LINE, PROMO_STOP_LINE].join("\n");
 }

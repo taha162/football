@@ -12,6 +12,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { logger } from "@/lib/log";
 import { normalizePhone, PHONE_ACCOUNT_DOMAIN } from "@/lib/phone";
 import { clearVerifyTicket, createVerification, getVerifyTicket, hashTicket } from "@/lib/phone-verification";
+import { inspectImage, randomFileName, UPLOAD_CACHE_SECONDS } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import type { Json } from "@/lib/supabase/types";
@@ -162,15 +163,58 @@ async function refused(action: string, code: string) {
 export async function startCampaignAction(_: ActionState, fd: FormData): Promise<ActionState> {
   if (!whatsappConfig().canSend) return fail("whatsapp_not_configured");
   const parsed = z
-    .object({ body: z.string().trim().min(5, "too_short").max(1000, "too_long"), city_id: uuid.optional() })
-    .safeParse({ body: fd.get("body"), city_id: str(fd, "city_id") });
+    .object({
+      body: z.string().trim().min(5, "too_short").max(1000, "too_long"),
+      city_id: uuid.optional(),
+      // A place: one of the venues, by its coordinates.
+      venue_id: uuid.optional(),
+      link: z
+        .string()
+        .trim()
+        .max(500, "too_long")
+        .refine((v) => /^https:\/\/[^\s]+$/.test(v), "invalid_link")
+        .optional(),
+    })
+    .safeParse({ body: fd.get("body"), city_id: str(fd, "city_id"), venue_id: str(fd, "venue_id"), link: str(fd, "link") });
   if (!parsed.success) return fail("validation", zodFieldErrors(parsed.error));
+  if (!(await getCurrentUser())?.isAdmin) {
+    await refused("admin_start_promo_campaign", "forbidden");
+    return fail("forbidden");
+  }
   const supabase = await createClient();
+
+  // The picture, if any: a JPG or PNG (WhatsApp shows those as photos), under a new name.
+  // Storage lets only admins write to promo-images; the database checks it is there.
+  let imagePath: string | null = null;
+  const file = fd.get("image");
+  if (file instanceof File && file.size > 0) {
+    const img = await inspectImage(file);
+    if (!img.ok) return fail("validation", { image: img.error });
+    if (img.ext !== "jpg" && img.ext !== "png") return fail("validation", { image: "promo_image_type" });
+    imagePath = randomFileName(img.ext);
+    const { error: upError } = await supabase.storage
+      .from("promo-images")
+      .upload(imagePath, img.bytes, { cacheControl: UPLOAD_CACHE_SECONDS, contentType: img.mime, upsert: false });
+    if (upError) {
+      logger.warn("promo_image_upload_failed", { message: upError.message.slice(0, 120) });
+      return fail("upload_failed");
+    }
+  }
+  const forget = async () => {
+    if (imagePath) await supabase.storage.from("promo-images").remove([imagePath]);
+  };
+
   const { data, error } = await supabase.rpc("admin_start_promo_campaign", {
     p_body: parsed.data.body,
     p_city_id: parsed.data.city_id as string,
+    ...(imagePath ? { p_image_path: imagePath } : {}),
+    ...(parsed.data.venue_id ? { p_venue_id: parsed.data.venue_id } : {}),
+    ...(parsed.data.link ? { p_link_url: parsed.data.link } : {}),
   });
   if (error) {
+    await forget();
+    // A database without 0031 knows no picture, place or link.
+    if (error.code === "PGRST202") return fail("promo_media_unavailable");
     const code = dbErrorCode(error, "admin_start_promo_campaign");
     await refused("admin_start_promo_campaign", code);
     return fail(code);

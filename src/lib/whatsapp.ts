@@ -61,6 +61,9 @@ async function callBot<T>(method: "GET" | "POST", path: string, body?: unknown, 
   }
 }
 
+/** A place WhatsApp shows as a map pin. */
+export type BotPlace = { lat: number; lng: number; name?: string; address?: string };
+
 export type BotState = "queued" | "sent" | "failed" | "cancelled" | "opted_out" | "unknown";
 
 /** What the bot found when it checked SITE_URL (whatsapp-bot/src/site.mjs, checkSite). */
@@ -85,7 +88,8 @@ export interface BotHealth {
 }
 
 export const bot = {
-  send: (msg: { id: string; to: string; text: string; kind: "booking" | "promo" }) =>
+  /** A message for the bot's queue; a promotion may carry a picture (an https address) and a place. */
+  send: (msg: { id: string; to: string; text: string; kind: "booking" | "promo"; image?: { url: string }; location?: BotPlace }) =>
     callBot<{ id: string; state: BotState; position?: number }>("POST", "/send", msg),
   status: (ids: string[]) => callBot<{ results: Record<string, { state: BotState; error?: string; at?: string }> }>("POST", "/status", { ids }),
   cancel: (ids: string[], reason: string) => callBot<{ cancelled: string[] }>("POST", "/cancel", { ids, reason }),

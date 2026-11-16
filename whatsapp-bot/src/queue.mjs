@@ -72,13 +72,15 @@ export function startOfDay(ms, timeZone) {
 
 /**
  * @typedef {"reply" | "booking" | "promo"} Kind
- * @typedef {{ id: string, kind: Kind, to: string, jid: string | null, text: string, at: number, tries: number }} Item
+ * @typedef {{ lat: number, lng: number, name?: string, address?: string }} Place
+ * @typedef {{ image?: { url: string }, location?: Place }} Media
+ * @typedef {{ id: string, kind: Kind, to: string, jid: string | null, text: string, at: number, tries: number } & Media} Item
  * @typedef {{ state: "sent" | "failed" | "cancelled" | "opted_out", error?: string, at: number }} Done
  * @typedef {{
  *   isReady(): boolean,
  *   lookup(phone: string): Promise<string | null>,
  *   typing(jid: string, ms: number): Promise<void>,
- *   send(jid: string, text: string): Promise<void>,
+ *   send(jid: string, text: string, media?: Media): Promise<void>,
  * }} Transport
  * @typedef {{
  *   minDelayMs: number, maxDelayMs: number, maxPerHour: number, maxPerDay: number,
@@ -161,9 +163,10 @@ export class OutboundQueue {
 
   /**
    * Adds a message. The same id twice is the same message: the answer is its current state.
-   * @param {{ id?: string, kind?: Kind, to: string, jid?: string | null, text: string }} msg
+   * A picture goes with the text; a place follows it as a map pin.
+   * @param {{ id?: string, kind?: Kind, to: string, jid?: string | null, text: string } & Media} msg
    */
-  enqueue({ id, kind = "booking", to, jid = null, text }) {
+  enqueue({ id, kind = "booking", to, jid = null, text, image, location }) {
     if (id) {
       const waiting = this.items.find((i) => i.id === id);
       if (waiting) return { id, state: "queued", position: this.position(waiting) };
@@ -172,7 +175,17 @@ export class OutboundQueue {
     }
     if (this.items.length >= this.config.maxQueue) throw new QueueFullError();
     /** @type {Item} */
-    const item = { id: id ?? `reply-${this.now()}-${Math.floor(this.random() * 1e9)}`, kind, to, jid, text, at: this.now(), tries: 0 };
+    const item = {
+      id: id ?? `reply-${this.now()}-${Math.floor(this.random() * 1e9)}`,
+      kind,
+      to,
+      jid,
+      text,
+      at: this.now(),
+      tries: 0,
+      ...(image ? { image } : {}),
+      ...(location ? { location } : {}),
+    };
     this.items.push(item);
     this.dirty = true;
     return { id: item.id, state: "queued", position: this.position(item) };
@@ -357,7 +370,7 @@ export class OutboundQueue {
         item.jid = jid; // a retry needn't ask again
       }
       await this.transport.typing(jid, this.typingMs(item.text, item.kind));
-      await this.transport.send(jid, item.text);
+      await this.transport.send(jid, item.text, { ...(item.image ? { image: item.image } : {}), ...(item.location ? { location: item.location } : {}) });
       this.errors = 0;
       if (item.kind !== "reply") this.sends.push(this.now());
       this.finish(item, "sent");

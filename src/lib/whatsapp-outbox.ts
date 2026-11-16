@@ -3,7 +3,8 @@ import { publicEnv } from "@/lib/env";
 import { logger } from "@/lib/log";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Json } from "@/lib/supabase/types";
-import { bot, whatsappConfig, type BotResult } from "@/lib/whatsapp";
+import { publicStorageUrl } from "@/lib/storage";
+import { bot, whatsappConfig, type BotPlace, type BotResult } from "@/lib/whatsapp";
 import { bookingMessage, promoMessage, type BookingPayload } from "@/lib/whatsapp-messages";
 
 /**
@@ -35,14 +36,37 @@ export interface ClaimedMessage {
   payload: Json;
   recipient_name: string | null;
   campaign_body: string | null;
+  /** A promotion's picture (in promo-images), place and link (migration 0031; absent before it). */
+  campaign_image?: string | null;
+  campaign_place?: Json | null;
+  campaign_link?: string | null;
 }
 
 /** The text of a claimed message, from its template. Null when it can't be written. */
 export function renderMessage(row: ClaimedMessage, siteUrl = publicEnv.siteUrl): string | null {
   if (row.body) return row.body;
-  if (row.kind === "promo") return row.campaign_body ? promoMessage({ id: row.id, body: row.campaign_body, name: row.recipient_name }) : null;
+  if (row.kind === "promo") {
+    return row.campaign_body ? promoMessage({ id: row.id, body: row.campaign_body, name: row.recipient_name, link: row.campaign_link }) : null;
+  }
   const p = row.payload as unknown as BookingPayload | null;
   return p && p.event && p.venue_name && p.starts_at ? bookingMessage(p, siteUrl) : null;
+}
+
+/** What goes with a promotion's text: its picture, by its public address, and its place. */
+export function promoExtras(row: ClaimedMessage): { image?: { url: string }; location?: BotPlace } {
+  if (row.kind !== "promo") return {};
+  const url = row.campaign_image ? publicStorageUrl("promo-images", row.campaign_image) : null;
+  const p = row.campaign_place as { lat?: unknown; lng?: unknown; name?: unknown; address?: unknown } | null | undefined;
+  const place =
+    p && typeof p.lat === "number" && typeof p.lng === "number"
+      ? {
+          lat: p.lat,
+          lng: p.lng,
+          ...(typeof p.name === "string" && p.name ? { name: p.name } : {}),
+          ...(typeof p.address === "string" && p.address ? { address: p.address } : {}),
+        }
+      : null;
+  return { ...(url ? { image: { url } } : {}), ...(place ? { location: place } : {}) };
 }
 
 export interface OutboxRun {
@@ -99,7 +123,7 @@ export async function deliverWhatsapp(): Promise<OutboxRun> {
       handed.push({ id: row.id, outcome: "failed", error: "render_failed" });
       continue;
     }
-    const res = await bot.send({ id: row.id, to: row.phone, text, kind: row.kind });
+    const res = await bot.send({ id: row.id, to: row.phone, text, kind: row.kind, ...promoExtras(row) });
     const outcome = outcomeOf(res);
     // The bot is down, paused or full: keep the rest for the next run.
     if (outcome === "later") holdRest = true;

@@ -54,6 +54,7 @@
 - Zod validation in server actions. Machine error codes are returned, never raw DB errors.
 - SQL lives only in migrations. RPCs use parameters and an empty `search_path`. Search input escapes `%`/`_` before `ILIKE`.
 - Uploads are checked server-side by size and magic bytes (JPEG/PNG/WebP), stored under random names, and limited by bucket MIME and size. Storage policies check path ownership.
+  - Offer pictures go to `promo-images`, which must be public: WhatsApp fetches them through the bot. Only admins may write or delete there (`private.is_admin()` in the storage policy; DB test), and only JPEG or PNG. A campaign accepts only a picture that is really in that bucket, named as the site names them. A link must be `https://`.
 - `safeNext()` only allows same-site relative redirects after sign-in. It parses the address the way the browser will and rejects backslashes and control characters, so `/\t/evil.example` (which a browser reads as `//evil.example`) is refused (unit tests).
 - Messages and user text render as text. React escapes them, and `dangerouslySetInnerHTML` is not used for user content.
 

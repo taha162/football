@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { readConfig, siteOrigin } from "../../whatsapp-bot/src/config.mjs";
 import { classify, createInboundHandler, hourlyLimiter, lidUser, maskPhone, phoneOfJid, senderPhone, textOf } from "../../whatsapp-bot/src/inbound.mjs";
 import { isBanSignal, OutboundQueue, QueueFullError, startOfDay } from "../../whatsapp-bot/src/queue.mjs";
-import { handle } from "../../whatsapp-bot/src/server.mjs";
+import { handle, readMedia } from "../../whatsapp-bot/src/server.mjs";
 import { checkSite, forwardToSite, type ForwardResult } from "../../whatsapp-bot/src/site.mjs";
 import { memoryStore } from "../../whatsapp-bot/src/store.mjs";
 import { findCode, isStopKeyword } from "../../whatsapp-bot/src/text.mjs";
@@ -33,6 +33,8 @@ function setup(opts: { config?: Partial<typeof CONFIG>; random?: () => number; s
   const events: string[] = [];
   /** How long each "typing…" lasted, in order. */
   const typed: number[] = [];
+  /** The picture and place that went with each message. */
+  const sentMedia: unknown[] = [];
   const transport = {
     ready: true,
     isReady() {
@@ -43,8 +45,9 @@ function setup(opts: { config?: Partial<typeof CONFIG>; random?: () => number; s
       events.push(`typing ${jid}`);
       typed.push(ms);
     }),
-    send: vi.fn(async (jid: string, text: string) => {
+    send: vi.fn(async (jid: string, text: string, media?: unknown) => {
       events.push(`send ${jid} ${text}`);
+      sentMedia.push(media);
     }),
   };
   const queue = new OutboundQueue({
@@ -628,6 +631,40 @@ describe("the HTTP API the site calls", () => {
     const inbound = () => [{ at: "2026-11-14T09:00:00.000Z", kind: "code" as const, outcome: "site_refused_secret" }];
     const out = handle({ method: "GET", path: "/health", authorization: `Bearer ${SECRET}`, body: null }, { secret: SECRET, queue, connection: connected, site, inbound });
     expect(out.body).toMatchObject({ linked: true, site: site(), inbound: inbound() });
+  });
+
+  it("a promotion can carry a picture (https only) and a place; anything else about them is refused or dropped", async () => {
+    const { queue, transport, sendNext } = setup();
+    const place = { lat: 36.34, lng: 43.13, name: "ملعب الزهور", address: "حي الزهور" };
+    expect(
+      call(queue, "POST", "/send", { id: "p-1", to: "9647700000001", text: "عرض", kind: "promo", image: { url: "https://x.supabase.co/storage/v1/object/public/promo-images/a.jpg" }, location: place }).status,
+    ).toBe(202);
+    expect(queue.items[0]).toMatchObject({ image: { url: "https://x.supabase.co/storage/v1/object/public/promo-images/a.jpg" }, location: place });
+    expect(call(queue, "POST", "/send", { to: "9647700000001", text: "x", image: { url: "http://x.example/a.jpg" } })).toMatchObject({ status: 400, body: { error: "invalid_image" } });
+    expect(call(queue, "POST", "/send", { to: "9647700000001", text: "x", image: "https://x.example/a.jpg" })).toMatchObject({ status: 400, body: { error: "invalid_image" } });
+    expect(call(queue, "POST", "/send", { to: "9647700000001", text: "x", location: { lat: 91, lng: 0 } })).toMatchObject({ status: 400, body: { error: "invalid_location" } });
+    expect(call(queue, "POST", "/send", { to: "9647700000001", text: "x", location: { lat: "a", lng: 1 } })).toMatchObject({ status: 400, body: { error: "invalid_location" } });
+    // Only what is used is kept: a long name is cut, an empty address left out, other fields ignored.
+    expect(readMedia({ location: { lat: 1, lng: 2, name: "x".repeat(150), address: " ", extra: "y" } })).toEqual({ ok: true, media: { location: { lat: 1, lng: 2, name: "x".repeat(100) } } });
+    expect(readMedia({})).toEqual({ ok: true, media: {} });
+
+    // They reach WhatsApp with the text.
+    expect(await sendNext()).toEqual(["p-1"]);
+    expect(transport.send).toHaveBeenCalledWith("9647700000001@s.whatsapp.net", "عرض", {
+      image: { url: "https://x.supabase.co/storage/v1/object/public/promo-images/a.jpg" },
+      location: place,
+    });
+  });
+
+  it("keeps a waiting picture and place over a restart", async () => {
+    const store = memoryStore();
+    const first = setup({ store });
+    first.queue.enqueue({ id: "p-2", kind: "promo", to: "9647700000001", text: "عرض", image: { url: "https://x.example/b.png" }, location: { lat: 1, lng: 2 } });
+    first.queue.dirty = true;
+    await first.queue.persist();
+    const second = setup({ store });
+    await second.queue.restore();
+    expect(second.queue.items[0]).toMatchObject({ id: "p-2", image: { url: "https://x.example/b.png" }, location: { lat: 1, lng: 2 } });
   });
 
   it("queues messages, checks what it is given, and refuses while WhatsApp restricts the number", () => {
