@@ -1467,6 +1467,9 @@ isOneToOne: true
 "add_venue_staff":
 { Args: { "p_role": Database["public"]['Enums']["venue_role"],"p_user_id": string,"p_venue_id": string }; Returns: undefined
                            },
+"admin_delete_user":
+{ Args: { "p_reason"?: string,"p_user_id": string }; Returns: Json
+                           },
 "admin_list_users":
 { Args: { "p_limit"?: number,"p_offset"?: number,"p_search"?: string }; Returns: {
               "city_id": string,"created_at": string,"display_name": string,"email": string,"id": string,"last_sign_in_at": string,"phone": string,"roles": (Database["public"]['Enums']["app_role"])[],"status": Database["public"]['Enums']["account_status"]
@@ -1510,6 +1513,9 @@ isOneToOne: true
                            },
 "admin_upsert_city":
 { Args: { "p_country_code": string,"p_currency": string,"p_id": string,"p_is_active"?: boolean,"p_latitude"?: number,"p_longitude"?: number,"p_name_ar": string,"p_name_en": string,"p_slug": string,"p_timezone": string }; Returns: string
+                           },
+"admin_user_deletion_preview":
+{ Args: { "p_user_id": string }; Returns: Json
                            },
 "admin_users_with_second_factor":
 { Args: { "p_user_ids": (string)[] }; Returns: string[]

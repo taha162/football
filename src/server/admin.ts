@@ -1,9 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { getLocale } from "next-intl/server";
 import { z } from "zod";
+import { redirect } from "@/i18n/navigation";
 import { dbErrorCode, fail, ok, str, uuid, type ActionState } from "@/lib/actions";
 import { logger } from "@/lib/log";
+import { DELETE_WORD } from "@/lib/member-deletion";
 import { removeMessageFiles } from "@/lib/message-files";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -74,6 +77,50 @@ export async function resetSecondFactorAction(_: ActionState, fd: FormData): Pro
   }
   logger.info("second_factor_reset", { user: user.data });
   return res;
+}
+
+const MEMBER_FILE_BUCKETS = ["avatars", "message-images", "message-voice"] as const;
+
+/**
+ * Deletes a member completely (Admin → Users → «حذف نهائي»). The database
+ * decides who may (admins only, after the second step; never oneself, an
+ * admin or a venue's owner), does it in one transaction, records it, and says
+ * which files were the member's; those are then removed from Storage. Nothing
+ * here is trusted from the form but the member's id, the typed word and the
+ * reason.
+ */
+export async function deleteMemberAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  const user = uuid.safeParse(fd.get("user_id"));
+  if (!user.success) return fail("invalid");
+  if (str(fd, "confirm") !== DELETE_WORD) return fail("validation", { confirm: "delete_word" });
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("admin_delete_user", { p_user_id: user.data, p_reason: str(fd, "reason") ?? "" });
+  if (error) {
+    const code = dbErrorCode(error, "admin_delete_user");
+    if (code === "forbidden" || code === "not_authenticated" || code === "mfa_required") {
+      const { data: me } = await supabase.auth.getUser();
+      logger.warn("admin_action_refused", { action: "admin_delete_user", code, by: me.user?.id ?? null });
+    }
+    return fail(code);
+  }
+  // The member's own files: their picture, and the pictures and voice notes of their messages.
+  const files = ((data ?? {}) as { files?: Partial<Record<(typeof MEMBER_FILE_BUCKETS)[number], string[]>> }).files ?? {};
+  const storage = createAdminClient()?.storage;
+  let left = 0;
+  for (const bucket of MEMBER_FILE_BUCKETS) {
+    const paths = (files[bucket] ?? []).filter((p) => typeof p === "string" && p.length > 0);
+    for (let i = 0; i < paths.length; i += 100) {
+      const chunk = paths.slice(i, i + 100);
+      const { error: removeError } = storage ? await storage.from(bucket).remove(chunk) : { error: { message: "no_service_role" } };
+      if (removeError) left += chunk.length;
+    }
+  }
+  const { data: me } = await supabase.auth.getUser();
+  logger.info("admin_user_deleted", { user: user.data, by: me.user?.id ?? null, files_left: left });
+  if (left > 0) logger.error("admin_user_files_left", { user: user.data, count: left });
+  revalidatePath("/[locale]/admin", "layout");
+  redirect({ href: { pathname: "/admin/users", query: { deleted: "1" } }, locale: await getLocale() });
+  return ok("member_deleted");
 }
 
 export async function setRoleAction(_: ActionState, fd: FormData): Promise<ActionState> {

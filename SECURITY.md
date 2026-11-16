@@ -47,6 +47,15 @@
   - Pages repeat the checks for UX (redirects), but they are not the guard.
 - **Pages that need an account** are listed in `src/proxy.ts`. A signed-out visitor gets a 307 to sign-in, with the return address, before anything renders. E2E (Journey K) checks fifteen of them, and that the public listings stay open.
 - **Suspension** blocks every RPC through `require_user` and is recorded in the audit log.
+- **Deleting a member for good** (Admin → Users → «حذف نهائي», migration 0030):
+  - The database decides: `admin_delete_user` runs `require_admin()`, so it's for admins only, after the second step. Moderators can't, and nobody else can through the API.
+  - It refuses: deleting oneself, deleting an admin (the role goes first), and deleting a venue's owner, so no venue is left without one.
+  - It deletes in one transaction: messages, upcoming bookings cancelled with the venue told, then `auth.users`. Everything that is the member's own goes with it by `ON DELETE CASCADE`.
+  - What is the venue's record stays without the name: bookings become `manual` under «عضو محذوف». Reports, the audit log, and the teams and venues they created also stay.
+  - It is written to the audit log first, with counts and the reason only.
+  - It returns the member's files (picture, conversation pictures, voice notes). The server removes them with the service role and logs any it couldn't (`admin_user_files_left`).
+  - The confirmation page says what goes and what stays, and the admin types «حذف»; the server checks the word.
+  - DB tests cover who may, what goes, what stays and each refusal. E2E covers the page, the word and a moderator turned away.
 - **Blocking** prevents direct messages, joining the blocker's matches and invitations.
 
 ## Input handling
@@ -170,7 +179,7 @@ Supabase backs up the database daily on paid plans. How many days are kept depen
   - Every promotion ends with "send 0 to stop". Sending `0`, `stop` or «إلغاء» opts the number out of **everything** at once and drops what still waits for it, in the site and in the bot.
   - Queued messages are re-checked just before they go (opted out, number changed, campaign stopped, booking already started) and skipped with the reason.
   - `outbound_messages` and `whatsapp_campaigns` have row security with no policy and no grants for API roles; admins read campaign totals through role-checked functions. Message rows are deleted after 90 days.
-- Account deletion is currently handled by support (see IMPLEMENTATION_STATUS.md). User data is never deleted by tests or scripts.
+- Account deletion: an admin deletes a member for good from Admin → Users (above, "Deleting a member for good"), for example at the member's request. User data is never deleted by scripts; tests delete only the users they create.
 
 ## Reporting a vulnerability
 

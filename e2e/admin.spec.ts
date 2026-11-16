@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { createAuthUser, createMatchFor, expect, rpc, signIn, test } from "./fixtures";
+import { admin, createAuthUser, createMatchFor, expect, PASSWORD, rpc, signIn, test } from "./fixtures";
 
 test.describe("Journey I — reporting and moderation", () => {
   test("a user reports a match, an administrator hides it and resolves the report", async ({ browser }) => {
@@ -96,5 +96,67 @@ test.describe("Journey I — reporting and moderation", () => {
       await page.goto(path);
       await expect(page).toHaveURL(/\/ar\/dashboard/);
     }
+  });
+});
+
+test.describe("Deleting a member for good", () => {
+  test("an admin sees what goes, confirms with «حذف», and the member is gone; admins have no such button", async ({ page, browser }) => {
+    const boss = await createAuthUser("Boss", { admin: true });
+    const target = await createAuthUser(`Gone ${randomUUID().slice(0, 6)}`);
+    const otherAdmin = await createAuthUser(`Second boss ${randomUUID().slice(0, 6)}`, { admin: true });
+    await createMatchFor(target);
+    await signIn(page, boss);
+
+    await page.goto(`/ar/admin/users?q=${encodeURIComponent(target.name)}`);
+    await page.getByRole("row").filter({ hasText: target.name }).getByRole("link", { name: "حذف نهائي" }).click();
+    await page.waitForURL(new RegExp(`/ar/admin/users/${target.id}/delete`));
+    await expect(page.getByRole("heading", { name: "حذف العضو نهائياً" })).toBeVisible();
+    await expect(page.getByTestId("delete-goes")).toContainText("المباريات التي نظّمها: ١");
+
+    // Anything but the word deletes nothing.
+    const confirm = page.getByRole("textbox", { name: /للتأكيد اكتب/ });
+    await confirm.fill("نعم");
+    await page.getByRole("button", { name: "احذف نهائياً" }).click();
+    await expect(page.getByText("اكتب كلمة «حذف» كما هي للتأكيد.")).toBeVisible();
+    expect(await admin("select 1 from auth.users where id = $1", [target.id])).toHaveLength(1);
+
+    await page.getByRole("textbox", { name: "السبب (اختياري، يُحفظ في سجل الإدارة)" }).fill("حساب تجريبي");
+    await confirm.fill("حذف");
+    await page.getByRole("button", { name: "احذف نهائياً" }).click();
+    await page.waitForURL(/\/ar\/admin\/users\?deleted=1/);
+    await expect(page.getByText("حُذف العضو نهائياً.")).toBeVisible();
+    expect(await admin("select 1 from auth.users where id = $1", [target.id])).toHaveLength(0);
+    const [log] = await admin<{ actor_id: string; details: { reason?: string } }>(
+      "select actor_id, details from public.audit_logs where action = 'user_deleted' and entity_id = $1",
+      [target.id],
+    );
+    expect(log).toMatchObject({ actor_id: boss.id, details: { reason: "حساب تجريبي" } });
+
+    // An admin has no such button, and their page refuses: the role goes first.
+    await page.goto(`/ar/admin/users?q=${encodeURIComponent(otherAdmin.name)}`);
+    await expect(page.getByRole("row").filter({ hasText: otherAdmin.name }).getByRole("link", { name: "حذف نهائي" })).toHaveCount(0);
+    await page.goto(`/ar/admin/users/${otherAdmin.id}/delete`);
+    await expect(page.getByText("هذا العضو مدير.", { exact: false })).toBeVisible();
+    await expect(page.getByRole("button", { name: "احذف نهائياً" })).toHaveCount(0);
+
+    // The deleted member can't sign in any more.
+    const context = await browser.newContext();
+    const other = await context.newPage();
+    await other.goto("/ar/sign-in");
+    await other.getByRole("textbox", { name: /^البريد الإلكتروني/ }).fill(target.email);
+    await other.getByRole("textbox", { name: "كلمة المرور" }).fill(PASSWORD);
+    await other.getByRole("button", { name: "تسجيل الدخول" }).click();
+    await expect(other.getByText("البريد الإلكتروني أو كلمة المرور غير صحيحة.")).toBeVisible();
+    await context.close();
+  });
+
+  test("moderators can't reach the delete page", async ({ page }) => {
+    const moderator = await createAuthUser("Mod");
+    await admin("insert into public.user_roles (user_id, role) values ($1, 'moderator')", [moderator.id]);
+    const target = await createAuthUser("Target");
+    await signIn(page, moderator);
+    await page.goto(`/ar/admin/users/${target.id}/delete`);
+    await expect(page).not.toHaveURL(/\/delete/);
+    expect(await admin("select 1 from auth.users where id = $1", [target.id])).toHaveLength(1);
   });
 });
