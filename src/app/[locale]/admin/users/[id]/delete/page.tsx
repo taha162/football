@@ -8,7 +8,7 @@ import { DELETE_WORD } from "@/lib/member-deletion";
 import { createClient } from "@/lib/supabase/server";
 import { deleteMemberAction } from "@/server/admin";
 import { ActionForm, FormField, Hidden, SubmitButton } from "@/components/ui/action-form";
-import { Input, Textarea } from "@/components/ui/field";
+import { controlProps, Input, Textarea } from "@/components/ui/field";
 import { Alert, Card, CardBody, PageHeader } from "@/components/ui/primitives";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -99,11 +99,12 @@ export default async function DeleteMemberPage({ params }: PageProps<"/[locale]/
           <CardBody>
             <ActionForm action={deleteMemberAction}>
               <Hidden values={{ user_id: id }} />
+              {/* A server page can't hand a function to FormField (a client component): controlProps instead. */}
               <FormField name="reason" label={t("deleteReason")}>
-                {(a) => <Textarea {...a} rows={2} maxLength={500} />}
+                <Textarea {...controlProps("reason")} rows={2} maxLength={500} />
               </FormField>
               <FormField name="confirm" label={t("deleteConfirm", { word: DELETE_WORD })} required>
-                {(a) => <Input {...a} required autoComplete="off" spellCheck={false} maxLength={20} />}
+                <Input {...controlProps("confirm")} required autoComplete="off" spellCheck={false} maxLength={20} />
               </FormField>
               <SubmitButton variant="danger" className="self-start">
                 {t("deleteSubmit")}
