@@ -46,8 +46,10 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     serverActions: {
-      // Image uploads (validated to <= 5 MB server-side).
-      bodySizeLimit: "6mb",
+      // Vercel refuses any request over 4.5 MB before the site sees it; the same here, so local runs
+      // behave as production. Pictures are made smaller in the browser and files stopped at 4 MB
+      // (src/lib/shrink-image.ts, src/components/ui/action-form.tsx).
+      bodySizeLimit: "4.5mb",
     },
     // Turbopack's on-disk cache (on by default since Next 16.3) has served a
     // stale globals.css from earlier runs, both in production builds and

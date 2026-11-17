@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { admin, createAuthUser, expect, signIn, test, type TestUser } from "./fixtures";
+import { admin, choosePhonePhoto, createAuthUser, expect, signIn, storedPictureSize, test, type TestUser } from "./fixtures";
 
 /** An 8×8 lime PNG. */
 const PHOTO = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAIAAABLbSncAAAAFUlEQVR42mPc8cmeARtgYsABBqcEAIHGAfltyicCAAAAAElFTkSuQmCC", "base64");
@@ -34,6 +34,24 @@ test.describe("Profile photo", () => {
     await page.reload();
     await expect(headerAvatar(page).locator("img")).toHaveCount(0);
     await expect(headerAvatar(page)).toHaveText(/^\p{L}{1,2}$/u);
+  });
+
+  test("a phone-sized photo is made smaller before it is sent, stays upright, and becomes the avatar", async ({ page }) => {
+    const user = await createAuthUser("Big photo");
+    await signIn(page, user);
+    await page.goto("/ar/profile");
+    // Over the 4.5 MB the host accepts in one request: before, the page broke («حدث خطأ ما»).
+    expect(await choosePhonePhoto(page.getByLabel("الصورة الشخصية"))).toBeGreaterThan(4.5 * 1024 * 1024);
+    await page.getByRole("button", { name: "رفع صورة" }).click();
+    await expect(page.getByText("تم تحديث الصورة.")).toBeVisible();
+    const [stored] = await admin<{ size: number; name: string }>(
+      "select (o.metadata ->> 'size')::int as size, o.name from public.profiles p join storage.objects o on o.bucket_id = 'avatars' and o.name = p.avatar_path where p.id = $1",
+      [user.id],
+    );
+    expect(stored.size).toBeGreaterThan(0);
+    expect(stored.size).toBeLessThan(1_500_000);
+    // Taken upright (stored on its side, with the tag to turn it): it arrives upright, 1600 px tall.
+    expect(await storedPictureSize(page, `avatars/${stored.name}`)).toEqual({ width: 1200, height: 1600 });
   });
 
   test("when picture storage is not public, the upload is refused with a clear message", async ({ page }) => {

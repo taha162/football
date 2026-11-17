@@ -9,33 +9,12 @@ import { Textarea } from "@/components/ui/field";
 import { Alert } from "@/components/ui/primitives";
 import { formatDistance, formatDuration } from "@/lib/duration";
 import type { SharedPoint } from "@/lib/geo";
+import { shrinkImage } from "@/lib/shrink-image";
 import { sendMessageAction } from "@/server/messages";
 import { LocationMap } from "./location-map";
 
-const MAX_SIDE = 1600;
 /** Longest voice note, in seconds (the server accepts up to 300). */
 export const MAX_RECORDING_SECONDS = 120;
-
-/**
- * Phone photos are often several megabytes: shrink to at most 1600 px on the
- * long side as JPEG before sending (faster on mobile data, and under the 5 MB
- * limit). Falls back to the original file if the browser can't decode it.
- */
-async function shrink(file: File): Promise<File> {
-  try {
-    const bitmap = await createImageBitmap(file);
-    const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height));
-    if (scale === 1 && file.size < 1_500_000 && file.type === "image/jpeg") return file;
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.round(bitmap.width * scale);
-    canvas.height = Math.round(bitmap.height * scale);
-    canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.82));
-    return blob ? new File([blob], "photo.jpg", { type: "image/jpeg" }) : file;
-  } catch {
-    return file;
-  }
-}
 
 /**
  * Recording formats in order of preference. AAC in MP4 plays everywhere
@@ -175,7 +154,8 @@ function TextComposer({ conversationId, onMode, onSending }: { conversationId: s
                 const input = e.currentTarget;
                 const chosen = input.files?.[0];
                 if (!chosen) return clear();
-                const small = await shrink(chosen);
+                // Phone photos: at most 1600 px as JPEG before sending (src/lib/shrink-image.ts), and previewed as sent.
+                const small = await shrinkImage(chosen);
                 if (small !== chosen) {
                   const list = new DataTransfer();
                   list.items.add(small);
