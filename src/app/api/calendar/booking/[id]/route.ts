@@ -1,4 +1,5 @@
 import { buildIcs } from "@/lib/calendar";
+import { API_LIMITS, hit, limitAddress, tooManyRequests } from "@/lib/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 import { BOOKING_PLACE, bookingEvent, calendarWorthy, type BookingForCalendar } from "@/server/venues/calendar";
 
@@ -9,7 +10,9 @@ export const dynamic = "force-dynamic";
  * Calendar" on iPhone). Only the customer who booked and the venue's staff
  * can read the booking (RLS), and only while it still holds its time.
  */
-export async function GET(_: Request, ctx: { params: Promise<{ id: string }> }) {
+export async function GET(request: Request, ctx: { params: Promise<{ id: string }> }) {
+  const limit = hit(API_LIMITS.calendar, limitAddress(request.headers));
+  if (!limit.ok) return tooManyRequests(limit.retryAfter);
   const { id } = await ctx.params;
   if (!/^[0-9a-f-]{36}$/.test(id)) return new Response(null, { status: 404 });
   const supabase = await createClient();

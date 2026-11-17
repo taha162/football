@@ -100,6 +100,7 @@
     "termsHeading": "الشروط",
     "acceptTerms": "أوافق على <terms>شروط الاستخدام</terms> و<privacy>سياسة الخصوصية</privacy>.",
     "linkInvalid": "الرابط غير صالح أو منتهي الصلاحية. حاول مرة أخرى.",
+    "sessionExpired": "انتهت جلستك، فسجّل الدخول من جديد. لحمايتك ينتهي تسجيل الدخول بعد 30 يوماً، أو بعد أسبوع دون استخدام.",
     "emailOrPhone": "البريد الإلكتروني أو رقم الهاتف",
     "emailOrPhoneHint": "إذا أنشأت حسابك برقم هاتفك، اكتب رقمك مثل 07701234567.",
     "verifyMethod": "طريقة التحقق",
@@ -646,7 +647,8 @@
     "booking_deposit_refund_due": "وصل موعد حجز {starts_at} في {venue_name} دون التأكد من العربون، فيجب إرجاعه للزبون.",
     "booking_cancelled_refund": "ألغى {venue_name} حجزك يوم {starts_at}، وسيُرجع لك العربون.",
     "booking_deposit_refunded": "أرجع {venue_name} عربون حجزك يوم {starts_at}.",
-    "missed_call": "مكالمة فائتة من {caller_name}."
+    "missed_call": "مكالمة فائتة من {caller_name}.",
+    "security_alert": "{kind, select, code_blocked {تنبيه أمني: رموز تحقق خاطئة متكررة} other {تنبيه أمني: كلمات مرور خاطئة متكررة}}{has_account, select, yes { على الحساب {account}} other {}}، فأُوقف تسجيل الدخول حتى 15 دقيقة. التفاصيل في سجل التدقيق."
   },
   "notificationTypes": {
     "match_participant_joined": "انضمام لاعب لمباراتي",

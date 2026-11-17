@@ -233,8 +233,10 @@ secure_password_change = true
 max_frequency = "1s"
 # Number of characters used in the email OTP.
 otp_length = 6
-# Number of seconds before the email OTP expires (defaults to 1 hour).
-otp_expiry = 3600
+# Number of seconds before the email OTP expires (defaults to 1 hour). Also the life of a
+# password-reset link: 15 minutes here; set the same in production (Supabase → Authentication →
+# Sign In / Providers → Email → Email OTP Expiration). Each link or code works once.
+otp_expiry = 900
 
 # Use a production-ready SMTP server
 # [auth.email.smtp]
@@ -286,12 +288,13 @@ max_frequency = "5s"
 # [auth.sms.test_otp]
 # 14152127777 = "123456"
 
-# Configure logged in session timeouts.
-# [auth.sessions]
+# Configure logged in session timeouts. The site enforces the same itself on any plan
+# (src/lib/session-policy.ts); on a paid plan production can set them in Supabase too.
+[auth.sessions]
 # Force log out after the specified duration.
-# timebox = "24h"
+timebox = "720h"
 # Force log out if the user has been inactive longer than the specified duration.
-# inactivity_timeout = "8h"
+inactivity_timeout = "168h"
 
 # This hook runs before a new user is created and allows developers to reject the request based on the incoming user object.
 # [auth.hook.before_user_created]

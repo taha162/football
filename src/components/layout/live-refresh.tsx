@@ -81,7 +81,7 @@ export function LiveRefresh({ userId, checkSeconds = 30 }: { userId: string; che
     let channel: RealtimeChannel | null = null;
     let closed = false;
     // Joined as the person (see getRealtimeClient), so only their own rows arrive.
-    void getRealtimeClient().then((supabase) => {
+    void getRealtimeClient(userId).then((supabase) => {
       if (closed) return;
       let live = supabase
         .channel(`live:${userId}`)

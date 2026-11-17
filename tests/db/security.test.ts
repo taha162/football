@@ -117,8 +117,16 @@ describe("private data isolation", () => {
   });
 
   it("e-mail addresses are never exposed through profiles", async () => {
+    // What visitors may read of a profile: granted column by column (migration 0032), so `select *` is refused.
+    const readable = (
+      await admin<{ column_name: string }>(
+        "select column_name from information_schema.column_privileges where table_schema = 'public' and table_name = 'profiles' and grantee = 'anon' and privilege_type = 'SELECT'",
+      )
+    ).map((r) => r.column_name);
+    expect(readable).toContain("display_name");
+    expect(readable).not.toContain("email");
     const user = await createUser();
-    const [row] = await asUser<Record<string, unknown>>(null, "select * from public.profiles where id = $1", [user]);
+    const [row] = await asUser<Record<string, unknown>>(null, `select ${readable.join(", ")} from public.profiles where id = $1`, [user]);
     expect(Object.keys(row)).not.toContain("email");
     expect(await errorOf(asUser(user, "select email from auth.users"))).toMatch(/permission denied/);
   });

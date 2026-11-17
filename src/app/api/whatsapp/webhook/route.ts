@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { logger } from "@/lib/log";
+import { API_LIMITS, hit, limitAddress, spent, tooManyRequests } from "@/lib/rate-limit";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { bearerMatches, whatsappConfig } from "@/lib/whatsapp";
 import { isStopKeyword, NO_TYPED_NUMBER_REPLY, STOPPED_REPLY, verificationReply, type ReceiveResult } from "@/lib/whatsapp-messages";
@@ -25,7 +26,11 @@ const Inbound = z.union([
  */
 export async function GET(request: NextRequest) {
   const cfg = whatsappConfig();
+  const address = limitAddress(request.headers);
+  const blocked = spent(API_LIMITS.badSecret, address);
+  if (!blocked.ok) return tooManyRequests(blocked.retryAfter);
   if (!cfg.enabled || !bearerMatches(request.headers.get("authorization"), cfg.secret)) {
+    hit(API_LIMITS.badSecret, address);
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   return NextResponse.json({ ok: true });
@@ -38,7 +43,12 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   const cfg = whatsappConfig();
+  // Wrong secrets are limited per address (the bot always has the right one, and isn't limited).
+  const address = limitAddress(request.headers);
+  const blocked = spent(API_LIMITS.badSecret, address);
+  if (!blocked.ok) return tooManyRequests(blocked.retryAfter);
   if (!cfg.enabled || !bearerMatches(request.headers.get("authorization"), cfg.secret)) {
+    hit(API_LIMITS.badSecret, address);
     if (cfg.enabled) logger.warn("whatsapp_webhook_rejected", { withHeader: request.headers.has("authorization") });
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }

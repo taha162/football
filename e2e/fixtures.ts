@@ -108,6 +108,16 @@ export async function emailedHtml(email: string, timeoutMs = 15_000): Promise<st
 }
 
 /**
+ * A visitor address for per-device limits (sent as x-real-ip), from the IPv6
+ * documentation range: about four billion of them, so one run never lands on
+ * an address an earlier run already counted (those counts last up to an hour).
+ */
+export function testAddress(): string {
+  const hex = randomUUID().replace(/-/g, "");
+  return `2001:db8:${hex.slice(0, 4)}:${hex.slice(4, 8)}::1`;
+}
+
+/**
  * The WhatsApp waiting page opens wa.me by itself in a new tab: answered here,
  * so no test reaches WhatsApp's site.
  */

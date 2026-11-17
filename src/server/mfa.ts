@@ -10,7 +10,7 @@ import { safeNext } from "@/lib/auth";
 import { logger } from "@/lib/log";
 import { afterSecondStep } from "@/lib/second-factor";
 import { createClient } from "@/lib/supabase/server";
-import { allowed, buckets, count } from "@/lib/throttle";
+import { allowed, buckets, countFailure } from "@/lib/throttle";
 
 /**
  * Two-step verification with an authenticator app (TOTP, Supabase Auth MFA).
@@ -44,13 +44,15 @@ async function verifiedFactor(supabase: Supabase): Promise<string | null> {
  * Checks a code from the app against the given factor; wrong codes count
  * towards the same limits as e-mailed codes (per account, and per device).
  */
-async function checkCode(supabase: Supabase, userId: string, factorId: string, code: string): Promise<ActionState | null> {
-  const limits = await buckets(["signinDevice"], [["codeAccount", `second-factor:${userId}`]]);
-  if (!(await allowed(limits))) return fail("too_many_attempts");
+async function checkCode(supabase: Supabase, user: { id: string; email?: string }, factorId: string, code: string): Promise<ActionState | null> {
+  const limits = await buckets(["signinDevice"], [["codeAccount", `second-factor:${user.id}`]]);
+  const account = user.email || undefined;
+  if (!(await allowed(limits, account))) return fail("too_many_attempts");
   const { error } = await supabase.auth.mfa.challengeAndVerify({ factorId, code });
   if (!error) return null;
   if (error.status === 429) return fail("rate_limited");
-  await count(limits);
+  logger.warn("second_factor_code_failed", { user: user.id });
+  await countFailure(limits, account);
   return fail("invalid_code");
 }
 
@@ -85,7 +87,7 @@ export async function confirmSecondFactorAction(_: ActionState, fd: FormData): P
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return fail("not_authenticated");
-  const refused = await checkCode(supabase, auth.user.id, factorId.data, code.data);
+  const refused = await checkCode(supabase, auth.user, factorId.data, code.data);
   if (refused) return refused;
   logger.info("second_factor_enabled", { user: auth.user.id });
   revalidatePath("/[locale]/settings", "page");
@@ -101,7 +103,7 @@ export async function verifySecondFactorAction(_: ActionState, fd: FormData): Pr
   if (!auth.user) return fail("not_authenticated");
   const factorId = await verifiedFactor(supabase);
   if (!factorId) return fail("second_factor_off");
-  const refused = await checkCode(supabase, auth.user.id, factorId, code.data);
+  const refused = await checkCode(supabase, auth.user, factorId, code.data);
   if (refused) return refused;
   redirect({ href: afterSecondStep(safeNext(fd.get("next"))), locale: await currentLocale() });
   return ok();
@@ -116,7 +118,7 @@ export async function turnOffSecondFactorAction(_: ActionState, fd: FormData): P
   if (!auth.user) return fail("not_authenticated");
   const factorId = await verifiedFactor(supabase);
   if (!factorId) return fail("second_factor_off");
-  const refused = await checkCode(supabase, auth.user.id, factorId, code.data);
+  const refused = await checkCode(supabase, auth.user, factorId, code.data);
   if (refused) return refused;
   const { error } = await supabase.auth.mfa.unenroll({ factorId });
   if (error) {

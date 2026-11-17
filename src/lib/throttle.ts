@@ -1,6 +1,7 @@
 import "server-only";
 import { createHmac } from "node:crypto";
 import { headers } from "next/headers";
+import { maskAccount } from "@/lib/account-mask";
 import { clientIp } from "@/lib/client-ip";
 import { logger } from "@/lib/log";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -14,11 +15,12 @@ import { createAdminClient } from "@/lib/supabase/admin";
  */
 const LIMITS = {
   signinDevice: { setting: "auth.signin_failures_per_device", default: 50, window: 15 * 60 },
-  signinAccount: { setting: "auth.signin_failures_per_account", default: 10, window: 15 * 60 },
+  // Five wrong passwords, or five wrong codes, on one account: it waits out the 15 minutes, and admins are alerted.
+  signinAccount: { setting: "auth.signin_failures_per_account", default: 5, window: 15 * 60 },
   signupDevice: { setting: "auth.signups_per_device", default: 20, window: 60 * 60 },
   resetDevice: { setting: "auth.resets_per_device", default: 10, window: 60 * 60 },
   resetAccount: { setting: "auth.resets_per_account", default: 5, window: 60 * 60 },
-  codeAccount: { setting: "auth.code_failures_per_account", default: 10, window: 15 * 60 },
+  codeAccount: { setting: "auth.code_failures_per_account", default: 5, window: 15 * 60 },
   resendAccount: { setting: "auth.code_resends_per_account", default: 5, window: 60 * 60 },
 } as const;
 
@@ -46,7 +48,43 @@ export async function buckets(device: LimitName[], accounts: Array<[LimitName, s
   return list.map(([name, value]) => ({ key: hashed(name, value), ...LIMITS[name] }));
 }
 
-async function ask(list: Bucket[], record: boolean): Promise<boolean> {
+/**
+ * A short tag for an account in the logs: the same account always gets the
+ * same tag, so repeated failures can be told apart, but the e-mail or number
+ * can't be read back from it.
+ */
+export function accountTag(value: string): string {
+  return hashed("signinAccount", value).split(":")[1].slice(0, 12);
+}
+
+type Admin = NonNullable<ReturnType<typeof createAdminClient>>;
+
+/**
+ * Repeated wrong passwords or codes: recorded in the audit log, and every admin
+ * is alerted in the site's notifications, at most once an hour for the same
+ * account (public.security_event, migration 0032). Sign-ups, resets and
+ * resends past their limits are only logged.
+ */
+async function alertAdmins(admin: Admin, list: Bucket[], account?: string) {
+  const settings = list.map((b) => b.setting);
+  const action = settings.includes(LIMITS.codeAccount.setting)
+    ? "code_blocked"
+    : settings.some((s) => s.startsWith("auth.signin_"))
+      ? "sign_in_blocked"
+      : null;
+  if (!action) return;
+  const key = (list.find((b) => b.setting.endsWith("_per_account")) ?? list[0]).key;
+  const { data, error } = await admin.rpc("security_event", {
+    p_action: action,
+    p_details: { account: account ? maskAccount(account) : "", limits: settings },
+    p_alert_key: key,
+  });
+  // Before migration 0032 there is no such function: the line above is the only trace.
+  if (error) logger.warn("security_alert_failed", { code: error.code });
+  else if (data) logger.warn("security_alert", { kind: action });
+}
+
+async function ask(list: Bucket[], record: boolean, account?: string): Promise<boolean> {
   if (list.length === 0) return true;
   const admin = createAdminClient();
   if (!admin) return true;
@@ -59,13 +97,23 @@ async function ask(list: Bucket[], record: boolean): Promise<boolean> {
   if (data === false) {
     // Repeated wrong passwords, codes or sign-ups: logged with the limits' names only (no address, no account).
     logger.warn("auth_limit_reached", { limits: list.map((b) => b.setting) });
+    await alertAdmins(admin, list, account);
     return false;
   }
   return true;
 }
 
-/** Whether the attempt may go ahead, without counting it (to count failures only, with `count`). */
-export const allowed = (list: Bucket[]) => ask(list, false);
+/**
+ * Whether the attempt may go ahead, without counting it (to count failures
+ * only, with `count`). `account`: the e-mail or number tried, for the admins'
+ * alert (masked there, never logged).
+ */
+export const allowed = (list: Bucket[], account?: string) => ask(list, false, account);
 
 /** Counts the attempt; false when a limit had already been reached (and nothing was counted). */
-export const count = (list: Bucket[]) => ask(list, true);
+export const count = (list: Bucket[], account?: string) => ask(list, true, account);
+
+/** Counts a failed attempt; when that one uses up a limit, admins are alerted now, not only at the next try. */
+export async function countFailure(list: Bucket[], account?: string): Promise<void> {
+  if (await count(list, account)) await allowed(list, account);
+}

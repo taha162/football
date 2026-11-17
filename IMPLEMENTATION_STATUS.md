@@ -1,6 +1,6 @@
 # Implementation status
 
-Last updated: 2026-10-29. "Verified" means covered by an automated test that passed on this date: unit, DB integration against real Postgres, or Playwright against a production build. Everything was verified locally against the Supabase CLI stack. The owner deploys the site on Vercel; that deployment could not be reached from the development environment (network policy), so nothing here was verified against it.
+Last updated: 2026-11-17. "Verified" means covered by an automated test that passed on this date: unit, DB integration against real Postgres, or Playwright against a production build. Everything was verified locally against the Supabase CLI stack. The owner deploys the site on Vercel; that deployment could not be reached from the development environment (network policy), so nothing here was verified against it.
 
 ## Verification summary
 
@@ -8,11 +8,11 @@ Last updated: 2026-10-29. "Verified" means covered by an automated test that pas
 | --- | --- |
 | `pnpm lint` | Clean |
 | `pnpm typecheck` | Clean (TS strict) |
-| `pnpm i18n:check` | 1811 keys, ar/en in sync, all static keys resolved |
-| `pnpm test:unit` | 63 passed (domain rules, ball physics, camera and quality logic, auth error mapping, reading Telegram updates and bot settings, site address) |
-| `pnpm test:db` | 84 passed (concurrency, RLS, RPC rules, jobs, phone verification with Telegram, booking deposits) |
-| `pnpm build` | Succeeds (Next.js 16.4, Turbopack) |
-| `pnpm e2e` (production build) | 37 passed: 34 desktop, 3 mobile (Pixel 7, Arabic RTL; one at tablet widths) |
+| `pnpm i18n:check` | 2157 keys, ar/en in sync, all static keys resolved |
+| `pnpm test:unit` | 186 passed (domain rules, ball physics, CSP and cookies, session lifetime, leaked-file paths, API limits, WhatsApp bot and messages, server pages) |
+| `pnpm test:db` | 149 passed (concurrency, RLS, RPC rules, jobs, phone verification, bookings and deposits, two-step verification, member deletion, WhatsApp, security events) |
+| `pnpm build` | Succeeds (Next.js 16.4.6, Turbopack) |
+| `pnpm e2e` (production build) | 83 of 84 passed: 80 desktop, 4 mobile (Pixel 7). The one failure was the test's own address collision (fixed in the test, not re-run: the local Docker stopped) |
 
 ## Features
 
@@ -129,6 +129,15 @@ Legend: ✅ implemented and verified by automated tests · 🟡 implemented, exe
   - Below 1024 px the header ran out of room, and had already overflowed on 768–820 px tablets.
 - ✅ Scheduled jobs (`/api/cron` → `run_scheduled_jobs`) are idempotent — DB.
 - 🟡 Health endpoint, structured redacting logs, security headers.
+- ✅ Security review of 17 November 2026 (`SECURITY_REVIEW.md`; migration 0032):
+  - Session cookies are HttpOnly; the browser gets only the short-lived access token from `/api/session`.
+  - A sign-in lasts 30 days at most, or 7 days without a visit (unit tests only: not tested by waiting 30 days).
+  - 5 wrong passwords or codes per account, then a pause, and every admin is alerted.
+  - Failed sign-ins, password changes and admin access are logged.
+  - Suspension notes are hidden from the API.
+  - Per-address limits on every API route; 404 for leaked-file paths under any prefix.
+  - Next.js 16.4.6, and four unused packages removed.
+  - Covered by unit, DB and E2E tests, including a forged-origin (CSRF) replay, admin pages for each role, an API flood, and CORS.
 - 🟡 Maps. With `NEXT_PUBLIC_MAP_PROVIDER=none` (the default), the address and an "open in maps" link are shown. With `mapbox` plus a token, static map images appear on venue pages and match discovery. The Mapbox path has **not** been tested, because no token is available. There are no interactive maps.
 
 ## Known limitations and launch blockers

@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { createAuthUser, expect, rpc, signIn, test } from "./fixtures";
+import { admin, createAuthUser, expect, rpc, signIn, test, testAddress } from "./fixtures";
 
 /** Collects what the Content-Security-Policy blocked on a page. */
 async function watchPolicy(page: Page) {
@@ -72,5 +72,119 @@ test.describe("Security headers", () => {
     await rpc(friend.id, "send_message", { p_conversation_id: conv, p_body: "live check" });
     await expect(page.getByText("live check")).toBeVisible({ timeout: 15_000 });
     expect(await blocked()).toEqual([]);
+  });
+});
+
+test.describe("Security review (17 November 2026)", () => {
+  test("session cookies are HttpOnly and SameSite: page scripts can't read them", async ({ page, context }) => {
+    const user = await createAuthUser("Cookie");
+    await signIn(page, user);
+    const session = (await context.cookies()).filter((c) => c.name.startsWith("sb-"));
+    expect(session.length).toBeGreaterThan(0);
+    for (const c of session) {
+      expect(c.httpOnly, c.name).toBe(true);
+      expect(c.sameSite, c.name).toBe("Lax");
+    }
+    expect(await page.evaluate(() => document.cookie)).not.toContain("sb-");
+  });
+
+  test("/api/session gives the page a short-lived token, only to the site itself and only with a session", async ({ page, browser }) => {
+    const user = await createAuthUser("Token");
+    await signIn(page, user);
+    const res = await page.request.get("/api/session");
+    expect(res.status()).toBe(200);
+    expect(res.headers()["cache-control"]).toContain("no-store");
+    expect(res.headers()["access-control-allow-origin"]).toBeUndefined();
+    const body = (await res.json()) as { access_token: unknown; expires_at: unknown; user_id: unknown };
+    expect(typeof body.access_token).toBe("string");
+    expect(body.user_id).toBe(user.id);
+    expect(Object.keys(body).sort()).toEqual(["access_token", "expires_at", "user_id"]);
+    // Asked from another site (the browser says so): refused.
+    expect((await page.request.get("/api/session", { headers: { "sec-fetch-site": "cross-site" } })).status()).toBe(403);
+    // Without a session: nothing.
+    const visitor = await browser.newContext();
+    expect((await visitor.request.get("/api/session")).status()).toBe(401);
+    await visitor.close();
+  });
+
+  test("files that must never be served answer 404, under any prefix", async ({ request }) => {
+    for (const path of ["/.env", "/.env.local", "/ar/.env", "/.git/config", "/ar/.git/HEAD", "/backup.sql", "/ar/dump.sql.gz", "/site.zip", "/server.log", "/package.json", "/supabase/config.toml", "/pnpm-lock.yaml"]) {
+      const res = await request.get(path, { maxRedirects: 0 });
+      expect(res.status(), path).toBe(404);
+      expect(await res.text(), path).not.toMatch(/SUPABASE|SERVICE_ROLE|\[core\]|BEGIN/);
+    }
+  });
+
+  test("admin pages open only for staff: visitors go to sign in, members and moderators are sent away", async ({ page, request, browser }) => {
+    const target = await createAuthUser("Target");
+    const pages = ["/ar/admin", "/ar/admin/users", "/ar/admin/audit", "/ar/admin/settings", "/ar/admin/promotions", "/ar/admin/reports", "/ar/admin/content", "/ar/admin/bookings", "/ar/admin/venues", `/ar/admin/users/${target.id}/delete`];
+    for (const path of pages) {
+      const res = await request.get(path, { maxRedirects: 0 });
+      expect(res.status(), path).toBe(307);
+      expect(res.headers().location, path).toMatch(/\/ar\/sign-in\?next=/);
+    }
+    await signIn(page, await createAuthUser("Member"));
+    for (const path of pages) {
+      await page.goto(path);
+      await expect(page, path).not.toHaveURL(/\/admin/);
+    }
+    // A moderator has the moderation pages, but not the admins' own.
+    const moderator = await createAuthUser("Moderator");
+    await admin("insert into public.user_roles (user_id, role) values ($1, 'moderator')", [moderator.id]);
+    const mod = await (await browser.newContext()).newPage();
+    await signIn(mod, moderator);
+    for (const path of ["/ar/admin/users", "/ar/admin/settings", "/ar/admin/promotions", `/ar/admin/users/${target.id}/delete`]) {
+      await mod.goto(path);
+      await expect(mod, path).toHaveURL(/\/ar\/admin$/);
+    }
+    await mod.context().close();
+  });
+
+  test("CSRF: a data-changing request from another site is refused by the server, even carrying the session", async ({ page }) => {
+    const user = await createAuthUser("Csrf");
+    await signIn(page, user);
+    await page.goto("/ar/settings");
+    const prefs = async () =>
+      (await admin<{ p: Record<string, boolean> | null }>("select notification_prefs as p from public.user_preferences where user_id = $1", [user.id]))[0]?.p ?? {};
+
+    // A real save from the page, captured as sent.
+    const sent = page.waitForRequest((r) => r.method() === "POST" && Boolean(r.headers()["next-action"]));
+    await page.locator('input[name="muted"][value="match_reminder"]').check();
+    await page.getByRole("button", { name: "حفظ التفضيلات" }).click();
+    const original = await sent;
+    await expect(page.getByText("تم حفظ التفضيلات.")).toBeVisible();
+    expect(await prefs()).toEqual({ match_reminder: false });
+
+    const replay = async (origin: string) => {
+      await admin("update public.user_preferences set notification_prefs = '{}'::jsonb where user_id = $1", [user.id]);
+      const headers = Object.fromEntries(Object.entries(await original.allHeaders()).filter(([k]) => !["host", "content-length", "cookie"].includes(k)));
+      return page.request.fetch(original.url(), { method: "POST", headers: { ...headers, origin }, data: original.postDataBuffer() ?? "" });
+    };
+    // From another site, with the session cookies attached (what SameSite=Lax already stops browsers from sending): refused, nothing saved.
+    const forged = await replay("https://evil.example");
+    expect(forged.status()).toBeGreaterThanOrEqual(400);
+    expect(await prefs()).toEqual({});
+    // The same request from the site itself still works: the origin is what was refused.
+    expect((await replay(new URL(page.url()).origin)).ok()).toBe(true);
+    expect(await prefs()).toEqual({ match_reminder: false });
+  });
+
+  test("CORS: another site's scripts get no access to the API", async ({ request }) => {
+    const preflight = await request.fetch("/api/health", { method: "OPTIONS", headers: { origin: "https://evil.example", "access-control-request-method": "GET" } });
+    expect(preflight.headers()["access-control-allow-origin"]).toBeUndefined();
+    const get = await request.get("/api/health", { headers: { origin: "https://evil.example" } });
+    expect(get.headers()["access-control-allow-origin"]).toBeUndefined();
+  });
+
+  test("an API route stops a flood from one address", async ({ request }) => {
+    const from = { "x-real-ip": testAddress() };
+    const codes: number[] = [];
+    for (let i = 0; i < 60; i++) codes.push((await request.get("/api/health", { headers: from })).status());
+    expect(codes.every((c) => c === 200)).toBe(true);
+    const last = await request.get("/api/health", { headers: from });
+    expect(last.status()).toBe(429);
+    expect(Number(last.headers()["retry-after"])).toBeGreaterThan(0);
+    // Another address is unaffected.
+    expect((await request.get("/api/health", { headers: { "x-real-ip": testAddress() } })).status()).toBe(200);
   });
 });

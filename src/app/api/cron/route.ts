@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { logger } from "@/lib/log";
+import { API_LIMITS, hit, limitAddress, spent, tooManyRequests } from "@/lib/rate-limit";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { deliverWhatsapp } from "@/lib/whatsapp-outbox";
 
@@ -23,7 +24,12 @@ function authorized(request: NextRequest): boolean {
  * (e.g. Vercel Cron or any scheduler). Idempotent.
  */
 export async function GET(request: NextRequest) {
+  // Wrong secrets are limited per address (the scheduler always has the right one).
+  const address = limitAddress(request.headers);
+  const blocked = spent(API_LIMITS.badSecret, address);
+  if (!blocked.ok) return tooManyRequests(blocked.retryAfter);
   if (!authorized(request)) {
+    hit(API_LIMITS.badSecret, address);
     // Someone other than the scheduler, or a scheduler with the wrong secret: worth noticing.
     logger.warn("cron_unauthorized", { withHeader: request.headers.has("authorization") });
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });

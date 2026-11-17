@@ -29,6 +29,8 @@ export function notificationHref(type: string, p: NotificationPayload): string {
   if (p.team_id) return `/teams/${str(p.team_id)}`;
   if (type === "venue_verification" || type === "venue_staff_added") return `/manage/venues/${str(p.venue_id)}`;
   if (type === "review_received") return "/profile";
+  // Admins only: repeated wrong passwords or codes (public.security_event, migration 0032).
+  if (type === "security_alert") return "/admin/audit";
   return "/notifications";
 }
 
