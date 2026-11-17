@@ -80,7 +80,7 @@ Legend: ✅ implemented and verified by automated tests · 🟡 implemented, exe
 ### Trust, safety and admin
 - ✅ Reports with content snapshot. Moderators hide or restore content, remove reported messages, suspend users and resolve reports. Everything is audited — E2E I, DB.
 - ✅ Admins manage roles; nobody can self-promote. The first admin is bootstrapped with `pnpm admin:grant` — DB, E2E K, script run locally.
-- 🟡 Admins (not moderators) delete a member for good from Admin → Users, after a page that says what goes and what stays and the typed word «حذف». It refuses oneself, admins and venue owners, and is audited. DB tests cover it (migration 0030). The E2E test is written but hasn't been run yet: the local stack was down.
+- ✅ Admins (not moderators) delete a member for good from Admin → Users, after a page that says what goes and what stays and the typed word «حذف». It refuses oneself, admins and venue owners, and is audited. Covered by DB tests (migration 0030) and E2E: the whole flow, a wrong word refused, the deleted member unable to sign in, moderators kept out. The first version's page failed to open (`CHANGES.md` item 82); a unit test now checks every server page for that mistake.
 - ✅ Signed-out and unauthorized access is redirected. Direct table writes with the anon key are rejected — E2E K, DB.
 - 🟡 Admin overview stats, users, venues, content, bookings, audit log, platform settings, cities and areas.
 - ✅ Player and venue reviews (participants only, once, within the window; no-shows excluded), reputation aggregates — DB.

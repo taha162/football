@@ -506,8 +506,10 @@ test.describe("WhatsApp bot status for admins", () => {
     await expect(inbound.getByRole("listitem").nth(1)).toContainText("لم يظهر رقم المرسل، فأُخبر بذلك · خلال ٠٫٣ ث · وصلت البوت بعد ٢ د من إرسالها");
     await expect(inbound.getByRole("listitem").nth(2)).toContainText("رسالة أخرى · أُرسلت رسالة المساعدة");
     await expect(inbound.getByRole("listitem").nth(3)).toContainText("ليست من الرقم الذي كُتب في الموقع، فأُخبر المرسل");
-    // Both database files applied (0029 says so in the summary).
-    await expect(page.getByText("تحديث قاعدة البيانات (الملفان …0028 و…0029)")).toBeVisible();
+    // All three database files applied (0029 and 0031 say so in the summary): no "not applied" note.
+    await expect(page.getByText("تحديث قاعدة البيانات (الملفات …0028 و…0029 و…0031)")).toBeVisible();
+    await expect(page.getByText("الملف …0029 غير مطبّق", { exact: false })).toHaveCount(0);
+    await expect(page.getByText("الملف …0031 غير مطبّق", { exact: false })).toHaveCount(0);
 
     // A secret that differs between Railway and Vercel says so, and where the bot posts.
     bot.healthExtra = { site: { url: siteUrl, state: "refused_secret", status: 401, at: new Date().toISOString() }, inbound: [] };
