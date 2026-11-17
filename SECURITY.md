@@ -21,13 +21,14 @@
 ## Authentication and authorization
 
 - Supabase Auth with e-mail and password (minimum length 8, configured in `supabase/config.toml`).
-- **Session cookies** are set by `@supabase/ssr` and refreshed by the proxy.
-  - They are `SameSite=Lax`, and `Secure` wherever the site is served over https (`sessionCookieOptions()` in `src/lib/env.ts`, unit-tested).
-  - They are **not** `HttpOnly`: the browser client reads the session to open live updates and calls. So the page's own scripts can read the cookie. The defence against a script that shouldn't be there is the nonce Content-Security-Policy (below), which refuses any script the server didn't send.
-  - They last 400 days (the library's default) and are refreshed while used. Signing out, or changing the password, ends the account's other sessions at Supabase. An access token already handed out stays valid until it expires (at most an hour, `jwt_expiry`).
+- **Session cookies** are set by `@supabase/ssr`, only by the server, and refreshed by the proxy (`sessionCookieOptions()` in `src/lib/env.ts`, unit-tested):
+  - `HttpOnly`: no script in the page can read them. The browser's live updates and calls ask `/api/session` for the access token instead (`src/lib/supabase/client.ts`). That route gives only the access token (an hour at most), never the refresh token. It answers only the site's own pages (`Sec-Fetch-Site`), sends no CORS headers, is `no-store`, and is limited per address. E2E: the cookies are HttpOnly and not in `document.cookie`; the route refuses other sites and visitors.
+  - `SameSite=Lax`, and `Secure` wherever the site is served over https.
+  - **Lifetime** (`src/lib/session-policy.ts`): a sign-in lasts 30 days at most. The proxy and `/api/session` read when it started from the access token's `amr` claim (kept across refreshes), end the session at Supabase, and send the person to sign in with a note. The cookies lapse after 7 days without a visit, because they are written with that lifetime and rewritten while the site is used. Local Supabase sets the same (`[auth.sessions]`); production can too, on a paid plan.
+  - Signing out, or changing the password, ends the account's other sessions at Supabase. An access token already handed out stays valid until it expires (at most an hour, `jwt_expiry`).
 - Server code identifies the user with `auth.getUser()`, which is validated by Auth and memoized per request. It never relies on `getSession()` alone.
 - `private.require_user()` rejects anonymous and suspended accounts, and anyone whose session still owes the authenticator-app code (below). It can also require completed onboarding.
-- **Changing the password** needs a session younger than a day (`secure_password_change`). The e-mailed reset link starts a fresh session, so the "forgot password" route always works. An older session gets "the link expired, ask for a new one". With an authenticator app, Supabase also refuses a new password (or e-mail) from a session that hasn't passed the code.
+- **Changing the password** is logged (`password_changed`, the account id only) and written to the audit log. It needs a session younger than a day (`secure_password_change`). The e-mailed reset link starts a fresh session, so the "forgot password" route always works. An older session gets "the link expired, ask for a new one". With an authenticator app, Supabase also refuses a new password (or e-mail) from a session that hasn't passed the code.
 - **Two-step verification** (authenticator app, TOTP), optional for everyone and recommended for staff (the admin pages say so until it's on):
   - Turned on in Settings: a QR code, or the key to type into the app on the same phone, then a first code to confirm it. Turning it off takes a current code too.
   - After the password, every page sends to `/mfa` until the code is accepted (`src/proxy.ts`). Sign-in goes there directly.
@@ -71,15 +72,23 @@
 
 - Per-user rate limits (advisory-locked) for messages, invitations, reports, team creation and organizer limits. Values are in `platform_settings`.
 - **Sign-in, sign-up, password reset and e-mail codes are limited per device and per account** (`public.auth_throttle`, settings `auth.*`). Supabase Auth sees every request coming from our server, so its own per-IP limits can't tell attackers apart; the app counts instead.
-  - Wrong passwords: 50 per device and 10 per account in 15 minutes. Wrong codes (e-mailed or from the authenticator app): 10 per account in 15 minutes. Sign-ups, by e-mail or by WhatsApp: 20 per device an hour. Reset e-mails: 10 per device and 5 per account an hour. Code resends: 5 per account an hour. Past a limit the form says to wait; the correct password is refused too until the window passes.
+  - Wrong passwords: 50 per device and **5 per account** in 15 minutes. Wrong codes (e-mailed or from the authenticator app): **5 per account** in 15 minutes. The device limit stays generous because mobile networks put many people behind one address.
+  - **When an account reaches its limit, every admin is alerted** in the site's notifications («تنبيه أمني»), at most once an hour per account, with the address masked (`o***@gmail.com`). The event goes into the audit log (`sign_in_blocked`, `code_blocked`). The alert can't be muted. Only the site's server can record these (`public.security_event`, service role, migration 0032). DB and E2E tests. Sign-ups, by e-mail or by WhatsApp: 20 per device an hour. Reset e-mails: 10 per device and 5 per account an hour. Code resends: 5 per account an hour. Past a limit the form says to wait; the correct password is refused too until the window passes.
   - A WhatsApp sign-up is counted **before** its account is created, so requests past the limit create nothing (E2E: with the limit at 2, a third sign-up from one device is refused and exactly two accounts exist).
   - The device is the client IP, read in one place (`clientIp()` in `src/lib/client-ip.ts`). It prefers `x-real-ip`, which Vercel sets to the connecting address. The first `x-forwarded-for` hop is used only as a fallback, because a visitor can put anything first there (unit test). Mobile networks in Iraq can put many people behind one address, so the device limits are generous and admins can raise them.
   - Keys are HMAC-SHA256 of the IP or account (keyed by the service-role key), so the table holds no addresses. Rows older than a day are deleted.
   - The limits need `SUPABASE_SERVICE_ROLE_KEY`; without it they are off and sign-in works unlimited. If the database call fails (for example before migration 0021 is run), sign-in still works and a warning is logged.
-  - DB tests: only the server may count; limits, check-only and separate keys; an admin setting overrides the default. E2E: ten wrong passwords, then the right one is refused with the waiting message.
+  - DB tests: only the server may count; limits, check-only and separate keys; an admin setting overrides the default. E2E: five wrong passwords, then the right one is refused with the waiting message, and an admin has the alert.
+- **API routes** (`/api/*`, `/auth/callback`) are limited per address (`src/lib/rate-limit.ts`):
+  - health 60, calendar file 60, `/api/session` 300 and sign-in links 30 a minute;
+  - wrong secrets on `/api/cron` and the WhatsApp webhook 10 a minute (the real callers always have the secret and aren't counted).
+  - Over the limit: 429 with `Retry-After`. The health check shares its database result for 10 seconds.
+  - They count in each server copy's memory, so on Vercel the count is per copy. A Vercel Firewall rule can add an exact one (`DEPLOYMENT.md`).
+  - Unit tests; E2E: the 61st request a minute from one address gets 429.
 - **Outgoing WhatsApp messages are paced to protect the number** (the bot's one queue): booking messages and promotions wait a random 8–25 s after any message, show "typing…" first and stay under hourly and daily caps; replies to someone who just wrote (their code, their stop request, the help text) go out within a second, after a short "typing…", and don't count against the caps. Also: no sending to numbers that aren't on WhatsApp, an automatic pause after repeated errors, and a stop until an admin resumes at any sign that WhatsApp restricts the number (refusals, rate limits, the "reach-out" lock, new-chat caps). Promotions also stay under a daily limit that starts low and grows each day (`whatsapp.promo_daily_*`), one campaign at a time. The bot answers each chat's other messages with the help text at most every 6 hours, and handles at most `INBOUND_PER_HOUR` messages per chat.
 - Reports snapshot the reported content. Moderators can hide (and restore) matches, teams, venues, tournaments and reviews. They can remove a reported chat message: the text is erased and the report keeps a copy. They can also suspend users and resolve reports. Every action is audited and the affected owner is notified. Moderators cannot read conversations; they only see the snapshot attached to a report.
 - Contact details (phone and WhatsApp) are shown only for venues, as business contacts. Player e-mails are never exposed (DB test).
+- **Profiles** are public, except the suspension reason and time: visitors and members are granted every other column, one by one (migration 0032). So `select *` on profiles is refused, and the site names its columns (`src/lib/profile-columns.ts`). A column added later must be granted, or it stays hidden. DB test.
 - **Booking deposits** move between the customer and the venue directly; the platform only records them.
   - A venue's payment details are a fraud target, because a changed wallet number would divert deposits. Only owners and managers can change them, and every change is audited (DB test).
   - Only venue staff can record a deposit as received or returned, and only the customer can report sending it (DB test).
@@ -117,13 +126,17 @@ E2E (`e2e/security.spec.ts`) checks:
 - that an `onerror=` handler injected into a page is refused, and the violation is reported;
 - that a walk through the landing page, venues, matches, notifications and a live conversation reports no CSP violation.
 
-CSRF: server actions are POSTs that Next.js accepts only from the site's own origin. The session cookies are `SameSite=Lax`. The only other POST endpoint, the WhatsApp webhook, requires its secret.
+**Files that must never be served:** the proxy answers 404 to dot-files and dot-folders (`.env`, `.git/…`, `.DS_Store`; not `/.well-known/`) and to backup, dump, log, key, config and archive files, under any prefix (`/ar/.env` too), before anything renders (`src/lib/sensitive-paths.ts`; its matcher lists the same patterns). Unit tests (29 paths) and E2E (12).
+
+CSRF: every form and delete is a Server Action, a POST that Next.js accepts only from the site's own origin. E2E: a captured "save settings" request replayed from another origin, with the session attached, is refused ("Invalid Server Actions request") and nothing changes; the same request from the site works. The session cookies are `SameSite=Lax`, so browsers don't attach them to other sites' requests at all. The only other POST endpoint, the WhatsApp webhook, requires its secret.
+
+CORS: no route sends CORS headers, so other sites' scripts can't read the answers (E2E).
 
 Server Action body size is capped at 6 MB.
 
 ## Account verification
 
-- **E-mail code:** Supabase Auth issues and checks the code (`verifyOtp`, type `email`). It expires (1 h by default) and resends are throttled. The pending address is kept in an httpOnly cookie, not in the URL.
+- **E-mail code and password-reset link:** Supabase Auth issues and checks them (`verifyOtp`). Each works once and expires after 15 minutes (`otp_expiry = 900`; production: Authentication → Email → Email OTP Expiration). Resends are throttled. The pending address is kept in an httpOnly cookie, not in the URL.
 - **Password reset replies** are the same whether or not an account exists, because Supabase answers unknown addresses without sending anything. The one exception is an e-mail that fails to send. That can only happen for an existing account, and the site reports it rather than claiming the link is on its way.
 - **Phone verification, the shared rules** (sign-up and password reset with WhatsApp, below):
   - Codes are 8 characters from a 31-symbol alphabet (~40 bits), valid for 15 minutes and usable once.
@@ -151,6 +164,12 @@ Server Action body size is capped at 6 MB.
 
 The server writes one JSON line per event (`src/lib/log.ts`), visible in Vercel → Logs. The logger drops values whose key looks like a password, token, secret, authorization, cookie, key, body, e-mail or phone. These events are logged:
 - `auth_limit_reached` (warn): a sign-in, sign-up, reset or code limit was hit. Logged with the limits' names only, never the address or account.
+- `sign_in_failed`, `email_code_failed` (warn): a wrong password, an unknown number, a wrong e-mail code. Logged with a tag made from the account (an HMAC), so repeats can be told apart but the address can't be read back. Never the password.
+- `second_factor_code_failed` (warn), with the account id.
+- `security_alert` (warn): an account or device reached its limit and the admins were alerted (above). `security_alert_failed` means migration 0032 isn't run yet.
+- `password_changed` (info), with the account id; also in the audit log.
+- `admin_page_requested` (info): who opened which admin page (prefetches left out). `admin_access_denied` (warn): a member without a staff role tried the admin area.
+- `session_expired` (info): a session past its 30 days was ended.
 - `cron_unauthorized` (warn): `/api/cron` called without the right secret. Logs whether a header was sent, never its value (unit test).
 - `admin_action_refused` (warn): a moderator or admin action refused for lack of the role or the second step. Logs the action, the reason and the account id.
 - `second_factor_enabled`, `second_factor_disabled`, `second_factor_reset` (info), and failures of these (error).
@@ -167,7 +186,13 @@ Supabase backs up the database daily on paid plans. How many days are kept depen
 
 - `.env*` files are git-ignored except `.env.example`, which contains no values.
 - Do not paste keys into issues, chats or logs. The logger redacts keys matching password, token, secret, authorization, cookie, key, body, email and phone.
-- Rotate the service-role key and `CRON_SECRET` if exposed. Rotation affects only the server environment.
+- No real key has ever been committed: the full history was scanned with gitleaks (17 November 2026). The matches are the local Supabase demo keys and test data.
+- **Rotating a key** (if one is ever exposed). The code reads every key from the environment, so nothing in the code changes:
+  - Supabase service-role key: Supabase → Project Settings → API Keys (or JWT Keys) → roll or create a new secret key, then set `SUPABASE_SERVICE_ROLE_KEY` in Vercel (and wherever `pnpm admin:grant` runs) and redeploy. The sign-in limits' stored keys are derived from it, so counts start afresh.
+  - `CRON_SECRET`: make a new random value (32+ characters), set it in Vercel and in the GitHub repository secret the scheduled job uses, and redeploy.
+  - `WHATSAPP_BOT_SECRET`: a new random value, set in Vercel and on the bot (Railway) at the same time; Admin → Settings → the bot's panel shows when both match.
+  - Mapbox token: create a new URL-restricted public token in Mapbox, set `NEXT_PUBLIC_MAPBOX_TOKEN`, redeploy, then delete the old token.
+  - Telegram bot token (the bot is no longer used): `/revoke` with @BotFather, or delete the bot; remove `TELEGRAM_*` from Vercel.
 
 ## Privacy
 
