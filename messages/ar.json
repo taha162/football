@@ -647,7 +647,8 @@
     "booking_deposit_refund_due": "وصل موعد حجز {starts_at} في {venue_name} دون التأكد من العربون، فيجب إرجاعه للزبون.",
     "booking_cancelled_refund": "ألغى {venue_name} حجزك يوم {starts_at}، وسيُرجع لك العربون.",
     "booking_deposit_refunded": "أرجع {venue_name} عربون حجزك يوم {starts_at}.",
-    "missed_call": "مكالمة فائتة من {caller_name}."
+    "missed_call": "مكالمة فائتة من {caller_name}.",
+    "security_alert": "{kind, select, code_blocked {تنبيه أمني: رموز تحقق خاطئة متكررة} other {تنبيه أمني: كلمات مرور خاطئة متكررة}}{has_account, select, yes { على الحساب {account}} other {}}، فأُوقف تسجيل الدخول حتى 15 دقيقة. التفاصيل في سجل التدقيق."
   },
   "notificationTypes": {
     "match_participant_joined": "انضمام لاعب لمباراتي",

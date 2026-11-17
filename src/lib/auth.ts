@@ -3,11 +3,12 @@ import { cache } from "react";
 import { redirect } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { isSupabaseConfigured } from "@/lib/env";
+import { logger } from "@/lib/log";
+import { PROFILE_COLUMNS, type Profile } from "@/lib/profile-columns";
 import { hasSecondFactor } from "@/lib/second-factor";
 import { createClient } from "@/lib/supabase/server";
-import type { Tables } from "@/lib/supabase/types";
 
-export type Profile = Tables<"profiles">;
+export type { Profile };
 
 export interface CurrentUser {
   id: string;
@@ -31,7 +32,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   const { data, error } = await supabase.auth.getUser();
   if (error || !data.user) return null;
   const [{ data: profile }, { data: roles }] = await Promise.all([
-    supabase.from("profiles").select("*").eq("id", data.user.id).maybeSingle(),
+    supabase.from("profiles").select(PROFILE_COLUMNS).eq("id", data.user.id).maybeSingle(),
     supabase.from("user_roles").select("role").eq("user_id", data.user.id),
   ]);
   if (!profile) return null;
@@ -68,7 +69,11 @@ export async function requireOnboardedUser(locale: Locale, returnTo: string): Pr
 
 export async function requireModerator(locale: Locale): Promise<CurrentUser> {
   const user = await requireUser(locale, "/admin");
-  if (!user.isModerator) redirect({ href: "/dashboard", locale });
+  if (!user.isModerator) {
+    // A member without a staff role tried the admin area: sent away, and noted (Vercel → Logs).
+    logger.warn("admin_access_denied", { user: user.id });
+    redirect({ href: "/dashboard", locale });
+  }
   return user;
 }
 

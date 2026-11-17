@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { maskAccount } from "@/lib/account-mask";
 import { SESSION_IDLE_SECONDS, SESSION_MAX_SECONDS, sessionStartedAt, sessionTooOld } from "@/lib/session-policy";
 
 /** A token-shaped string with these claims (only the payload is read; Supabase checks the signature). */
@@ -23,5 +24,13 @@ describe("session lifetime", () => {
     expect(sessionTooOld(token({ amr: [{ method: "otp", timestamp: now - 29 * DAY }] }), now)).toBe(false);
     expect(sessionTooOld(token({ iat: now - 90 * DAY }), now)).toBe(false);
     expect(sessionTooOld(null, now)).toBe(false);
+  });
+});
+
+describe("maskAccount (security alerts)", () => {
+  it("shows enough to recognise an account, not to read it", () => {
+    expect(maskAccount("Omar.K@Gmail.com")).toBe("o***@gmail.com");
+    expect(maskAccount("9647701234567")).toBe("+96477***67");
+    expect(maskAccount("12")).toBe("***");
   });
 });

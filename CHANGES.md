@@ -1507,3 +1507,21 @@
 **لا يحتاج** أي ملف SQL.
 
 التعديل: «Sessions expire, and page scripts can no longer read them»
+
+### 85. خمس محاولات خاطئة ثم انتظار، وتنبيه للمديرين، وسبب الإيقاف لم يعد عاماً
+**ما تغيّر:**
+- **الحد:** خمس كلمات مرور خاطئة، أو خمسة رموز خاطئة، على حساب واحد خلال 15 دقيقة، ثم ينتظر الحساب. كانت 10.
+- **تنبيه أمني لكل مدير** في الإشعارات حين يُوقف حساب: مرة في الساعة على الأكثر لكل حساب، والعنوان مخفي جزئياً (`o***@gmail.com`). لا يمكن كتمه. ويُسجَّل في سجل التدقيق.
+- **السجلات:** محاولات الدخول الفاشلة، وتغيير كلمة المرور، وفتح صفحات الإدارة ومن رُفض منها. لا تُكتب كلمة مرور ولا عنوان بريد أبداً.
+- **سبب إيقاف العضو ووقته:** كانا يُقرآن من واجهة قاعدة البيانات بالمفتاح العام. صارا للمشرفين فقط.
+
+الملفات:
+- قاعدة البيانات: `supabase/migrations/20261117000032_security_review.sql` و`src/lib/supabase/types.ts`.
+- الموقع: `src/lib/throttle.ts` و`src/lib/account-mask.ts` (جديد) و`src/lib/profile-columns.ts` (جديد) و`src/lib/auth.ts` و`src/lib/notifications.ts` و`src/server/auth.ts` و`src/server/mfa.ts` و`src/proxy.ts` و`src/app/[locale]/players/[id]/page.tsx`، والنصوص في `messages/`.
+- الاختبارات: `tests/db/security-review.test.ts` (جديد) و`tests/db/security.test.ts` و`tests/unit/security-review.test.ts` و`e2e/verification.spec.ts`.
+
+**ما حُذف:** لا شيء.
+
+**يحتاج** ملف SQL: `…0032`. قبل تطبيقه يعمل الموقع، لكن الحد يبقى 10، والتنبيه يُكتب في السجلات فقط، وسبب الإيقاف يبقى مقروءاً.
+
+التعديل: «Five wrong tries, then a pause; admins alerted; suspension notes private»

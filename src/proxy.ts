@@ -10,6 +10,12 @@ import { sessionTooOld } from "./lib/session-policy";
 
 const intl = createMiddleware(routing);
 
+/** Link prefetches (the router's and the browser's): not someone opening a page. */
+function isPrefetch(request: NextRequest): boolean {
+  if (request.headers.get("next-router-prefetch") === "1") return true;
+  return /prefetch/i.test(request.headers.get("sec-purpose") ?? request.headers.get("purpose") ?? "");
+}
+
 /**
  * 1. Resolves the locale (prefix redirect / cookie) via next-intl.
  * 2. Refreshes the Supabase session cookies on the same response, and ends a
@@ -86,6 +92,9 @@ export async function proxy(request: NextRequest) {
   // instead of an in-stream redirect). Pages and the database still enforce
   // authorization independently.
   if (!user) return PROTECTED.some((p) => p.test(path)) ? sendTo("/sign-in", expired ? "expired" : undefined) : response;
+
+  // Who opens the admin area, and which page (Vercel → Logs). Whether they may is decided by the pages and the database.
+  if (/^\/admin(\/|$)/.test(path) && !isPrefetch(request)) logger.info("admin_page_requested", { user: user.id, path });
 
   // Password passed, authenticator-app code not yet: the database shows such a
   // session nothing (migration 0027), so every page but the code page waits for it.

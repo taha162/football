@@ -647,7 +647,8 @@
     "booking_deposit_refund_due": "The booking at {venue_name} for {starts_at} reached its time without the deposit being checked, so it must be returned to the customer.",
     "booking_cancelled_refund": "{venue_name} cancelled your booking on {starts_at}. The venue will return your deposit.",
     "booking_deposit_refunded": "{venue_name} has returned your deposit for the booking on {starts_at}.",
-    "missed_call": "Missed call from {caller_name}."
+    "missed_call": "Missed call from {caller_name}.",
+    "security_alert": "{kind, select, code_blocked {Security alert: repeated wrong codes} other {Security alert: repeated wrong passwords}}{has_account, select, yes { on the account {account}} other {}}, so signing in is paused for up to 15 minutes. Details in the audit log."
   },
   "notificationTypes": {
     "match_participant_joined": "Someone joins my match",

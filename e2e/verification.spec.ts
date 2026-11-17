@@ -22,14 +22,15 @@ test.describe("Account verification", () => {
     await expect(page.getByRole("checkbox")).toBeChecked();
   });
 
-  test("guessing a password: after ten wrong ones the account pauses, even for the right one", async ({ page }) => {
+  test("guessing a password: after five wrong ones the account pauses, even for the right one, and admins are alerted", async ({ page }) => {
     test.setTimeout(90_000);
+    const watcher = await createAuthUser("Watcher", { admin: true });
     const user = await createAuthUser("Guarded");
     await page.goto("/ar/sign-in");
     const login = page.getByRole("textbox", { name: /^البريد الإلكتروني/ });
     const pass = page.getByRole("textbox", { name: "كلمة المرور" });
     await login.fill(user.email);
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 5; i++) {
       await pass.fill(`wrong-password-${i}`);
       // Each attempt's own answer (the sign-in is a POST to this page).
       await Promise.all([
@@ -45,6 +46,14 @@ test.describe("Account verification", () => {
     await page.getByRole("button", { name: "تسجيل الدخول" }).click();
     await expect(page.getByText(/^محاولات كثيرة من هذا الجهاز أو لهذا الحساب/)).toBeVisible();
     await expect(page).toHaveURL(/\/ar\/sign-in/);
+
+    // Every admin was alerted once, with enough of the address to recognise it (not all of it).
+    const masked = `${user.email[0]}***${user.email.slice(user.email.indexOf("@"))}`;
+    const alerts = await admin<{ payload: { kind: string; account: string } }>(
+      "select payload from public.notifications where user_id = $1 and type = 'security_alert' and payload ->> 'account' = $2",
+      [watcher.id, masked],
+    );
+    expect(alerts).toEqual([{ payload: expect.objectContaining({ kind: "sign_in_blocked", account: masked }) }]);
   });
 
   test("e-mail: a user who signs in before confirming is sent to the code page, can resend and verify", async ({ page }) => {

@@ -1815,6 +1815,9 @@ isOneToOne: true
         isOneToOne: false
         isSetofReturn: true
       } },
+"security_event":
+{ Args: { "p_action": string,"p_alert_key"?: string,"p_details"?: Json,"p_user"?: string }; Returns: boolean
+                           },
 "send_call_signal":
 { Args: { "p_call_id": string,"p_kind": string,"p_payload": Json }; Returns: undefined
                            },

@@ -14,7 +14,7 @@ import { looksLikePhone, normalizePhone } from "@/lib/phone";
 import { hasSecondFactor } from "@/lib/second-factor";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { allowed, buckets, count } from "@/lib/throttle";
+import { accountTag, allowed, buckets, count, countFailure } from "@/lib/throttle";
 
 const email = z.string().trim().toLowerCase().email("invalid_email").max(254);
 const password = z.string().min(8, "password_too_short").max(72, "password_too_long");
@@ -54,13 +54,16 @@ export async function signInAction(_: ActionState, fd: FormData): Promise<Action
   }
   // Too many wrong passwords from this device or on this account: stop guessing for a while.
   const limits = await buckets(["signinDevice"], [["signinAccount", account]]);
-  if (!(await allowed(limits))) return fail("too_many_attempts");
+  if (!(await allowed(limits, account))) return fail("too_many_attempts");
+  const via = address ? "email" : "phone";
   if (!address) {
     // Phone sign-in (accounts verified with WhatsApp, or with Telegram before it was removed): map the number to its auth address.
     const admin = createAdminClient();
     const { data } = admin ? await admin.rpc("auth_email_for_phone", { p_phone: account }) : { data: null };
     if (!data) {
-      await count(limits);
+      // Logged with a tag that can't be read back to the number; the password is never logged.
+      logger.warn("sign_in_failed", { via, account: accountTag(account) });
+      await countFailure(limits, account);
       return fail("invalid_credentials");
     }
     address = data as string;
@@ -70,7 +73,10 @@ export async function signInAction(_: ActionState, fd: FormData): Promise<Action
   const { data, error } = await supabase.auth.signInWithPassword({ email: address, password: pass.data });
   if (error) {
     const code = authErrorCode(error);
-    if (code === "invalid_credentials") await count(limits);
+    if (code === "invalid_credentials") {
+      logger.warn("sign_in_failed", { via, account: accountTag(account) });
+      await countFailure(limits, account);
+    }
     if (code === "email_not_confirmed") {
       await setPendingEmail(address);
       redirect({ href: "/verify-email", locale: await currentLocale() });
@@ -134,11 +140,14 @@ export async function verifyEmailCodeAction(_: ActionState, fd: FormData): Promi
   if (!/^[0-9]{6,10}$/.test(token)) return fail("validation", { code: "invalid_code" });
   // Guessing codes: limited per account and per device.
   const limits = await buckets(["signinDevice"], [["codeAccount", address]]);
-  if (!(await allowed(limits))) return fail("too_many_attempts");
+  if (!(await allowed(limits, address))) return fail("too_many_attempts");
   const supabase = await createClient();
   const { error } = await supabase.auth.verifyOtp({ email: address, token, type: "email" });
   if (error) {
-    if (error.status !== 429) await count(limits);
+    if (error.status !== 429) {
+      logger.warn("email_code_failed", { account: accountTag(address) });
+      await countFailure(limits, address);
+    }
     return fail(error.status === 429 ? "rate_limited" : "invalid_code");
   }
   await clearPendingEmail();
@@ -192,6 +201,13 @@ export async function resetPasswordAction(_: ActionState, fd: FormData): Promise
   if (!user.user) return fail("reset_link_expired");
   const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
   if (error) return fail(authErrorCode(error));
+  // Recorded (who and when, never the password): Vercel's logs, and Admin → Audit.
+  logger.info("password_changed", { user: user.user.id });
+  const admin = createAdminClient();
+  if (admin) {
+    const { error: auditError } = await admin.rpc("security_event", { p_action: "password_changed", p_user: user.user.id });
+    if (auditError) logger.warn("security_event_failed", { code: auditError.code });
+  }
   redirect({ href: "/dashboard", locale: await currentLocale() });
   return ok();
 }
