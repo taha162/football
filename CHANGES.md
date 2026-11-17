@@ -1470,3 +1470,22 @@
 **لا يحتاج** أي ملف SQL.
 
 التعديل: «Fix the delete-member page failing to open»
+
+## 2026-11-17 (مراجعة الأمان الثانية)
+
+التقرير الكامل، مرتباً حسب الخطورة، في `SECURITY_REVIEW.md`.
+
+### 83. تحديث Next.js وحذف حزم غير مستعملة
+**ما تغيّر:**
+- **Next.js من 16.4.3 إلى 16.4.6:** النسخة السابقة عليها ثغرة معلنة متوسطة (GHSA-mfr8-8qww-v76h). الموقع لا يستعمل الميزة المصابة (`'use cache'`)، ومع ذلك حُدّث.
+- **أداة الفحص (lint):** حُدّثت حزمة `minimatch` داخلها إلى النسخة المصححة. هذه أداة للمطوّر فقط ولا تصل إلى الموقع.
+- **أربع حزم مثبتة غير مستعملة حُذفت:** `react-hook-form` و`@hookform/resolvers` و`dotenv` و`@vitest/coverage-v8`.
+- `pnpm audit`: لا ثغرات معروفة.
+
+الملفات: `package.json` و`pnpm-lock.yaml` و`pnpm-workspace.yaml`.
+
+**ما حُذف:** الحزم الأربع أعلاه.
+
+**لا يحتاج** أي ملف SQL.
+
+التعديل: «Update Next.js to 16.4.6 and remove unused packages»
