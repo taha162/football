@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { logger } from "@/lib/log";
+import { API_LIMITS, hit, limitAddress, tooManyRequests } from "@/lib/rate-limit";
 import { sessionTooOld } from "@/lib/session-policy";
 import { createClient } from "@/lib/supabase/server";
 
@@ -22,6 +23,8 @@ const none = (status: number) => NextResponse.json({ access_token: null }, { sta
 export async function GET(request: NextRequest) {
   const from = request.headers.get("sec-fetch-site");
   if (from && from !== "same-origin") return none(403);
+  const limit = hit(API_LIMITS.session, limitAddress(request.headers));
+  if (!limit.ok) return tooManyRequests(limit.retryAfter);
 
   const supabase = await createClient();
   // Checked with Supabase Auth; an expired access token is refreshed first (new cookies on this answer).

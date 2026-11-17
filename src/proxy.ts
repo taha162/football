@@ -6,6 +6,7 @@ import { contentSecurityPolicy, newNonce } from "./lib/csp";
 import { sessionCookieOptions } from "./lib/env";
 import { logger } from "./lib/log";
 import { hasSecondFactor, needsSecondStep } from "./lib/second-factor";
+import { isSensitivePath } from "./lib/sensitive-paths";
 import { sessionTooOld } from "./lib/session-policy";
 
 const intl = createMiddleware(routing);
@@ -17,13 +18,21 @@ function isPrefetch(request: NextRequest): boolean {
 }
 
 /**
- * 1. Resolves the locale (prefix redirect / cookie) via next-intl.
- * 2. Refreshes the Supabase session cookies on the same response, and ends a
+ * 1. Answers probes for leaked files (.env, .git, backups…) with a plain 404.
+ * 2. Resolves the locale (prefix redirect / cookie) via next-intl.
+ * 3. Refreshes the Supabase session cookies on the same response, and ends a
  *    session that signed in longer ago than the site allows.
  * Authorization is NOT done here: every page and action checks the user
  * server-side, and the database enforces RLS.
  */
 export async function proxy(request: NextRequest) {
+  if (isSensitivePath(request.nextUrl.pathname)) {
+    return new NextResponse("Not found", {
+      status: 404,
+      headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": "noindex" },
+    });
+  }
+
   // The site is Arabic only (old /en links are redirected in next.config.ts).
   // next-intl doesn't see Accept-Language, so nothing tries another language.
   const headers = new Headers(request.headers);
@@ -118,5 +127,8 @@ export const config = {
   matcher: [
     // Pages: everything but API routes, auth callbacks, Next internals and files (anything with a dot).
     "/((?!api|auth|_next|_vercel|.*\\..*).*)",
+    // And, dot or not, whatever looks like a leaked file (the same patterns as src/lib/sensitive-paths.ts): answered 404 above.
+    "/((?:.*/)?\\.(?!well-known(?:/|$))[^/]+(?:/.*)?)",
+    "/(.*\\.(?:env|sql|sqlite3?|db|bak|backup|old|orig|save|swp|dump|log|ini|conf|cfg|pem|key|crt|p12|pfx|zip|tar|gz|tgz|bz2|xz|7z|rar|toml|ya?ml)(?:[./~].*)?)",
   ],
 };

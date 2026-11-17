@@ -1,6 +1,7 @@
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 import { safeNext } from "@/lib/auth";
+import { API_LIMITS, hit, limitAddress, tooManyRequests } from "@/lib/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -8,6 +9,8 @@ import { createClient } from "@/lib/supabase/server";
  * change). Supports the PKCE `code` flow and the `token_hash` flow.
  */
 export async function GET(request: NextRequest) {
+  const limit = hit(API_LIMITS.authCallback, limitAddress(request.headers));
+  if (!limit.ok) return tooManyRequests(limit.retryAfter);
   const { searchParams, origin } = request.nextUrl;
   const next = safeNext(searchParams.get("next"), "/");
   const code = searchParams.get("code");

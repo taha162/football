@@ -1,5 +1,5 @@
-import { randomInt, randomUUID } from "node:crypto";
-import { admin, createAuthUser, emailedCode, emailedHtml, expect, PASSWORD, quietWhatsapp, test } from "./fixtures";
+import { randomUUID } from "node:crypto";
+import { admin, createAuthUser, emailedCode, emailedHtml, expect, PASSWORD, quietWhatsapp, test, testAddress } from "./fixtures";
 
 const phone = () => `9647${String(Math.floor(Math.random() * 1e9)).padStart(9, "0")}`;
 const localFormat = (e164: string) => `0${e164.slice(3)}`;
@@ -87,8 +87,9 @@ test.describe("Account verification", () => {
   });
 
   test("phone sign-up: past the per-device limit, no account is created at all", async ({ browser }) => {
-    // A device of its own (an address only this test uses), and a limit of two sign-ups for it.
-    const ip = `203.0.113.${randomInt(1, 255)}`;
+    // A device of its own (an address only this run uses: the counts last an hour, so a small range can
+    // land on an address an earlier run already used up), and a limit of two sign-ups for it.
+    const ip = testAddress();
     const tag = `Throttle ${randomUUID().slice(0, 8)}`;
     const [setting] = await admin<{ value: unknown }>("select value from public.platform_settings where key = 'auth.signups_per_device'");
     await admin("update public.platform_settings set value = '2'::jsonb where key = 'auth.signups_per_device'");
