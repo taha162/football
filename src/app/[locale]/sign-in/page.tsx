@@ -32,6 +32,8 @@ export default async function SignInPage({ params, searchParams }: PageProps<"/[
       }
     >
       {sp.error === "link_invalid" ? <Alert tone="warning">{t("linkInvalid")}</Alert> : null}
+      {/* Sent here by the proxy when the session passed its lifetime (src/lib/session-policy.ts). */}
+      {sp.reason === "expired" ? <Alert tone="info">{t("sessionExpired")}</Alert> : null}
       <SignInForm next={next} />
     </AuthShell>
   );

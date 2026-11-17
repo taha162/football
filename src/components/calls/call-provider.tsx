@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useMemo, useState, type Dispatch,
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { publicEnv } from "@/lib/env";
 import { publicStorageUrl } from "@/lib/storage";
-import { getBrowserClient, getRealtimeClient } from "@/lib/supabase/client";
+import { getAccessToken, getBrowserClient, getRealtimeClient } from "@/lib/supabase/client";
 import type { Database, Json } from "@/lib/supabase/types";
 import { callIceServersAction } from "@/server/calls";
 import { findAudioRoute, isOtherIphoneBrowser, isPhone, type AudioRoute, type NoRoute } from "./audio-route";
@@ -292,9 +292,9 @@ function createEngine(setView: Dispatch<SetStateAction<CallView>>) {
     if (callId) await db().rpc("end_call", { p_call_id: callId, p_reason: reason });
   }
 
+  /** Kept for hanging up as the page closes, when there's no time to ask the site for it. */
   async function rememberToken() {
-    const { data } = await db().auth.getSession();
-    L().token = data.session?.access_token ?? null;
+    L().token = await getAccessToken();
   }
 
   function startHeartbeat(ms: number) {
@@ -378,7 +378,7 @@ function createEngine(setView: Dispatch<SetStateAction<CallView>>) {
     let channel: RealtimeChannel | null = null;
     let closed = false;
     // Joined as this person (RLS decides which calls reach them), once the session has loaded.
-    void getRealtimeClient().then((client) => {
+    void getRealtimeClient(me).then((client) => {
       if (closed) return;
       channel = client
         .channel(`calls:${me}`)

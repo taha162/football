@@ -74,3 +74,36 @@ test.describe("Security headers", () => {
     expect(await blocked()).toEqual([]);
   });
 });
+
+test.describe("Security review (17 November 2026)", () => {
+  test("session cookies are HttpOnly and SameSite: page scripts can't read them", async ({ page, context }) => {
+    const user = await createAuthUser("Cookie");
+    await signIn(page, user);
+    const session = (await context.cookies()).filter((c) => c.name.startsWith("sb-"));
+    expect(session.length).toBeGreaterThan(0);
+    for (const c of session) {
+      expect(c.httpOnly, c.name).toBe(true);
+      expect(c.sameSite, c.name).toBe("Lax");
+    }
+    expect(await page.evaluate(() => document.cookie)).not.toContain("sb-");
+  });
+
+  test("/api/session gives the page a short-lived token, only to the site itself and only with a session", async ({ page, browser }) => {
+    const user = await createAuthUser("Token");
+    await signIn(page, user);
+    const res = await page.request.get("/api/session");
+    expect(res.status()).toBe(200);
+    expect(res.headers()["cache-control"]).toContain("no-store");
+    expect(res.headers()["access-control-allow-origin"]).toBeUndefined();
+    const body = (await res.json()) as { access_token: unknown; expires_at: unknown; user_id: unknown };
+    expect(typeof body.access_token).toBe("string");
+    expect(body.user_id).toBe(user.id);
+    expect(Object.keys(body).sort()).toEqual(["access_token", "expires_at", "user_id"]);
+    // Asked from another site (the browser says so): refused.
+    expect((await page.request.get("/api/session", { headers: { "sec-fetch-site": "cross-site" } })).status()).toBe(403);
+    // Without a session: nothing.
+    const visitor = await browser.newContext();
+    expect((await visitor.request.get("/api/session")).status()).toBe(401);
+    await visitor.close();
+  });
+});

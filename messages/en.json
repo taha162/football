@@ -100,6 +100,7 @@
     "termsHeading": "Terms",
     "acceptTerms": "I accept the <terms>terms of use</terms> and <privacy>privacy policy</privacy>.",
     "linkInvalid": "That link is invalid or has expired. Please try again.",
+    "sessionExpired": "Your session ended, so please sign in again. For your safety, signing in lasts 30 days, or a week without use.",
     "emailOrPhone": "E-mail or phone number",
     "emailOrPhoneHint": "If you signed up with your phone number, enter it, e.g. 07701234567.",
     "verifyMethod": "Verification method",

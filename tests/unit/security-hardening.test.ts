@@ -20,9 +20,10 @@ describe("clientIp (per-device limits)", () => {
 });
 
 describe("sessionCookieOptions", () => {
-  it("marks the session cookie Secure wherever the site is served over https", () => {
-    expect(sessionCookieOptions("https://al-malab.example")).toEqual({ secure: true });
-    expect(sessionCookieOptions("http://localhost:3000")).toEqual({ secure: false });
+  it("HttpOnly, SameSite=Lax, a week without use, and Secure wherever the site is served over https", () => {
+    const week = 7 * 24 * 60 * 60;
+    expect(sessionCookieOptions("https://al-malab.example")).toEqual({ path: "/", httpOnly: true, secure: true, sameSite: "lax", maxAge: week });
+    expect(sessionCookieOptions("http://localhost:3000")).toMatchObject({ httpOnly: true, secure: false, sameSite: "lax" });
   });
 });
 

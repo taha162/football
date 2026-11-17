@@ -3,6 +3,7 @@
  * server-only secrets must never be imported from client components
  * (see `src/lib/supabase/admin.ts`, which is guarded by `server-only`).
  */
+import { SESSION_IDLE_SECONDS } from "./session-policy";
 
 /**
  * The origin (scheme + host) of a site address as someone typed it. Copying
@@ -48,15 +49,25 @@ export const publicEnv = {
 };
 
 /**
- * Options for the Supabase session cookie. @supabase/ssr leaves out `Secure`,
- * so a browser would also send the session over plain http (an http link, a
- * hostile network before HSTS is known). Wherever the site is served over
- * https, the cookie is marked Secure. It stays readable by the page's own
- * script, which the browser client needs for live updates; the nonce policy
- * (src/lib/csp.ts) keeps other script from running.
+ * Options for the Supabase session cookies, which only the server writes:
+ * - `HttpOnly`: no script in the page can read them, so a script that slipped
+ *   in couldn't take the session away. The browser's live connection asks
+ *   /api/session for a short-lived access token instead (src/lib/supabase/client.ts).
+ * - `Secure` wherever the site is served over https (@supabase/ssr leaves it
+ *   out), so the session never travels over plain http.
+ * - `SameSite=Lax`: not sent with requests other sites start, except plain
+ *   top-level links.
+ * - They lapse after SESSION_IDLE_SECONDS without a visit; each visit that
+ *   refreshes the session writes them again.
  */
-export function sessionCookieOptions(siteUrl = publicEnv.siteUrl): { secure: boolean } {
-  return { secure: siteUrl.startsWith("https://") };
+export function sessionCookieOptions(siteUrl = publicEnv.siteUrl) {
+  return {
+    path: "/",
+    httpOnly: true,
+    secure: siteUrl.startsWith("https://"),
+    sameSite: "lax" as const,
+    maxAge: SESSION_IDLE_SECONDS,
+  };
 }
 
 export function isSupabaseConfigured(): boolean {

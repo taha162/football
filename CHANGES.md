@@ -1489,3 +1489,21 @@
 **لا يحتاج** أي ملف SQL.
 
 التعديل: «Update Next.js to 16.4.6 and remove unused packages»
+
+### 84. جلسة الدخول تنتهي، ولا تقرؤها نصوص الصفحة
+**ما تغيّر:**
+- **ملفات الجلسة (cookies) صارت HttpOnly:** لا يستطيع أي نص برمجي في الصفحة قراءتها، فلا يُسرق تسجيل الدخول حتى لو دخل نص خبيث.
+- **المكالمات والتحديثات المباشرة** تأخذ من الموقع مفتاحاً قصير العمر، ساعة على الأكثر، عبر `/api/session`. هذا الطريق يرفض المواقع الأخرى ومن لم يسجّل دخوله.
+- **مدة الجلسة:** 30 يوماً على الأكثر من تسجيل الدخول، أو أسبوع دون استخدام. بعدها تُنهى الجلسة في Supabase أيضاً، وتظهر صفحة الدخول برسالة «انتهت جلستك، فسجّل الدخول من جديد».
+- **روابط استعادة كلمة المرور ورموز البريد:** 15 دقيقة محلياً بدل ساعة. في الموقع الحقيقي تحتاج إعداداً في Supabase (`DEPLOYMENT.md`، القسم 16).
+
+الملفات:
+- الموقع: `src/lib/session-policy.ts` (جديد) و`src/lib/env.ts` و`src/lib/supabase/client.ts` و`src/app/api/session/route.ts` (جديد) و`src/proxy.ts` و`src/app/[locale]/sign-in/page.tsx` و`src/components/calls/call-provider.tsx` و`src/components/layout/live-refresh.tsx`، والنصوص في `messages/`.
+- الإعداد المحلي: `supabase/config.toml`.
+- الاختبارات: `tests/unit/security-hardening.test.ts` و`tests/unit/security-review.test.ts` و`e2e/security.spec.ts`.
+
+**ما حُذف:** قراءة الجلسة من نصوص الصفحة.
+
+**لا يحتاج** أي ملف SQL.
+
+التعديل: «Sessions expire, and page scripts can no longer read them»
