@@ -78,8 +78,8 @@ export function SignUpForm() {
 /**
  * Sign-up with a WhatsApp number instead of an e-mail: name, the number,
  * password and terms. The code must then come from that number's WhatsApp.
- * With WhatsApp messages set up, an unticked box asks whether to receive
- * offers on WhatsApp.
+ * With WhatsApp messages set up, offers on WhatsApp come with it: the box is
+ * ticked and can't be unticked here, and Settings turns them off afterwards.
  */
 export function WhatsappSignUpForm({ offerPromos = false }: { offerPromos?: boolean }) {
   const t = useTranslations("auth");
@@ -114,8 +114,10 @@ export function WhatsappSignUpForm({ offerPromos = false }: { offerPromos?: bool
         )}
       </FormField>
       {offerPromos ? (
+        // Part of signing up with WhatsApp: ticked, and it can't be unticked here. After signing
+        // up, Settings (or sending 0) turns offers off. The server records it whatever the form says.
         <FormField name="wa_promos" label={t("promosHeading")} hint={t("promosHint")}>
-          {(a) => <Checkbox {...a} label={t("promosOptIn")} />}
+          {(a) => <Checkbox {...a} defaultChecked disabled className="cursor-default" label={t("promosOptIn")} />}
         </FormField>
       ) : null}
       <SubmitButton size="lg">{t("continueWhatsapp")}</SubmitButton>

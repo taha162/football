@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage, type Server } from "node:http";
-import { admin, createAuthUser, expect, localTime, mosul, PASSWORD, rpc, signIn, test, whatsappMessage, type TestUser } from "./fixtures";
+import { admin, createAuthUser, expect, localTime, mosul, PASSWORD, quietWhatsapp, rpc, signIn, test, whatsappMessage, type TestUser } from "./fixtures";
 
 /**
  * WhatsApp through the platform's own number (whatsapp-bot/), without
@@ -26,11 +26,16 @@ async function hiddenMessage(baseURL: string, text: string): Promise<Record<stri
   return (await res.json()) as Record<string, unknown>;
 }
 const BOT_NUMBER = process.env.WHATSAPP_BOT_NUMBER ?? "";
+/** A 1×1 JPEG, for an offer's picture. */
+const JPEG = Buffer.from(
+  "/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=",
+  "base64",
+);
 const SECRET = process.env.WHATSAPP_BOT_SECRET ?? "";
 
 /** The site's side of the bot: /send, /status, /cancel, /health and /link. */
 class StandInBot {
-  received: { id: string; to: string; text: string; kind: string }[] = [];
+  received: { id: string; to: string; text: string; kind: string; image?: { url: string }; location?: { lat: number; lng: number; name?: string; address?: string } }[] = [];
   /** Added to /health: what the bot found when it checked SITE_URL, and its latest incoming messages. */
   healthExtra: Record<string, unknown> = {};
   private server: Server | null = null;
@@ -89,6 +94,7 @@ async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> 
 const bot = new StandInBot();
 test.beforeAll(async () => bot.start());
 test.afterAll(async () => bot.stop());
+test.beforeEach(async ({ context }) => quietWhatsapp(context));
 
 const setSetting = (key: string, value: unknown) =>
   admin("update public.platform_settings set value = $2::jsonb where key = $1", [key, JSON.stringify(value)]);
@@ -123,20 +129,31 @@ test.describe("WhatsApp verification", () => {
     await number.fill("123");
     await page.getByRole("textbox", { name: "كلمة المرور" }).fill(PASSWORD);
     await page.getByRole("checkbox", { name: /شروط الاستخدام/ }).check();
-    // Offers only with a tick, and the box starts unticked.
+    // Offers come with signing up with WhatsApp: ticked, and they can't be unticked here (Settings turns them off).
     const promos = page.getByRole("checkbox", { name: "أرسلوا لي العروض على واتساب" });
-    await expect(promos).not.toBeChecked();
-    await promos.check();
+    await expect(promos).toBeChecked();
+    await expect(promos).toBeDisabled();
     await page.getByRole("button", { name: "متابعة عبر واتساب" }).click();
     await expect(page.getByText("رقم الهاتف غير صحيح.")).toBeVisible();
     await number.fill(localFormat(from));
     await page.getByRole("textbox", { name: "كلمة المرور" }).fill(PASSWORD);
+    const opened = page.context().waitForEvent("page");
     await page.getByRole("button", { name: "متابعة عبر واتساب" }).click();
     await page.waitForURL(/\/ar\/verify-whatsapp/);
 
     const code = (await page.getByTestId("verify-code").textContent())!.trim();
     expect(code).toMatch(/^[A-HJKMNP-Z2-9]{4}-[A-HJKMNP-Z2-9]{4}$/);
+    // WhatsApp opened by itself, on the platform's number with the code typed in, and the page says so.
+    expect((await opened).url()).toBe(`https://wa.me/${BOT_NUMBER}?text=${code}`);
+    await expect(page.getByText("فتحنا واتساب على رقم «الملعب» والرمز مكتوب فيه.", { exact: false })).toBeVisible();
     await expect(page.getByRole("link", { name: "افتح واتساب" })).toHaveAttribute("data-href", `https://wa.me/${BOT_NUMBER}?text=${code}`);
+    // Coming back to the page doesn't open it again.
+    let reopened = 0;
+    page.context().on("page", () => reopened++);
+    await page.reload();
+    await expect(page.getByTestId("verify-code")).toHaveText(code);
+    await page.waitForTimeout(1000);
+    expect(reopened).toBe(0);
     await expect(page.getByTestId("whatsapp-from")).toContainText(display(from));
 
     // Requests without the bot's secret are refused, and the body is checked.
@@ -166,11 +183,18 @@ test.describe("WhatsApp verification", () => {
     await page.getByRole("button", { name: "ابدأ اللعب" }).click();
     await page.waitForURL(/\/ar\/dashboard/);
 
-    // Settings: the number, booking messages on, offers on (ticked at sign-up).
+    // Settings: the number, booking messages on, offers on (part of signing up), and offers can be turned off here.
     await page.goto("/ar/settings");
     await expect(page.getByText(`+${from}`)).toBeVisible();
     await expect(page.getByRole("checkbox", { name: /رسائل حجوزاتي/ })).toBeChecked();
-    await expect(page.getByRole("checkbox", { name: "العروض والأخبار" })).toBeChecked();
+    const offers = page.getByRole("checkbox", { name: "العروض والأخبار" });
+    await expect(offers).toBeChecked();
+    await offers.uncheck();
+    await offers.locator("xpath=ancestor::form").getByRole("button", { name: "حفظ" }).click();
+    await expect(page.getByText("تم حفظ إعدادات واتساب.")).toBeVisible();
+    await page.reload();
+    await expect(page.getByRole("checkbox", { name: "العروض والأخبار" })).not.toBeChecked();
+    await expect(page.getByRole("checkbox", { name: /رسائل حجوزاتي/ })).toBeChecked();
 
     // Sign in with the local number format.
     await page.context().clearCookies();
@@ -217,7 +241,9 @@ test.describe("WhatsApp verification", () => {
     await whatsappMessage(baseURL!, from, await signUp(page));
     await page.waitForURL(/\/ar\/onboarding/, { timeout: 15_000 });
 
-    const other = await (await browser.newContext()).newPage();
+    const otherContext = await browser.newContext();
+    await quietWhatsapp(otherContext);
+    const other = await otherContext.newPage();
     expect((await whatsappMessage(baseURL!, from, await signUp(other))).reply).toContain("مرتبط بحساب آخر");
     await expect(other.getByText("هذا الرقم مرتبط بحساب آخر في «الملعب».")).toBeVisible({ timeout: 15_000 });
 
@@ -378,11 +404,25 @@ test.describe("WhatsApp promotions", () => {
     await expect(page.getByTestId("campaign-row").first()).toContainText("أُوقفت");
     expect(bot.received.filter((m) => m.kind === "promo" && fans.some((f) => f.phone === m.to))).toHaveLength(0);
 
-    // Second campaign: sent, only to the two who opted in, each greeted by name.
+    // Second campaign, with a picture, a place (a venue on the map) and a link: sent only to the two who
+    // opted in, each greeted by name.
     await allowance(10);
+    const owner = await createAuthUser("Owner");
+    const venue = await rpc<string>(owner.id, "create_venue", { p_name: `ملعب العرض ${randomUUID().slice(0, 4)}`, p_city_id: await mosul() });
+    await admin("update public.venues set latitude = 36.34, longitude = 43.13, address = 'حي الزهور' where id = $1", [venue]);
+    const [{ name: venueName }] = await admin<{ name: string }>("select name from public.venues where id = $1", [venue]);
+    await page.reload(); // the venues to choose from are read with the page
     await page.getByRole("textbox", { name: "نص الرسالة" }).fill("ملعب جديد في مدينتك!");
+    await page.getByLabel("صورة (اختياري)").setInputFiles({ name: "offer.jpg", mimeType: "image/jpeg", buffer: JPEG });
+    await page.getByRole("combobox", { name: "موقع (اختياري)" }).selectOption({ label: venueName });
+    await page.getByRole("textbox", { name: "رابط (اختياري)" }).fill("https://al-malab.example/venues");
+    const preview = page.getByTestId("promo-preview");
+    await expect(preview.getByRole("img", { name: "الصورة المرفقة بالعرض" })).toBeVisible();
+    await expect(preview).toContainText("🔗 https://al-malab.example/venues");
+    await expect(preview).toContainText(venueName);
     await page.getByRole("combobox", { name: "إلى" }).selectOption({ label: `${cityName} (٢)` });
     await page.getByRole("button", { name: "إرسال", exact: true }).click();
+    await expect(page.getByRole("dialog")).toContainText("مع صورة");
     await page.getByRole("button", { name: "أرسل الآن" }).click();
     await expect(page.getByText("بدأ الإرسال", { exact: false })).toBeVisible();
     await expect.poll(() => fans.map((f) => bot.to(f.phone).length), { timeout: 15_000 }).toEqual([1, 1]);
@@ -391,14 +431,22 @@ test.describe("WhatsApp promotions", () => {
       const [m] = bot.to(f.phone);
       expect(m.kind).toBe("promo");
       expect(m.text).toContain("ملعب جديد في مدينتك!");
+      expect(m.text).toContain("🔗 https://al-malab.example/venues");
       expect(m.text.split("\n")[0]).toContain("Fan");
       expect(m.text.trim().split("\n").at(-1)).toBe("لإيقاف هذه الرسائل أرسل 0");
+      expect(m.image?.url).toMatch(/\/storage\/v1\/object\/public\/promo-images\/[0-9a-f-]{36}\.jpg$/);
+      expect(m.location).toEqual({ lat: 36.34, lng: 43.13, name: venueName, address: "حي الزهور" });
     }
+    // The picture is really there for WhatsApp to fetch.
+    expect((await fetch(bot.to(fans[0].phone)[0].image!.url)).ok).toBe(true);
     await runCron(baseURL!);
     await page.reload();
     const second = page.getByTestId("campaign-row").first();
     await expect(second).toContainText("انتهت");
     await expect(second).toContainText("أُرسل ٢");
+    await expect(second).toContainText("مع صورة");
+    await expect(second).toContainText(venueName);
+    await expect(second).toContainText("مع رابط");
 
     // Every campaign is in the audit log, with who did it.
     const audit = await admin<{ action: string; actor_id: string }>(

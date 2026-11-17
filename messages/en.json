@@ -124,13 +124,14 @@
     "forgotWhatsapp": "Recover with WhatsApp",
     "forgotWhatsappNote": "Signed up with your phone number? Type it, then send the code from WhatsApp on that number and choose a new password.",
     "promosHeading": "Offers on WhatsApp",
-    "promosHint": "Optional. Occasional venue offers and Al-Malab news; stop them anytime by sending 0.",
+    "promosHint": "Occasional venue offers and Al-Malab news on WhatsApp. After signing up you can stop them anytime in Settings, or by sending 0.",
     "promosOptIn": "Send me offers on WhatsApp",
     "waTitle": "Confirm your number with WhatsApp",
     "waSubtitleSignup": "One last step to activate your account and link it to your number.",
     "waSubtitleReset": "Confirm the number linked to your account to choose a new password.",
     "waStep1": "Tap “Open WhatsApp”: it opens on Al-Malab's number with the code typed in.",
     "waStep2": "Tap send in WhatsApp, then come back here.",
+    "waAutoOpened": "We opened WhatsApp on Al-Malab's number with the code typed in. Tap send there, then come back here.",
     "waOpen": "Open WhatsApp",
     "waNoApp": "WhatsApp didn't open?",
     "waManual": "From WhatsApp on your number, send this code to:",
@@ -455,7 +456,13 @@
     "whatsapp_not_configured": "The WhatsApp bot isn't set up yet.",
     "whatsapp_bot_unreachable": "Couldn't reach the WhatsApp bot. Try again shortly.",
     "campaign_in_progress": "A campaign is still sending. Stop it or wait for it to finish.",
-    "campaign_not_active": "This campaign has stopped or finished."
+    "campaign_not_active": "This campaign has stopped or finished.",
+    "cannot_delete_self": "You can't delete your own account.",
+    "cannot_delete_admin": "An admin can't be deleted. Remove the admin role first.",
+    "venue_owner": "A venue's owner can't be deleted.",
+    "invalid_link": "The link must start with https://",
+    "venue_without_location": "This venue has no place on the map.",
+    "promo_media_unavailable": "Database file …0031 is not applied, so pictures, places and links can't be sent yet."
   },
   "validation": {
     "invalid": "Invalid value.",
@@ -481,7 +488,10 @@
     "invalid_json": "Enter a valid JSON value.",
     "invalid_slug": "Use lowercase letters, digits and dashes.",
     "invalid_code": "Enter the numeric code you received.",
-    "app_code": "Type the six digits the app shows."
+    "app_code": "Type the six digits the app shows.",
+    "delete_word": "Type the word «حذف» exactly to confirm.",
+    "promo_image_type": "The picture must be a JPG or PNG.",
+    "invalid_link": "The link must start with https://"
   },
   "success": {
     "saved": "Saved.",
@@ -720,7 +730,7 @@
       "sections": [
         {
           "heading": "What we store",
-          "body": "Your e-mail address (private), display name, optional photo, city, optional public neighborhood, playing preferences, the matches, teams and bookings you take part in, messages you send, and reviews and reports you submit."
+          "body": "Your e-mail address or phone number (both private), display name, optional photo, city, optional public neighborhood, playing preferences, the matches, teams and bookings you take part in, messages you send, and reviews and reports you submit."
         },
         {
           "heading": "What others can see",
@@ -733,6 +743,10 @@
         {
           "heading": "Messages",
           "body": "Conversations are visible only to their participants. Moderators can see a copy of a message only when it is reported."
+        },
+        {
+          "heading": "WhatsApp messages",
+          "body": "If you sign up with your phone number, Al-Malab's number messages you on WhatsApp with three kinds of messages: the answer to your verification code, messages about your bookings, and venue offers and Al-Malab news. Offers come with signing up by phone number. You can stop them anytime in Settings or by sending 0, and booking messages in Settings too. We only message numbers their owners have confirmed."
         },
         {
           "heading": "Your choices",
@@ -1425,6 +1439,27 @@
     "secondFactor": "Two-step",
     "resetSecondFactor": "Reset two-step verification",
     "resetSecondFactorDescription": "For someone who lost their phone: the authenticator app is removed from their account, so they sign in with the password alone and set it up again. First make sure the request comes from the account's owner.",
+    "deleteMember": "Delete for good",
+    "deleteMemberTitle": "Delete the member for good",
+    "deleteMemberIntro": "“{name}” and everything that is theirs is deleted from the database. This can't be undone.",
+    "deleteGoes": "Deleted with them",
+    "deleteGoesAccount": "Their account, profile, phone number, picture, settings, notifications, and their place in conversations and venues",
+    "deleteGoesMatches": "Matches they organised: {count}, and tournaments: {tournaments}, with whoever joined them",
+    "deleteGoesMessages": "Their messages: {count}, with their pictures and voice notes",
+    "deleteGoesTeams": "Their team memberships: {count}. The teams themselves stay",
+    "deleteGoesReviews": "Reviews they wrote or that were written about them: {count}",
+    "deleteStays": "Stays, without their name",
+    "deleteStaysBookings": "Their venue bookings: {count}. They stay in each venue's records as “deleted member”. Upcoming ones ({upcoming}) are cancelled and the venue is told.",
+    "deleteStaysRecords": "Reports they filed, the admin log, and the teams and venues they created.",
+    "deleteBlockedSelf": "This is your own account; it isn't deleted from here.",
+    "deleteBlockedAdmin": "This member is an admin. Remove the admin role on the users page first, then delete them.",
+    "deleteBlockedVenue": "This member owns a venue: {venues}. A venue's owner isn't deleted, so the venue and its customers' bookings are never left without one.",
+    "deleteUnavailable": "Database file …0030 is not applied: run it in the SQL Editor first.",
+    "deleteReason": "Reason (optional, kept in the admin log)",
+    "deleteConfirm": "To confirm, type: {word}",
+    "deleteSubmit": "Delete for good",
+    "deleteBack": "Back to users",
+    "memberDeleted": "The member was deleted for good.",
     "secondFactorAdvice": "Your account has admin rights: turn on two-step verification to protect it.",
     "secondFactorAdviceAction": "Turn it on in Settings",
     "whatsappBot": "WhatsApp bot",
@@ -1455,10 +1490,11 @@
     "waPausedUntil": "until {time}",
     "waBotQueue": "With the bot",
     "waBotQueueValue": "{total} waiting · {hour} of {perHour} sent this hour, {today} of {perDay} today",
-    "waDatabase": "Database update (files …0028 and …0029)",
+    "waDatabase": "Database update (files …0028, …0029 and …0031)",
     "waDatabaseMissing": "Not applied. Run the file in the SQL Editor.",
     "waDatabaseOk": "Applied",
     "waDatabaseOld": "File …0029 isn't applied: run it in the SQL Editor so WhatsApp sign-up asks for the number.",
+    "waDatabaseOld31": "File …0031 is not applied: run it in the SQL Editor to send offers with a picture, a place and a link.",
     "waBookingMessages": "Booking messages",
     "waOn": "On",
     "waBookingMessagesOff": "Off. To turn them on, set <code>whatsapp.booking_messages</code> to <code>true</code> in “Platform policies” below.",
@@ -1537,6 +1573,18 @@
     "promoEveryone": "Everyone who opted in ({count})",
     "promoCity": "{city} ({count})",
     "promoPreview": "How it arrives:",
+    "promoImage": "Picture (optional)",
+    "promoImageHint": "JPG or PNG, up to 5 MB. It arrives with the text as one message.",
+    "promoImageRemove": "Remove the picture",
+    "promoImageAlt": "The offer's picture",
+    "promoPlace": "Place (optional)",
+    "promoPlaceNone": "No place",
+    "promoPlaceHint": "One of the site's venues. It arrives after the message as a map pin the recipient can open.",
+    "promoLink": "Link (optional)",
+    "promoLinkHint": "Shown under the text; it starts with https://",
+    "promoMediaOld": "To add a picture, a place or a link, apply database file …0031 first.",
+    "promoWithImage": "with a picture",
+    "promoWithLink": "with a link",
     "promoSend": "Send",
     "promoConfirmTitle": "Confirm sending",
     "promoConfirmCount": "Recipients: {count}",

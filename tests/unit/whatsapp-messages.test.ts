@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
+// Pictures are sent by their public Storage address.
+vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://abc.supabase.co");
 
 const {
   bookingLink,
@@ -16,7 +18,7 @@ const {
   verificationReply,
 } = await import("@/lib/whatsapp-messages");
 const { readWhatsappSettings } = await import("@/lib/whatsapp-settings");
-const { outcomeOf, renderMessage } = await import("@/lib/whatsapp-outbox");
+const { outcomeOf, promoExtras, renderMessage } = await import("@/lib/whatsapp-outbox");
 
 const SITE = "https://al-malab.example";
 // Thursday 19 November 2026, 20:00–21:00 in Baghdad (17:00–18:00 UTC).
@@ -166,5 +168,32 @@ describe("the WhatsApp worker", () => {
     expect(renderMessage({ ...base, kind: "booking", payload: booking, body: "as sent" }, SITE)).toBe("as sent");
     expect(renderMessage({ ...base, kind: "booking", payload: {} }, SITE)).toBeNull();
     expect(renderMessage({ ...base, kind: "promo", payload: {} }, SITE)).toBeNull();
+  });
+
+  it("a promotion's link goes under the text; its picture and place go with it to the bot", () => {
+    const text = promoMessage({ id: "m-3", body: "خصم ٢٠٪", name: "Ali", link: "https://al-malab.example/venues" });
+    expect(text.split("\n")).toContain("🔗 https://al-malab.example/venues");
+    expect(text.indexOf("🔗")).toBeLessThan(text.indexOf(PROMO_STOP_LINE));
+    const row = {
+      id: "m-4",
+      kind: "promo" as const,
+      phone: "9647701234567",
+      body: null,
+      payload: {},
+      recipient_name: "Ali",
+      campaign_body: "خصم",
+      campaign_image: "0b8f0e6e-1111-4222-8333-444455556666.jpg",
+      campaign_place: { lat: 36.34, lng: 43.13, name: "ملعب الزهور", address: null },
+      campaign_link: "https://al-malab.example/venues",
+    };
+    expect(renderMessage(row, SITE)).toContain("🔗 https://al-malab.example/venues");
+    expect(promoExtras(row)).toEqual({
+      image: { url: "https://abc.supabase.co/storage/v1/object/public/promo-images/0b8f0e6e-1111-4222-8333-444455556666.jpg" },
+      location: { lat: 36.34, lng: 43.13, name: "ملعب الزهور" },
+    });
+    // Booking messages carry neither; a campaign without them sends the text alone.
+    expect(promoExtras({ ...row, kind: "booking" })).toEqual({});
+    expect(promoExtras({ ...row, campaign_image: null, campaign_place: null })).toEqual({});
+    expect(promoExtras({ ...row, campaign_place: { lat: "x", lng: 1 } })).toEqual({ image: expect.anything() });
   });
 });

@@ -5,7 +5,7 @@ import { formatDateTime, formatNumber } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 import { bot, whatsappConfig } from "@/lib/whatsapp";
 import { stopCampaignAction } from "@/server/whatsapp";
-import { CampaignComposer, type AudienceOption } from "@/components/admin/campaign-composer";
+import { CampaignComposer, type AudienceOption, type PlaceOption } from "@/components/admin/campaign-composer";
 import { ConfirmAction } from "@/components/ui/confirm-action";
 import { Alert, Badge, Card, CardBody, DefinitionList, PageHeader, Section } from "@/components/ui/primitives";
 
@@ -22,13 +22,18 @@ type Campaign = {
   sent: number;
   failed: number;
   skipped: number;
+  /** From migration 0031 on. */
+  image_path?: string | null;
+  place_name?: string | null;
+  link_url?: string | null;
 };
 
 /**
  * Promotional WhatsApp messages (admins only). They go only to people who
- * ticked the opt-in box, slowly, through the same queue as booking messages,
- * and every one ends with how to stop them. The database checks the role
- * again and audits each campaign.
+ * agreed to them (part of signing up with WhatsApp; Settings or "0" turns
+ * them off), slowly, through the same queue as booking messages, and every
+ * one ends with how to stop them. The database checks the role again and
+ * audits each campaign.
  */
 export default async function AdminPromotionsPage() {
   const locale = await getLocale();
@@ -37,15 +42,27 @@ export default async function AdminPromotionsPage() {
   const t = await getTranslations("admin");
   const cfg = whatsappConfig();
   const supabase = await createClient();
-  const [{ data: audience, error: audienceError }, { data: campaigns }, { data: summary }, { data: cities }, health] = await Promise.all([
+  const [{ data: audience, error: audienceError }, { data: campaigns }, { data: summary }, { data: cities }, { data: venues }, health] = await Promise.all([
     supabase.rpc("admin_whatsapp_audience"),
     supabase.rpc("admin_whatsapp_campaigns", { p_limit: 20 }),
     supabase.rpc("admin_whatsapp_summary"),
     supabase.from("cities").select("id, name_ar, name_en").order("sort_order"),
+    // Places a promotion can point to: venues shown on the site, with coordinates.
+    supabase
+      .from("venues")
+      .select("id, name, address")
+      .eq("is_hidden", false)
+      .not("latitude", "is", null)
+      .not("longitude", "is", null)
+      .order("name")
+      .limit(300),
     cfg.canSend ? bot.health() : Promise.resolve(null),
   ]);
   const a = (audience ?? { total: 0, by_city: {} }) as { total: number; by_city: Record<string, number> };
-  const s = summary as { promo_left_today: number; opted_in: number } | null;
+  const s = summary as { promo_left_today: number; opted_in: number; schema?: number } | null;
+  // A picture, a place and a link need migration 0031.
+  const media = (s?.schema ?? 0) >= 31;
+  const places: PlaceOption[] = (venues ?? []).map((v) => ({ value: v.id, label: v.name, address: v.address }));
   const cityName = new Map((cities ?? []).map((c) => [c.id, locale === "ar" ? c.name_ar : c.name_en]));
   const options: AudienceOption[] = [
     { value: "", label: t("promoEveryone", { count: formatNumber(a.total, locale) }), count: a.total },
@@ -92,7 +109,13 @@ export default async function AdminPromotionsPage() {
         <Card>
           <CardBody>
             {active ? <Alert tone="info" title={t("promoOneAtATime")} /> : null}
-            <CampaignComposer audiences={options} sampleName={user!.profile.display_name} disabled={!cfg.canSend || active || Boolean(audienceError)} />
+            <CampaignComposer
+              audiences={options}
+              places={places}
+              media={media}
+              sampleName={user!.profile.display_name}
+              disabled={!cfg.canSend || active || Boolean(audienceError)}
+            />
           </CardBody>
         </Card>
       </Section>
@@ -122,6 +145,13 @@ export default async function AdminPromotionsPage() {
                     </td>
                     <td className="min-w-48 max-w-xs p-2">
                       <p className="line-clamp-3 whitespace-pre-wrap">{c.body}</p>
+                      {c.image_path || c.place_name || c.link_url ? (
+                        <p className="mt-1 flex flex-wrap gap-x-3 text-xs text-muted">
+                          {c.image_path ? <span>🖼 {t("promoWithImage")}</span> : null}
+                          {c.place_name ? <span>📍 {c.place_name}</span> : null}
+                          {c.link_url ? <span>🔗 {t("promoWithLink")}</span> : null}
+                        </p>
+                      ) : null}
                     </td>
                     <td className="min-w-28 p-2">
                       {c.city_id ? cityName.get(c.city_id) ?? "—" : t("promoAll")}

@@ -94,8 +94,15 @@ export async function WhatsappPanel() {
   }
   items.push({
     label: t("waDatabase"),
-    // 0029 says so in the summary; before it, WhatsApp sign-up can't ask for the number.
-    value: summaryError ? bad(t("waDatabaseMissing")) : (s?.schema ?? 0) < 29 ? bad(t("waDatabaseOld")) : good(t("waDatabaseOk")),
+    // Each file says so in the summary: before 0029 WhatsApp sign-up can't ask for the number;
+    // before 0031 offers go without a picture, a place or a link.
+    value: summaryError
+      ? bad(t("waDatabaseMissing"))
+      : (s?.schema ?? 0) < 29
+        ? bad(t("waDatabaseOld"))
+        : (s?.schema ?? 0) < 31
+          ? <span className="text-warning">{t("waDatabaseOld31")}</span>
+          : good(t("waDatabaseOk")),
   });
   if (s) {
     items.push({

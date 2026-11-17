@@ -1405,14 +1405,14 @@ isOneToOne: false
                   ]
                 },"whatsapp_campaigns": {
                   Row: {
-                    "body": string,"city_id": string | null,"created_at": string,"created_by": string | null,"finished_at": string | null,"id": string,"recipients": number,"status": Database["public"]['Enums']["campaign_status"],"stopped_at": string | null,"stopped_by": string | null
+                    "body": string,"city_id": string | null,"created_at": string,"created_by": string | null,"finished_at": string | null,"id": string,"image_path": string | null,"link_url": string | null,"place_address": string | null,"place_lat": number | null,"place_lng": number | null,"place_name": string | null,"recipients": number,"status": Database["public"]['Enums']["campaign_status"],"stopped_at": string | null,"stopped_by": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "body": string,"city_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"finished_at"?: string | null,"id"?: string,"recipients"?: number,"status"?: Database["public"]['Enums']["campaign_status"],"stopped_at"?: string | null,"stopped_by"?: string | null
+                    "body": string,"city_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"finished_at"?: string | null,"id"?: string,"image_path"?: string | null,"link_url"?: string | null,"place_address"?: string | null,"place_lat"?: number | null,"place_lng"?: number | null,"place_name"?: string | null,"recipients"?: number,"status"?: Database["public"]['Enums']["campaign_status"],"stopped_at"?: string | null,"stopped_by"?: string | null
                   }
                   Update: {
-                    "body"?: string,"city_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"finished_at"?: string | null,"id"?: string,"recipients"?: number,"status"?: Database["public"]['Enums']["campaign_status"],"stopped_at"?: string | null,"stopped_by"?: string | null
+                    "body"?: string,"city_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"finished_at"?: string | null,"id"?: string,"image_path"?: string | null,"link_url"?: string | null,"place_address"?: string | null,"place_lat"?: number | null,"place_lng"?: number | null,"place_name"?: string | null,"recipients"?: number,"status"?: Database["public"]['Enums']["campaign_status"],"stopped_at"?: string | null,"stopped_by"?: string | null
                   }
                   Relationships: [
                     {
@@ -1467,6 +1467,9 @@ isOneToOne: true
 "add_venue_staff":
 { Args: { "p_role": Database["public"]['Enums']["venue_role"],"p_user_id": string,"p_venue_id": string }; Returns: undefined
                            },
+"admin_delete_user":
+{ Args: { "p_reason"?: string,"p_user_id": string }; Returns: Json
+                           },
 "admin_list_users":
 { Args: { "p_limit"?: number,"p_offset"?: number,"p_search"?: string }; Returns: {
               "city_id": string,"created_at": string,"display_name": string,"email": string,"id": string,"last_sign_in_at": string,"phone": string,"roles": (Database["public"]['Enums']["app_role"])[],"status": Database["public"]['Enums']["account_status"]
@@ -1491,7 +1494,7 @@ isOneToOne: true
 { Args: { "p_note"?: string,"p_status": Database["public"]['Enums']["verification_status"],"p_venue_id": string }; Returns: undefined
                            },
 "admin_start_promo_campaign":
-{ Args: { "p_body": string,"p_city_id"?: string }; Returns: Json
+{ Args: { "p_body": string,"p_city_id"?: string,"p_image_path"?: string,"p_link_url"?: string,"p_venue_id"?: string }; Returns: Json
                            },
 "admin_stats":
 { Args: Record<PropertyKey, never>; Returns: Json
@@ -1511,6 +1514,9 @@ isOneToOne: true
 "admin_upsert_city":
 { Args: { "p_country_code": string,"p_currency": string,"p_id": string,"p_is_active"?: boolean,"p_latitude"?: number,"p_longitude"?: number,"p_name_ar": string,"p_name_en": string,"p_slug": string,"p_timezone": string }; Returns: string
                            },
+"admin_user_deletion_preview":
+{ Args: { "p_user_id": string }; Returns: Json
+                           },
 "admin_users_with_second_factor":
 { Args: { "p_user_ids": (string)[] }; Returns: string[]
                            },
@@ -1519,7 +1525,7 @@ isOneToOne: true
                            },
 "admin_whatsapp_campaigns":
 { Args: { "p_limit"?: number }; Returns: {
-              "body": string,"city_id": string,"created_at": string,"created_by_name": string,"failed": number,"finished_at": string,"id": string,"queued": number,"recipients": number,"sending": number,"sent": number,"skipped": number,"status": Database["public"]['Enums']["campaign_status"],"stopped_at": string
+              "body": string,"city_id": string,"created_at": string,"created_by_name": string,"failed": number,"finished_at": string,"id": string,"image_path": string,"link_url": string,"place_name": string,"queued": number,"recipients": number,"sending": number,"sent": number,"skipped": number,"status": Database["public"]['Enums']["campaign_status"],"stopped_at": string
             }[]
                            },
 "admin_whatsapp_summary":
@@ -1925,7 +1931,7 @@ isOneToOne: true
                            },
 "wa_outbox_claim":
 { Args: { "p_limit"?: number }; Returns: {
-              "body": string,"campaign_body": string,"id": string,"kind": Database["public"]['Enums']["outbound_kind"],"payload": Json,"phone": string,"recipient_name": string
+              "body": string,"campaign_body": string,"campaign_image": string,"campaign_link": string,"campaign_place": Json,"id": string,"kind": Database["public"]['Enums']["outbound_kind"],"payload": Json,"phone": string,"recipient_name": string
             }[]
                            },
 "wa_outbox_cleanup":

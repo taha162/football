@@ -54,7 +54,7 @@ export function describedBy(id: string, error?: unknown, hint?: unknown) {
   return { "aria-describedby": ids || undefined, "aria-invalid": error ? true : undefined } as const;
 }
 
-export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
+export function Input({ className, ...props }: ComponentProps<"input">) {
   return <input className={cn(control, "h-11", className)} {...props} />;
 }
 

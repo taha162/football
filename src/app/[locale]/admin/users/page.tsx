@@ -9,7 +9,8 @@ import { InlineAction } from "@/components/ui/action-form";
 import { buttonClass } from "@/components/ui/button";
 import { ConfirmAction } from "@/components/ui/confirm-action";
 import { Input } from "@/components/ui/field";
-import { Badge, PageHeader } from "@/components/ui/primitives";
+import { LinkButton } from "@/components/ui/link-button";
+import { Alert, Badge, PageHeader } from "@/components/ui/primitives";
 import { Pagination } from "@/components/ui/pagination";
 import { isPhoneAccountEmail } from "@/lib/phone";
 
@@ -30,6 +31,7 @@ export default async function AdminUsersPage({ searchParams }: PageProps<"/[loca
   return (
     <>
       <PageHeader title={t("nav.users")} />
+      {sp.deleted === "1" ? <Alert tone="success">{t("memberDeleted")}</Alert> : null}
       <Form action="" scroll={false} className="flex gap-2">
         <label htmlFor="admin-user-q" className="sr-only">{t("searchUsers")}</label>
         <Input id="admin-user-q" name="q" defaultValue={q} placeholder={t("searchUsers")} />
@@ -102,6 +104,12 @@ export default async function AdminUsersPage({ searchParams }: PageProps<"/[loca
                           variant="outline"
                         />
                       ) : null}
+                      {/* Admins only (this page is theirs); an admin must lose the role before they can be deleted. */}
+                      {u.roles.includes("admin") ? null : (
+                        <LinkButton href={`/admin/users/${u.id}/delete`} className={buttonClass("danger", "sm")}>
+                          {t("deleteMember")}
+                        </LinkButton>
+                      )}
                     </div>
                   ) : (
                     <span className="text-xs text-muted">{t("you")}</span>

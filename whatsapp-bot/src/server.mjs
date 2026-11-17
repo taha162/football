@@ -6,7 +6,10 @@ import { QueueFullError } from "./queue.mjs";
  * The bot's small HTTP API, for the site only: every route but /healthz needs
  * `Authorization: Bearer WHATSAPP_BOT_SECRET`.
  *
- *   POST /send    {id?, to, text, kind?}  queue a message (same id = same message)
+ *   POST /send    {id?, to, text, kind?, image?, location?}
+ *                                         queue a message (same id = same message); a picture
+ *                                         ({url}: https) goes with the text, a place ({lat, lng,
+ *                                         name?, address?}) follows it as a map pin
  *   POST /status  {ids}                   what became of messages
  *   POST /cancel  {ids, reason?}          drop messages that haven't gone out
  *   GET  /health                          connection, pause, queue, caps, can it reach the site, latest incoming messages
@@ -19,6 +22,32 @@ import { QueueFullError } from "./queue.mjs";
 
 const MAX_BODY = 64 * 1024;
 const ID = /^[A-Za-z0-9_-]{1,64}$/;
+
+/**
+ * A message's picture and place, checked: `{image?, location?}`, or an error
+ * code. Nothing else from the request is kept.
+ * @param {any} body
+ * @returns {{ ok: true, media: { image?: { url: string }, location?: { lat: number, lng: number, name?: string, address?: string } } } | { ok: false, error: string }}
+ */
+export function readMedia(body) {
+  /** @type {{ image?: { url: string }, location?: { lat: number, lng: number, name?: string, address?: string } }} */
+  const media = {};
+  if (body?.image != null) {
+    const url = typeof body.image.url === "string" ? body.image.url.trim() : "";
+    if (!/^https:\/\/\S+$/.test(url) || url.length > 1000) return { ok: false, error: "invalid_image" };
+    media.image = { url };
+  }
+  if (body?.location != null) {
+    const lat = Number(body.location.lat);
+    const lng = Number(body.location.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return { ok: false, error: "invalid_location" };
+    const words = (/** @type {unknown} */ v, /** @type {number} */ max) => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : undefined);
+    const name = words(body.location.name, 100);
+    const address = words(body.location.address, 200);
+    media.location = { lat, lng, ...(name ? { name } : {}), ...(address ? { address } : {}) };
+  }
+  return { ok: true, media };
+}
 
 /**
  * @param {string | undefined} header
@@ -55,11 +84,13 @@ export function handle({ method, path, authorization, body }, { secret, queue, c
     if (!/^[1-9]\d{7,14}$/.test(to)) return { status: 400, body: { error: "invalid_number" } };
     if (!text || text.length > 2000) return { status: 400, body: { error: "invalid_text" } };
     if (body?.id !== undefined && !(typeof body.id === "string" && ID.test(body.id))) return { status: 400, body: { error: "invalid_id" } };
+    const media = readMedia(body);
+    if (!media.ok) return { status: 400, body: { error: media.error } };
     // While WhatsApp is restricting the number, or it is logged out, nothing new is taken.
     const paused = queue.paused;
     if (paused && paused.reason !== "consecutive_errors") return { status: 503, body: { error: "paused", reason: paused.reason } };
     try {
-      return { status: 202, body: queue.enqueue({ id: body?.id, kind, to, text }) };
+      return { status: 202, body: queue.enqueue({ id: body?.id, kind, to, text, ...media.media }) };
     } catch (e) {
       if (e instanceof QueueFullError) return { status: 503, body: { error: "queue_full" } };
       throw e;

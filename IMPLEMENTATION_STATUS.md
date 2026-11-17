@@ -26,6 +26,7 @@ Legend: ✅ implemented and verified by automated tests · 🟡 implemented, exe
 - ⛔ **Phone sign-up with a Telegram bot: removed** at the owner's request (`CHANGES.md` item 76). No option, page, webhook or admin panel is left; E2E checks that the webhook answers 404 and the page shows «الصفحة غير موجودة». Accounts made with Telegram sign in with their number and password and recover with WhatsApp. The database keeps Telegram's functions, unused and server-only.
 - 🟡 **Phone sign-up and password recovery confirmed by WhatsApp, through the platform's own number (no Meta account):** the user sends the code from their own WhatsApp to the bot in `whatsapp-bot/` (Baileys), which forwards it with the sender's real number (LID addressing resolved). One step. The user types the number first, and the code counts only from it.
   - Covered by DB tests (verification, wrong and malformed codes, repeats, number taken, rate limit, the typed number, server-only access), unit tests (the bot's message reading, LID numbers, queue, API, settings; the site's templates and settings) and E2E tests that play the bot (sign-up, sign-in with the number, recovery, "0" to stop, number taken, the waiting page carrying on as soon as the user returns from WhatsApp).
+  - After the form, WhatsApp opens by itself with the code typed in, when the browser allows it; the person only taps send. Offers on WhatsApp come with signing up this way; Settings or "0" turns them off.
   - **Not tried on real WhatsApp:** this environment can't reach WhatsApp's servers and has no phone. Hidden until `WHATSAPP_BOT_SECRET` and `WHATSAPP_BOT_NUMBER` are set; needs migration 0028 first.
 - ✅ Sign-out, onboarding (city, positions, skill) — E2E A.
 - 🟡 Forgot and reset password. Wired to Supabase Auth; requires SMTP in production. Locally, mail goes to the mail catcher.
@@ -73,12 +74,13 @@ Legend: ✅ implemented and verified by automated tests · 🟡 implemented, exe
 - ✅ Conversations per match/team/booking/challenge/tournament plus direct messages, with access derived from membership — DB.
 - 🟡 Realtime updates in the thread view (Supabase Realtime with RLS). Implemented; not asserted by E2E.
 - ✅ In-app notifications with dedupe and preferences. Reminders via the scheduled job — E2E A and C, DB.
-- 🟡 WhatsApp booking messages (confirmed, changed, cancelled) and opted-in promotions with an admin page, a recipient-count confirmation, a stop button, a report and audit rows. Queued in the database, paced by the bot. Tested end to end with a stand-in bot (E2E) and in the database; not yet with a real WhatsApp number. Off until the bot is set up and `whatsapp.booking_messages` is turned on.
+- 🟡 WhatsApp booking messages (confirmed, changed, cancelled) and promotions, which can carry a picture, a place (a venue's map pin) and a link, with an admin page, a recipient-count confirmation, a stop button, a report and audit rows. Queued in the database, paced by the bot. Tested end to end with a stand-in bot (E2E) and in the database; not yet with a real WhatsApp number. Off until the bot is set up and `whatsapp.booking_messages` is turned on.
 - ⛔ E-mail, SMS and push notifications. No provider is configured.
 
 ### Trust, safety and admin
 - ✅ Reports with content snapshot. Moderators hide or restore content, remove reported messages, suspend users and resolve reports. Everything is audited — E2E I, DB.
 - ✅ Admins manage roles; nobody can self-promote. The first admin is bootstrapped with `pnpm admin:grant` — DB, E2E K, script run locally.
+- 🟡 Admins (not moderators) delete a member for good from Admin → Users, after a page that says what goes and what stays and the typed word «حذف». It refuses oneself, admins and venue owners, and is audited. DB tests cover it (migration 0030). The E2E test is written but hasn't been run yet: the local stack was down.
 - ✅ Signed-out and unauthorized access is redirected. Direct table writes with the anon key are rejected — E2E K, DB.
 - 🟡 Admin overview stats, users, venues, content, bookings, audit log, platform settings, cities and areas.
 - ✅ Player and venue reviews (participants only, once, within the window; no-shows excluded), reputation aggregates — DB.

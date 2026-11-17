@@ -36,7 +36,7 @@ const queue = new OutboundQueue({
     isReady: () => connection?.transport.isReady() ?? false,
     lookup: (phone) => connection.transport.lookup(phone),
     typing: (jid, ms) => connection.transport.typing(jid, ms),
-    send: (jid, text) => connection.transport.send(jid, text),
+    send: (jid, text, media) => connection.transport.send(jid, text, media),
   },
 });
 await queue.restore();

@@ -482,6 +482,53 @@ describe("Promotions and the sending queue", () => {
     ]);
   });
 
+  it("a campaign can carry a picture, a place and a link; only admins put pictures in promo-images", async () => {
+    await isolate();
+    const city = await newCity();
+    const fan = await playerWithPhone("Fan", city);
+    await rpc(fan.id, "set_my_whatsapp_settings", { p_bookings: true, p_promos: true });
+    const start = (args: Record<string, unknown>) => rpc<{ campaign_id: string }>(boss, "admin_start_promo_campaign", { p_body: "عرض الصيف", p_city_id: city, ...args });
+
+    // Pictures: an admin may put one in the public bucket; nobody else may.
+    const picture = `${randomUUID()}.jpg`;
+    const player = await createUser();
+    expect(await errorOf(asUser(player, "insert into storage.objects (bucket_id, name) values ('promo-images', $1)", [`${randomUUID()}.jpg`]))).toMatch(
+      /row-level security|permission denied/,
+    );
+    await asUser(boss, "insert into storage.objects (bucket_id, name) values ('promo-images', $1)", [picture]);
+    // Only a picture that is there, named as the site names them; only https links; only venues on the map.
+    expect(await errorOf(start({ p_image_path: `${randomUUID()}.jpg` }))).toBe("invalid_image");
+    expect(await errorOf(start({ p_image_path: "../avatars/x.jpg" }))).toBe("invalid_image");
+    expect(await errorOf(start({ p_link_url: "http://al-malab.example" }))).toBe("invalid_link");
+    expect(await errorOf(start({ p_venue_id: randomUUID() }))).toBe("venue_not_found");
+    const owner = await createUser("Owner");
+    const venue = await rpc<string>(owner, "create_venue", { p_name: `ملعب الصيف ${randomUUID().slice(0, 4)}`, p_city_id: await mosul() });
+    expect(await errorOf(start({ p_venue_id: venue }))).toBe("venue_without_location");
+    await admin("update public.venues set latitude = 36.34, longitude = 43.13, address = 'حي الزهور' where id = $1", [venue]);
+    const [{ name }] = await admin<{ name: string }>("select name from public.venues where id = $1", [venue]);
+
+    const { campaign_id } = await start({ p_image_path: picture, p_venue_id: venue, p_link_url: "https://al-malab.example/venues" });
+    // The place is copied: renaming the venue later changes nothing already sent.
+    await admin("update public.venues set name = 'اسم آخر' where id = $1", [venue]);
+    const [listed] = (await rpcRows<{ id: string; image_path: string; place_name: string; link_url: string }>(boss, "admin_whatsapp_campaigns")).filter((c) => c.id === campaign_id);
+    expect(listed).toMatchObject({ image_path: picture, place_name: name, link_url: "https://al-malab.example/venues" });
+
+    // The worker hands each message with them, for the bot.
+    await promoAllowance(1);
+    const [msg] = await admin<{ campaign_image: string; campaign_place: Record<string, unknown>; campaign_link: string }>("select * from public.wa_outbox_claim(5)");
+    expect(msg).toMatchObject({
+      campaign_image: picture,
+      campaign_place: { lat: 36.34, lng: 43.13, name, address: "حي الزهور" },
+      campaign_link: "https://al-malab.example/venues",
+    });
+    const [audit] = await admin<{ details: Record<string, unknown> }>(
+      "select details from public.audit_logs where entity_id = $1 and action = 'whatsapp_campaign_started'",
+      [campaign_id],
+    );
+    expect(audit.details).toMatchObject({ image: true, place: venue, link: true });
+    await rpc(boss, "admin_stop_promo_campaign", { p_campaign_id: campaign_id });
+  });
+
   it("hands booking messages first, then promotions within today's limit, and records what the bot reports", async () => {
     await isolate();
     const city = await newCity();
