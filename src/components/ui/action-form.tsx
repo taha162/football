@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { useFormStatus } from "react-dom";
+import { unstable_rethrow } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { armCelebration } from "@/components/motion/celebrate";
 import { bringIntoView, shake } from "@/components/motion/scroll";
@@ -17,6 +18,7 @@ import { Button, type ButtonProps } from "./button";
 import { Alert } from "./primitives";
 import { Field, controlProps, describedBy } from "./field";
 import { cn } from "@/lib/cn";
+import { fileBytes, shrinkFormImages, UPLOAD_LIMIT_BYTES } from "@/lib/shrink-image";
 import { useActionMessage } from "./use-action-message";
 
 type ClientActionState =
@@ -63,7 +65,21 @@ export function ActionForm({
   /** Key of the <Celebration> that confirms this action's success (see components/motion/celebrate.tsx). */
   celebrate?: string;
 }) {
-  const [state, formAction] = useActionState(action, null);
+  const [state, formAction] = useActionState(async (prev: ClientActionState, data: FormData): Promise<ClientActionState> => {
+    // Pictures straight from a phone are made smaller first: the host refuses any request over 4.5 MB.
+    const fd = await shrinkFormImages(data, { keepTransparency: true });
+    // Whatever is still too big is stopped here with the reason, not refused on the way.
+    if (fileBytes(fd) > UPLOAD_LIMIT_BYTES) return { ok: false, error: "file_too_large", at: Date.now() };
+    try {
+      return await action(prev, fd);
+    } catch (error) {
+      // The site's own redirects (and not-found) carry on as before.
+      unstable_rethrow(error);
+      // No answer from the site: the connection dropped, or the host refused the request. Said in the
+      // form, with what was written kept, instead of the page breaking («حدث خطأ ما»).
+      return { ok: false, error: "request_failed", at: Date.now() };
+    }
+  }, null);
   const formRef = useRef<HTMLFormElement>(null);
   const text = useErrorText();
   const t = useTranslations("common");
@@ -132,17 +148,24 @@ export function ActionForm({
 /**
  * Puts back what was submitted. React 19 resets a form after its action runs,
  * whatever the answer, so without this an error would leave every field empty
- * (or back at its old value). Passwords and files stay empty; hidden fields
+ * (or back at its old value). Chosen files go back where the browser allows,
+ * so sending again needs no new choice. Passwords stay empty; hidden fields
  * keep their own values.
  */
 function restoreFields(form: HTMLFormElement | null, data: FormData | null) {
   if (!form || !data) return;
   const names = new Set(data.keys());
   for (const name of names) {
-    const values = data.getAll(name).filter((v): v is string => typeof v === "string");
+    const all = data.getAll(name);
+    const values = all.filter((v): v is string => typeof v === "string");
+    const files = all.filter((v): v is File => v instanceof File && v.size > 0);
     for (const el of form.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(`[name="${CSS.escape(name)}"]`)) {
       if (el instanceof HTMLInputElement) {
-        if (el.type === "password" || el.type === "file" || el.type === "hidden") continue;
+        if (el.type === "file") {
+          if (files.length) restoreFiles(el, files);
+          continue;
+        }
+        if (el.type === "password" || el.type === "hidden") continue;
         if (el.type === "checkbox" || el.type === "radio") el.checked = values.includes(el.value);
         else el.value = values[0] ?? "";
       } else if (el instanceof HTMLSelectElement) {
@@ -156,6 +179,16 @@ function restoreFields(form: HTMLFormElement | null, data: FormData | null) {
   // A box that was unticked sends nothing: untick it again.
   for (const el of form.querySelectorAll<HTMLInputElement>('input[type="checkbox"][name]')) {
     if (!names.has(el.name)) el.checked = false;
+  }
+}
+
+function restoreFiles(input: HTMLInputElement, files: File[]) {
+  try {
+    const list = new DataTransfer();
+    for (const file of input.multiple ? files : files.slice(0, 1)) list.items.add(file);
+    input.files = list.files;
+  } catch {
+    // A browser that can't set files: the person chooses again.
   }
 }
 

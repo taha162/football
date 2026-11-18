@@ -5,7 +5,7 @@
  * executed as the relevant user.
  */
 import { randomUUID } from "node:crypto";
-import { expect, test, type BrowserContext, type Page } from "@playwright/test";
+import { expect, test, type BrowserContext, type Locator, type Page } from "@playwright/test";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { admin, localTime, mosul, rpc } from "../tests/shared/db";
 import { totp, wrongCode } from "../tests/shared/totp";
@@ -105,6 +105,51 @@ export async function emailedHtml(email: string, timeoutMs = 15_000): Promise<st
     await new Promise((r) => setTimeout(r, 500));
   }
   throw new Error(`no e-mail sent to ${email}`);
+}
+
+/**
+ * Puts a photo as phones take them into a file input: 3000×2250 of noise
+ * (which doesn't compress), so the JPEG is bigger than the 4.5 MB the host
+ * accepts in one request. Taken upright, it is stored as phones store it: on
+ * its side, with an EXIF tag (orientation 6) to turn it a quarter clockwise,
+ * so it shows 2250 wide and 3000 tall. Returns its size in bytes.
+ */
+export async function choosePhonePhoto(input: Locator): Promise<number> {
+  return input.evaluate(async (el) => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 3000;
+    canvas.height = 2250;
+    const ctx = canvas.getContext("2d")!;
+    const pixels = ctx.createImageData(canvas.width, canvas.height);
+    const words = new Uint32Array(pixels.data.buffer);
+    for (let i = 0; i < words.length; i++) words[i] = ((Math.random() * 0x1000000) | 0) | 0xff000000;
+    ctx.putImageData(pixels, 0, 0);
+    const blob = await new Promise<Blob>((resolve) => canvas.toBlob((b) => resolve(b!), "image/jpeg", 0.95));
+    const jpeg = new Uint8Array(await blob.arrayBuffer());
+    // APP1 "Exif\0\0": a big-endian TIFF header, then one tag, Orientation (0x0112) = 6.
+    const exif = new Uint8Array([
+      0xff, 0xe1, 0x00, 0x22, 0x45, 0x78, 0x69, 0x66, 0x00, 0x00,
+      0x4d, 0x4d, 0x00, 0x2a, 0x00, 0x00, 0x00, 0x08,
+      0x00, 0x01, 0x01, 0x12, 0x00, 0x03, 0x00, 0x00, 0x00, 0x01, 0x00, 0x06, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00,
+    ]);
+    const photo = new File([jpeg.slice(0, 2), exif, jpeg.slice(2)], "IMG_0001.jpg", { type: "image/jpeg" });
+    const list = new DataTransfer();
+    list.items.add(photo);
+    (el as HTMLInputElement).files = list.files;
+    el.dispatchEvent(new Event("change", { bubbles: true }));
+    return photo.size;
+  });
+}
+
+/** Width and height of a picture in a public storage bucket ("bucket/path"), as the page shows it. */
+export async function storedPictureSize(page: Page, object: string): Promise<{ width: number; height: number }> {
+  return page.evaluate(async (src) => {
+    const img = new Image();
+    img.src = src;
+    await img.decode();
+    return { width: img.naturalWidth, height: img.naturalHeight };
+  }, `${SUPABASE_URL}/storage/v1/object/public/${object}`);
 }
 
 /**

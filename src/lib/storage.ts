@@ -2,7 +2,8 @@ import { publicEnv } from "@/lib/env";
 
 export type Bucket = "avatars" | "team-logos" | "venue-images" | "promo-images";
 
-export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+/** Under the 4.5 MB the host (Vercel) accepts in one request; pictures are made smaller in the browser first (src/lib/shrink-image.ts). */
+export const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
 
 export function publicStorageUrl(bucket: Bucket, path: string | null | undefined): string | null {
   if (!path || !publicEnv.supabaseUrl) return null;
@@ -47,7 +48,7 @@ export async function inspectImage(file: File): Promise<{ ok: true; mime: string
   return { ok: true, mime: match.mime, ext: match.ext, bytes };
 }
 
-export const MAX_VOICE_BYTES = 5 * 1024 * 1024;
+export const MAX_VOICE_BYTES = 4 * 1024 * 1024;
 
 /** What browsers record voice in: WebM or Ogg (Opus), or MP4 (AAC/Opus, Safari). */
 const AUDIO_SIGNATURES: { mime: string; ext: string; test: (b: Uint8Array) => boolean }[] = [

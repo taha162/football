@@ -81,6 +81,8 @@ export function CampaignComposer({
         setLink("");
         clearPicture();
       }}
+      // The reason shows under the form: the confirmation would cover it. What was written and chosen stays.
+      onError={() => dialog.current?.close()}
     >
       <Field label={t("promoText")} htmlFor={bodyId} hint={t("promoTextHint")} required>
         <Textarea

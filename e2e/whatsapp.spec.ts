@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage, type Server } from "node:http";
-import { admin, createAuthUser, expect, localTime, mosul, PASSWORD, quietWhatsapp, rpc, signIn, test, whatsappMessage, type TestUser } from "./fixtures";
+import { admin, choosePhonePhoto, createAuthUser, expect, localTime, mosul, PASSWORD, quietWhatsapp, rpc, signIn, test, whatsappMessage, type TestUser } from "./fixtures";
 
 /**
  * WhatsApp through the platform's own number (whatsapp-bot/), without
@@ -454,6 +454,57 @@ test.describe("WhatsApp promotions", () => {
       [boss.id],
     );
     expect(audit.map((a) => a.action)).toEqual(["whatsapp_campaign_started", "whatsapp_campaign_stopped", "whatsapp_campaign_started"]);
+  });
+
+  test("a phone-sized picture is made smaller before it is sent; a send the host refuses says so instead of breaking the page", async ({ page }) => {
+    test.setTimeout(120_000);
+    const city = (await admin<{ id: string }>(
+      "insert into public.cities (slug, name_en, name_ar, country_code, timezone, currency, is_active) values ($1, 'WA E2E', $2, 'IQ', 'Asia/Baghdad', 'IQD', false) returning id",
+      [`wa-e2e-${randomUUID().slice(0, 8)}`, `مدينة صورة ${randomUUID().slice(0, 4)}`],
+    ))[0].id;
+    const [{ name_ar: cityName }] = await admin<{ name_ar: string }>("select name_ar from public.cities where id = $1", [city]);
+    const fan = await playerWithPhone("Fan", city);
+    await rpc(fan.id, "set_my_whatsapp_settings", { p_bookings: true, p_promos: true });
+    const boss = await createAuthUser("Boss", { admin: true });
+    await signIn(page, boss);
+    await allowance(5);
+    await page.goto("/ar/admin/promotions");
+    const body = `عرض بصورة من الهاتف ${randomUUID().slice(0, 4)}`;
+    await page.getByRole("textbox", { name: "نص الرسالة" }).fill(body);
+    // A photo as phones take them: over the 4.5 MB the host (Vercel) accepts in one request.
+    expect(await choosePhonePhoto(page.getByLabel("صورة (اختياري)"))).toBeGreaterThan(4.5 * 1024 * 1024);
+    await expect(page.getByTestId("promo-preview").getByRole("img", { name: "الصورة المرفقة بالعرض" })).toBeVisible();
+    await page.getByRole("combobox", { name: "إلى" }).selectOption({ label: `${cityName} (١)` });
+
+    // The host refuses the request the way Vercel does past 4.5 MB: the page stays, and says why.
+    await page.route("**/ar/admin/promotions", (route) =>
+      route.request().method() === "POST"
+        ? route.fulfill({ status: 413, contentType: "text/plain; charset=utf-8", body: "Request Entity Too Large\n\nFUNCTION_PAYLOAD_TOO_LARGE\n" })
+        : route.fallback(),
+    );
+    await page.getByRole("button", { name: "إرسال", exact: true }).click();
+    await page.getByRole("button", { name: "أرسل الآن" }).click();
+    await expect(page.getByText("تعذّر الإرسال", { exact: false })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "حدث خطأ ما" })).toHaveCount(0);
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    // What was written and chosen is still there.
+    await expect(page.getByRole("textbox", { name: "نص الرسالة" })).toHaveValue(body);
+    await expect(page.getByTestId("promo-preview").getByRole("img", { name: "الصورة المرفقة بالعرض" })).toBeVisible();
+    expect(await admin("select 1 from public.whatsapp_campaigns where body = $1", [body])).toHaveLength(0);
+
+    // Sent for real: the picture goes at most 1600 px on its long side, far under the limit, and the offer starts with it.
+    await page.unroute("**/ar/admin/promotions");
+    await page.getByRole("button", { name: "إرسال", exact: true }).click();
+    await page.getByRole("button", { name: "أرسل الآن" }).click();
+    await expect(page.getByText("بدأ الإرسال", { exact: false })).toBeVisible();
+    const [stored] = await admin<{ size: number }>(
+      "select (o.metadata ->> 'size')::int as size from public.whatsapp_campaigns c join storage.objects o on o.bucket_id = 'promo-images' and o.name = c.image_path where c.body = $1",
+      [body],
+    );
+    expect(stored.size).toBeGreaterThan(0);
+    expect(stored.size).toBeLessThan(1_500_000);
+    await expect.poll(() => bot.to(fan.phone).length, { timeout: 15_000 }).toBe(1);
+    expect(bot.to(fan.phone)[0].image?.url).toMatch(/\/promo-images\/[0-9a-f-]{36}\.jpg$/);
   });
 
   test("moderators and players can't open the promotions page", async ({ page }) => {
