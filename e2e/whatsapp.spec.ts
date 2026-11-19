@@ -180,6 +180,10 @@ test.describe("WhatsApp verification", () => {
     await page.getByText("متوسط", { exact: true }).click();
     await page.getByRole("button", { name: "ابدأ اللعب" }).click();
     await page.waitForURL(/\/ar\/dashboard/);
+    // The account menu says who is signed in: the number, never the account's stand-in address.
+    await page.getByRole("button", { name: /^قائمة حساب/ }).click();
+    await expect(page.getByTestId("account-contact")).toHaveText(display(from));
+    await page.keyboard.press("Escape");
 
     // Settings: the number, booking messages on, offers on (part of signing up), and offers can be turned off here.
     await page.goto("/ar/settings");

@@ -601,8 +601,12 @@ html[data-enter] :is(.reveal, .reveal-children > *) {
   .menu-trigger:hover {
     box-shadow: 0 0 0 2px var(--color-line-strong);
   }
-  details[open] > .menu-trigger {
+  .menu-trigger[aria-expanded="true"] {
     box-shadow: 0 0 0 2px var(--color-accent);
+  }
+  .menu-trigger:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
   }
   .menu-panel {
     transform-origin: top right;
@@ -610,7 +614,7 @@ html[data-enter] :is(.reveal, .reveal-children > *) {
   [dir="rtl"] .menu-panel {
     transform-origin: top left;
   }
-  details[open] > .menu-panel {
+  .menu-panel[data-open] {
     animation: menu-in 280ms var(--ease-out) both;
   }
 

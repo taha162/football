@@ -11,7 +11,7 @@ async function uploadPhoto(page: Page, user: TestUser) {
   await page.getByRole("button", { name: "رفع صورة" }).click();
 }
 
-const headerAvatar = (page: Page) => page.locator("summary.menu-trigger > span");
+const headerAvatar = (page: Page) => page.locator("button.menu-trigger > span");
 
 // The last test makes the avatars bucket private for a moment: keep these in sequence.
 test.describe.configure({ mode: "serial" });
