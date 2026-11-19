@@ -5,8 +5,8 @@ const WRONG = "الرمز غير صحيح أو انتهت صلاحيته.";
 
 /** The sign-in form, without waiting for the dashboard (with an app, the code page comes first). */
 async function enterPassword(page: Page, user: TestUser) {
-  await page.goto("/ar/sign-in?next=/notifications");
-  await page.getByRole("textbox", { name: /^البريد الإلكتروني/ }).fill(user.email);
+  await page.goto("/ar/sign-in?next=/notifications&method=email");
+  await page.getByRole("textbox", { name: "البريد الإلكتروني" }).fill(user.email);
   await page.getByRole("textbox", { name: "كلمة المرور" }).fill(PASSWORD);
   await page.getByRole("button", { name: "تسجيل الدخول" }).click();
 }

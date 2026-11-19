@@ -8,7 +8,7 @@ test.describe("Journey A — register, onboard, discover and join", () => {
     const matchId = await createMatchFor(organizer, { p_title: title });
 
     const email = `e2e-a-${Date.now()}@example.test`;
-    await page.goto("/ar/sign-up");
+    await page.goto("/ar/sign-up?method=email");
     await page.getByLabel("الاسم الظاهر").fill("Journey Player");
     await page.getByRole("textbox", { name: "البريد الإلكتروني" }).fill(email);
     await page.getByRole("textbox", { name: "كلمة المرور" }).fill("Str0ng-pass-123");
@@ -118,7 +118,7 @@ test.describe("Journey J — Arabic only", () => {
     await page.goto("/ar/sign-in");
     await page.getByRole("button", { name: "تسجيل الدخول" }).click();
     // Native validation keeps the form from submitting empty; field stays focused & labelled in Arabic.
-    await expect(page.getByLabel("البريد الإلكتروني")).toBeVisible();
+    await expect(page.getByLabel("رقم واتساب")).toBeVisible();
   });
 });
 

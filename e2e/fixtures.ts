@@ -55,9 +55,9 @@ export async function createAuthUser(name: string, opts: { onboard?: boolean; ad
 }
 
 export async function signIn(page: Page, user: TestUser) {
-  await page.goto("/ar/sign-in");
-  // "البريد الإلكتروني أو رقم الهاتف": accounts made with a phone number sign in with it.
-  await page.getByRole("textbox", { name: /^البريد الإلكتروني/ }).fill(user.email);
+  // The WhatsApp number comes first; test users have an e-mail, the other way in.
+  await page.goto("/ar/sign-in?method=email");
+  await page.getByRole("textbox", { name: "البريد الإلكتروني" }).fill(user.email);
   await page.getByRole("textbox", { name: "كلمة المرور" }).fill(PASSWORD);
   await page.getByRole("button", { name: "تسجيل الدخول" }).click();
   await page.waitForURL(/\/dashboard/);

@@ -37,15 +37,17 @@ function reportDelivery(code: string, status?: number): string {
 }
 
 export async function signInAction(_: ActionState, fd: FormData): Promise<ActionState> {
-  const login = String(fd.get("email") ?? "").trim();
+  // The WhatsApp number (the main way, field "phone") or the e-mail; a number typed as the e-mail still works.
+  const field = fd.has("phone") ? "phone" : "email";
+  const login = String(fd.get(field) ?? "").trim();
   const pass = z.string().min(1, "required").safeParse(fd.get("password"));
   if (!pass.success) return fail("validation", { password: "required" });
 
   let address: string | null = null;
   let account: string;
-  if (looksLikePhone(login)) {
+  if (field === "phone" || looksLikePhone(login)) {
     const phone = normalizePhone(login);
-    if (!phone) return fail("validation", { email: "invalid_phone" });
+    if (!phone) return fail("validation", { [field]: "invalid_phone" });
     account = phone;
   } else {
     const parsed = email.safeParse(login);
@@ -64,7 +66,7 @@ export async function signInAction(_: ActionState, fd: FormData): Promise<Action
       // Logged with a tag that can't be read back to the number; the password is never logged.
       logger.warn("sign_in_failed", { via, account: accountTag(account) });
       await countFailure(limits, account);
-      return fail("invalid_credentials");
+      return fail("invalid_phone_credentials");
     }
     address = data as string;
   }
@@ -76,6 +78,8 @@ export async function signInAction(_: ActionState, fd: FormData): Promise<Action
     if (code === "invalid_credentials") {
       logger.warn("sign_in_failed", { via, account: accountTag(account) });
       await countFailure(limits, account);
+      // Said about the number when the number was typed.
+      if (via === "phone") return fail("invalid_phone_credentials");
     }
     if (code === "email_not_confirmed") {
       await setPendingEmail(address);

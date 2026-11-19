@@ -29,7 +29,7 @@ export default async function VerifyEmailPage({ params }: PageProps<"/[locale]/v
         ),
       })}
       footer={
-        <Link href="/sign-up" className="font-semibold text-accent hover:underline">
+        <Link href={{ pathname: "/sign-up", query: { method: "email" } }} className="font-semibold text-accent hover:underline">
           {t("changeEmail")}
         </Link>
       }

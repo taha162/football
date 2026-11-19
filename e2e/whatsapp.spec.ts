@@ -118,11 +118,9 @@ test.describe("WhatsApp verification", () => {
   test("sign up by sending the code from one's own WhatsApp, then sign in, recover the password, and stop messages", async ({ page, baseURL }) => {
     const from = phone();
     await page.goto("/ar/sign-up");
-    // E-mail and WhatsApp; Telegram is gone.
-    await expect(page.getByRole("link", { name: "البريد", exact: true })).toBeVisible();
-    await expect(page.getByRole("link", { name: "تيليغرام", exact: true })).toHaveCount(0);
-    await page.getByRole("link", { name: "واتساب", exact: true }).click();
-    await page.waitForURL(/method=whatsapp/);
+    // WhatsApp first, e-mail the other way under «أو»; Telegram is gone.
+    await expect(page.getByRole("link", { name: "إنشاء حساب بالبريد الإلكتروني" })).toBeVisible();
+    await expect(page.getByText("تيليغرام")).toHaveCount(0);
     await page.getByRole("textbox", { name: "الاسم الظاهر" }).fill("WhatsApp Player");
     // The number is typed too: a wrong one is refused on the form.
     const number = page.getByRole("textbox", { name: "رقم واتساب" });
@@ -199,7 +197,7 @@ test.describe("WhatsApp verification", () => {
     // Sign in with the local number format.
     await page.context().clearCookies();
     await page.goto("/ar/sign-in");
-    await page.getByRole("textbox", { name: "البريد الإلكتروني أو رقم الهاتف" }).fill(localFormat(from));
+    await page.getByRole("textbox", { name: "رقم واتساب" }).fill(localFormat(from));
     await page.getByRole("textbox", { name: "كلمة المرور" }).fill(PASSWORD);
     await page.getByRole("button", { name: "تسجيل الدخول" }).click();
     await page.waitForURL(/\/ar\/dashboard/);
