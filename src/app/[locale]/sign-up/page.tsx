@@ -2,11 +2,9 @@ import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link, redirect } from "@/i18n/navigation";
 import { getCurrentUser } from "@/lib/auth";
-import { AuthShell } from "@/components/auth/auth-shell";
+import { AuthShell, OtherWay } from "@/components/auth/auth-shell";
 import { SignUpForm, WhatsappSignUpForm } from "@/components/auth/auth-forms";
-import { buttonClass } from "@/components/ui/button";
 import { whatsappConfig } from "@/lib/whatsapp";
-import { LinkButton } from "@/components/ui/link-button";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/sign-up">): Promise<Metadata> {
   const t = await getTranslations({ locale: (await params).locale, namespace: "auth" });
@@ -14,15 +12,15 @@ export async function generateMetadata({ params }: PageProps<"/[locale]/sign-up"
 }
 
 type Method = "email" | "whatsapp";
-const LABEL = { email: "methodEmail", whatsapp: "methodWhatsapp" } as const;
 
 export default async function SignUpPage({ params, searchParams }: PageProps<"/[locale]/sign-up">) {
   const { locale } = await params;
   const wa = whatsappConfig();
-  // Only the ways that are set up: e-mail always, WhatsApp once its bot is.
-  const methods: Method[] = ["email", ...(wa.enabled ? (["whatsapp"] as const) : [])];
+  // WhatsApp first once its bot is set up; the e-mail is the other way, under «أو» (?method=email).
+  const methods: Method[] = wa.enabled ? ["whatsapp", "email"] : ["email"];
   const asked = (await searchParams).method;
-  const method = methods.find((m) => m !== "email" && m === asked) ?? "email";
+  const method = methods.find((m) => m === asked) ?? methods[0];
+  const other = methods.find((m) => m !== method);
   setRequestLocale(locale);
   if (await getCurrentUser()) redirect({ href: "/dashboard", locale });
   const t = await getTranslations("auth");
@@ -33,27 +31,18 @@ export default async function SignUpPage({ params, searchParams }: PageProps<"/[
       footer={
         <>
           {t("haveAccount")}{" "}
-          <Link href="/sign-in" className="font-semibold text-accent hover:underline">
+          <Link href={{ pathname: "/sign-in", query: method === "email" ? { method } : {} }} className="font-semibold text-accent hover:underline">
             {t("signIn")}
           </Link>
         </>
       }
     >
-      {methods.length > 1 ? (
-        <nav aria-label={t("verifyMethod")} className="grid grid-cols-2 gap-1 rounded-xl border border-line bg-surface-2 p-1">
-          {methods.map((m) => (
-            <LinkButton
-              key={m}
-              href={{ pathname: "/sign-up", query: m === "email" ? {} : { method: m } }}
-              aria-current={method === m ? "page" : undefined}
-              className={buttonClass(method === m ? "secondary" : "ghost", "sm", "w-full")}
-            >
-              {t(LABEL[m])}
-            </LinkButton>
-          ))}
-        </nav>
-      ) : null}
       {method === "whatsapp" ? <WhatsappSignUpForm offerPromos={wa.canSend} /> : <SignUpForm />}
+      {other ? (
+        <OtherWay via={other} or={t("or")} href={{ pathname: "/sign-up", query: other === methods[0] ? {} : { method: other } }}>
+          {t(other === "email" ? "signUpEmail" : "signUpWhatsapp")}
+        </OtherWay>
+      ) : null}
     </AuthShell>
   );
 }

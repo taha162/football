@@ -142,8 +142,8 @@ test.describe("Deleting a member for good", () => {
     // The deleted member can't sign in any more.
     const context = await browser.newContext();
     const other = await context.newPage();
-    await other.goto("/ar/sign-in");
-    await other.getByRole("textbox", { name: /^البريد الإلكتروني/ }).fill(target.email);
+    await other.goto("/ar/sign-in?method=email");
+    await other.getByRole("textbox", { name: "البريد الإلكتروني" }).fill(target.email);
     await other.getByRole("textbox", { name: "كلمة المرور" }).fill(PASSWORD);
     await other.getByRole("button", { name: "تسجيل الدخول" }).click();
     await expect(other.getByText("البريد الإلكتروني أو كلمة المرور غير صحيحة.")).toBeVisible();

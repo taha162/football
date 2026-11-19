@@ -13,6 +13,7 @@ export function Field({
   children,
   className,
   required,
+  aside,
 }: {
   label: ReactNode;
   htmlFor: string;
@@ -21,13 +22,25 @@ export function Field({
   children: ReactNode;
   className?: string;
   required?: boolean;
+  /** Beside the label, at the other end of its line (a "Forgot?" link); not part of the label. */
+  aside?: ReactNode;
 }) {
+  const caption = (
+    <label htmlFor={htmlFor} className="text-sm font-medium text-ink">
+      {label}
+      {required ? <span aria-hidden="true" className="text-accent"> *</span> : null}
+    </label>
+  );
   return (
     <div className={cn("field flex flex-col gap-1.5", className)}>
-      <label htmlFor={htmlFor} className="text-sm font-medium text-ink">
-        {label}
-        {required ? <span aria-hidden="true" className="text-accent"> *</span> : null}
-      </label>
+      {aside ? (
+        <div className="flex items-baseline justify-between gap-3">
+          {caption}
+          {aside}
+        </div>
+      ) : (
+        caption
+      )}
       {children}
       {hint && !error ? (
         <p id={`${htmlFor}-hint`} className="text-xs text-muted">

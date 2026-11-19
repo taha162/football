@@ -95,7 +95,7 @@ test.describe("Mobile (Arabic, RTL)", () => {
 
   test("public pages fit the phone viewport", async ({ page }) => {
     const screen = page.viewportSize()!.width;
-    for (const path of ["/ar", "/ar/matches", "/ar/venues", "/ar/teams", "/ar/tournaments", "/ar/sign-up"]) {
+    for (const path of ["/ar", "/ar/matches", "/ar/venues", "/ar/teams", "/ar/tournaments", "/ar/sign-in", "/ar/sign-up"]) {
       await page.goto(path);
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
       expect(overflow, `horizontal overflow on ${path}`).toBeLessThanOrEqual(0);

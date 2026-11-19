@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { ActionForm, FormField, Hidden, SubmitButton } from "@/components/ui/action-form";
 import { Checkbox, Input } from "@/components/ui/field";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Alert } from "@/components/ui/primitives";
 import {
   forgotPasswordAction,
@@ -19,26 +20,35 @@ import { startWhatsappResetAction, startWhatsappSignupAction } from "@/server/wh
 import { useActionMessage } from "@/components/ui/use-action-message";
 
 /**
- * E-mail or phone number, and password. The number is for accounts made with
- * a phone number (WhatsApp, and Telegram before it was removed): those can
- * always sign in, whether or not the WhatsApp bot is set up.
+ * The WhatsApp number (the main way) or the e-mail, and the password. A
+ * number signs in accounts made with it, whether or not the WhatsApp bot is
+ * set up. «نسيتها؟» sits beside the password's label, the eye in its field.
+ * Both fields are required (on the inputs); no asterisks, as there's nothing optional.
  */
-export function SignInForm({ next }: { next?: string }) {
+export function SignInForm({ next, method }: { next?: string; method: "whatsapp" | "email" }) {
   const t = useTranslations("auth");
+  const forgot = (
+    <Link href="/forgot-password" className="text-sm font-medium text-accent hover:underline">
+      {t("forgotLink")}
+    </Link>
+  );
   return (
     <ActionForm action={signInAction}>
       <Hidden values={{ next }} />
-      <FormField name="email" label={t("emailOrPhone")} hint={t("emailOrPhoneHint")} required>
-        {(a) => <Input {...a} type="text" autoComplete="username" autoCapitalize="none" spellCheck={false} required dir="ltr" />}
+      {method === "whatsapp" ? (
+        <FormField name="phone" label={t("waPhone")}>
+          {(a) => <WhatsappNumberInput {...a} autoComplete="username" />}
+        </FormField>
+      ) : (
+        <FormField name="email" label={t("email")}>
+          {(a) => (
+            <Input {...a} type="email" inputMode="email" autoComplete="username" autoCapitalize="none" spellCheck={false} required dir="ltr" placeholder="name@example.com" />
+          )}
+        </FormField>
+      )}
+      <FormField name="password" label={t("password")} aside={forgot}>
+        {(a) => <PasswordInput {...a} autoComplete="current-password" required />}
       </FormField>
-      <FormField name="password" label={t("password")} required>
-        {(a) => <Input {...a} type="password" autoComplete="current-password" required dir="ltr" />}
-      </FormField>
-      <div className="flex justify-end">
-        <Link href="/forgot-password" className="text-sm text-accent hover:underline">
-          {t("forgotLink")}
-        </Link>
-      </div>
       <SubmitButton size="lg">{t("signIn")}</SubmitButton>
     </ActionForm>
   );
@@ -56,7 +66,7 @@ export function SignUpForm() {
         {(a) => <Input {...a} type="email" autoComplete="email" inputMode="email" required dir="ltr" />}
       </FormField>
       <FormField name="password" label={t("password")} hint={t("passwordHint")} required>
-        {(a) => <Input {...a} type="password" autoComplete="new-password" required minLength={8} maxLength={72} dir="ltr" />}
+        {(a) => <PasswordInput {...a} autoComplete="new-password" required minLength={8} maxLength={72} />}
       </FormField>
       <FormField name="accept_terms" label={t("termsHeading")}>
         {(a) => (
@@ -99,7 +109,7 @@ export function WhatsappSignUpForm({ offerPromos = false }: { offerPromos?: bool
         {(a) => <WhatsappNumberInput {...a} />}
       </FormField>
       <FormField name="password" label={t("password")} hint={t("passwordHint")} required>
-        {(a) => <Input {...a} type="password" autoComplete="new-password" required minLength={8} maxLength={72} dir="ltr" />}
+        {(a) => <PasswordInput {...a} autoComplete="new-password" required minLength={8} maxLength={72} />}
       </FormField>
       <FormField name="accept_terms" label={t("termsHeading")}>
         {(a) => (
@@ -127,7 +137,8 @@ export function WhatsappSignUpForm({ offerPromos = false }: { offerPromos?: bool
 
 /** A WhatsApp number as people write it in Iraq (07…), or with its country code. */
 function WhatsappNumberInput(props: ComponentProps<typeof Input>) {
-  return <Input {...props} type="tel" inputMode="tel" autoComplete="tel" required maxLength={20} dir="ltr" placeholder="07XX XXX XXXX" />;
+  // `autoComplete` can be overridden: on the sign-in form the number is the account's user name.
+  return <Input type="tel" inputMode="tel" autoComplete="tel" required maxLength={20} dir="ltr" placeholder="07XX XXX XXXX" {...props} />;
 }
 
 export function VerifyEmailForm() {
@@ -197,12 +208,13 @@ export function WhatsappResetForm() {
       <FormField name="phone" label={t("waPhone")} hint={t("waPhoneResetHint")} required>
         {(a) => <WhatsappNumberInput {...a} />}
       </FormField>
-      <SubmitButton size="lg" variant="secondary">{t("forgotWhatsapp")}</SubmitButton>
+      <SubmitButton size="lg">{t("forgotWhatsapp")}</SubmitButton>
     </ActionForm>
   );
 }
 
-export function ForgotPasswordForm() {
+/** `secondary`: under the WhatsApp recovery, the other way. */
+export function ForgotPasswordForm({ secondary = false }: { secondary?: boolean }) {
   const t = useTranslations("auth");
   const message = useActionMessage();
   return (
@@ -210,7 +222,7 @@ export function ForgotPasswordForm() {
       <FormField name="email" label={t("email")} required>
         {(a) => <Input {...a} type="email" autoComplete="email" required dir="ltr" />}
       </FormField>
-      <SubmitButton size="lg">{t("sendReset")}</SubmitButton>
+      <SubmitButton size="lg" variant={secondary ? "outline" : "primary"}>{t("sendReset")}</SubmitButton>
     </ActionForm>
   );
 }
@@ -227,10 +239,10 @@ export function ResetPasswordForm({ hasSession }: { hasSession: boolean }) {
   return (
     <ActionForm action={resetPasswordAction}>
       <FormField name="password" label={t("newPassword")} hint={t("passwordHint")} required>
-        {(a) => <Input {...a} type="password" autoComplete="new-password" required minLength={8} dir="ltr" />}
+        {(a) => <PasswordInput {...a} autoComplete="new-password" required minLength={8} />}
       </FormField>
       <FormField name="confirm" label={t("confirmPassword")} required>
-        {(a) => <Input {...a} type="password" autoComplete="new-password" required minLength={8} dir="ltr" />}
+        {(a) => <PasswordInput {...a} autoComplete="new-password" required minLength={8} />}
       </FormField>
       <SubmitButton size="lg">{t("savePassword")}</SubmitButton>
     </ActionForm>

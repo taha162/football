@@ -7,7 +7,7 @@ const localFormat = (e164: string) => `0${e164.slice(3)}`;
 test.describe("Account verification", () => {
   test("e-mail: signing up with an address that already has an account says so, instead of waiting for a code", async ({ page }) => {
     const existing = await createAuthUser("Existing");
-    await page.goto("/ar/sign-up");
+    await page.goto("/ar/sign-up?method=email");
     await page.getByRole("textbox", { name: "الاسم الظاهر" }).fill("لاعب مكرر");
     await page.getByRole("textbox", { name: "البريد الإلكتروني" }).fill(existing.email);
     await page.getByRole("textbox", { name: "كلمة المرور" }).fill(PASSWORD);
@@ -26,8 +26,8 @@ test.describe("Account verification", () => {
     test.setTimeout(90_000);
     const watcher = await createAuthUser("Watcher", { admin: true });
     const user = await createAuthUser("Guarded");
-    await page.goto("/ar/sign-in");
-    const login = page.getByRole("textbox", { name: /^البريد الإلكتروني/ });
+    await page.goto("/ar/sign-in?method=email");
+    const login = page.getByRole("textbox", { name: "البريد الإلكتروني" });
     const pass = page.getByRole("textbox", { name: "كلمة المرور" });
     await login.fill(user.email);
     for (let i = 0; i < 5; i++) {
@@ -58,7 +58,7 @@ test.describe("Account verification", () => {
 
   test("e-mail: a user who signs in before confirming is sent to the code page, can resend and verify", async ({ page }) => {
     const email = `e2e-code-${randomUUID().slice(0, 8)}@example.test`;
-    await page.goto("/ar/sign-up");
+    await page.goto("/ar/sign-up?method=email");
     await page.getByRole("textbox", { name: "الاسم الظاهر" }).fill("لاعب الرمز");
     await page.getByRole("textbox", { name: "البريد الإلكتروني" }).fill(email);
     await page.getByRole("textbox", { name: "كلمة المرور" }).fill(PASSWORD);
@@ -70,8 +70,8 @@ test.describe("Account verification", () => {
     expect(await emailedHtml(email)).not.toContain("href=");
 
     // Leave and sign in instead: the account is not confirmed yet.
-    await page.goto("/ar/sign-in");
-    await page.getByRole("textbox", { name: /البريد الإلكتروني/ }).fill(email);
+    await page.goto("/ar/sign-in?method=email");
+    await page.getByRole("textbox", { name: "البريد الإلكتروني" }).fill(email);
     await page.getByRole("textbox", { name: "كلمة المرور" }).fill(PASSWORD);
     await page.getByRole("button", { name: "تسجيل الدخول" }).click();
     await page.waitForURL(/\/ar\/verify-email/);
@@ -119,7 +119,7 @@ test.describe("Account verification", () => {
 
   test("Telegram is gone: no sign-up option, no recovery button, no waiting page, no webhook", async ({ page, baseURL }) => {
     await page.goto("/ar/sign-up?method=telegram");
-    await expect(page.getByRole("textbox", { name: "البريد الإلكتروني" })).toBeVisible(); // the e-mail form instead
+    await expect(page.getByRole("textbox", { name: "رقم واتساب" })).toBeVisible(); // the first way, WhatsApp, instead
     await expect(page.getByText("تيليغرام")).toHaveCount(0);
     await page.goto("/ar/forgot-password");
     await expect(page.getByRole("button", { name: "استعادة عبر واتساب" })).toBeVisible();

@@ -165,7 +165,8 @@ function restoreFields(form: HTMLFormElement | null, data: FormData | null) {
           if (files.length) restoreFiles(el, files);
           continue;
         }
-        if (el.type === "password" || el.type === "hidden") continue;
+        // A password stays empty, even one shown with the eye button (data-secret, password-input.tsx).
+        if (el.type === "password" || el.type === "hidden" || el.dataset.secret !== undefined) continue;
         if (el.type === "checkbox" || el.type === "radio") el.checked = values.includes(el.value);
         else el.value = values[0] ?? "";
       } else if (el instanceof HTMLSelectElement) {
@@ -211,6 +212,7 @@ export function FormField({
   hint,
   required,
   className,
+  aside,
   children,
 }: {
   name: string;
@@ -220,6 +222,8 @@ export function FormField({
   hint?: ReactNode;
   required?: boolean;
   className?: string;
+  /** Beside the label, at the other end of its line (see Field). */
+  aside?: ReactNode;
   children: ((aria: FieldAria) => ReactNode) | ReactNode;
 }) {
   const error = useFieldError(name);
@@ -239,7 +243,7 @@ export function FormField({
     else el.removeAttribute("aria-invalid");
   }, [isRender, id, describedby, invalid]);
   return (
-    <Field label={label} htmlFor={id} hint={hint} error={error} required={required} className={className}>
+    <Field label={label} htmlFor={id} hint={hint} error={error} required={required} className={className} aside={aside}>
       {typeof children === "function" ? children({ id, name, ...aria }) : <div ref={wrapper} className="contents">{children}</div>}
     </Field>
   );

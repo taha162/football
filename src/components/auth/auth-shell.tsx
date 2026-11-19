@@ -1,4 +1,40 @@
 import type { ReactNode } from "react";
+import { Mail, MessageCircle } from "lucide-react";
+import { buttonClass } from "@/components/ui/button";
+import { LinkButton, type Href } from "@/components/ui/link-button";
+
+/** The thin line with «أو» between the main way in and the other one. */
+export function OrDivider({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-3 text-xs text-faint" aria-hidden="true">
+      <span className="h-px flex-1 bg-line" />
+      {label}
+      <span className="h-px flex-1 bg-line" />
+    </div>
+  );
+}
+
+/**
+ * The other way in, under «أو»: the divider, then a full-width outlined button
+ * with its mark, as sign-in pages offer another provider. It swaps the form on
+ * the same page. `-mt-4`: the form above ends with its (empty) message area,
+ * so the line sits as far from the button above as from the one below.
+ */
+export function OtherWay({ href, via, or, children }: { href: Href; via: "email" | "whatsapp"; or: string; children: ReactNode }) {
+  return (
+    <div className="-mt-4 flex flex-col gap-5">
+      <OrDivider label={or} />
+      <LinkButton href={href} replace scroll={false} className={buttonClass("outline", "lg", "w-full")}>
+        {via === "email" ? (
+          <Mail aria-hidden="true" className="size-5 text-muted" />
+        ) : (
+          <MessageCircle aria-hidden="true" className="size-5 text-[#25d366]" />
+        )}
+        {children}
+      </LinkButton>
+    </div>
+  );
+}
 
 export function AuthShell({ title, subtitle, children, footer }: { title: string; subtitle?: ReactNode; children: ReactNode; footer?: ReactNode }) {
   return (
