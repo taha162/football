@@ -772,6 +772,15 @@ dialog[open]::backdrop {
     transform: translateY(-6px) scale(0.96);
   }
 }
+/* The caret in the box a code is typed into next (OtpInput). With reduced motion it stays still. */
+.otp-caret {
+  animation: otp-blink 1.06s step-end infinite;
+}
+@keyframes otp-blink {
+  50% {
+    opacity: 0;
+  }
+}
 @keyframes badge-pop {
   from {
     opacity: 0;

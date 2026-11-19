@@ -3,7 +3,8 @@
 import type { ComponentProps } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
-import { ActionForm, FormField, Hidden, SubmitButton } from "@/components/ui/action-form";
+import { ActionForm, FormField, Hidden, SubmitButton, SubmitWhenReady } from "@/components/ui/action-form";
+import { OtpInput } from "@/components/ui/otp-input";
 import { Checkbox, Input } from "@/components/ui/field";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Alert } from "@/components/ui/primitives";
@@ -147,22 +148,11 @@ export function VerifyEmailForm() {
   return (
     <div className="flex flex-col gap-4">
       <ActionForm action={verifyEmailCodeAction}>
+        {/* Six boxes; a project set to a longer code (up to 10, DEPLOYMENT.md) adds boxes as it is typed or pasted. */}
         <FormField name="code" label={t("code")} hint={t("codeHint")} required>
-          {(a) => (
-            <Input
-              {...a}
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              pattern="[0-9]{6,10}"
-              maxLength={10}
-              required
-              autoFocus
-              dir="ltr"
-              className="text-center font-display text-2xl tracking-[0.4em]"
-            />
-          )}
+          {(a) => <OtpInput {...a} length={6} maxLength={10} required autoFocus />}
         </FormField>
-        <SubmitButton size="lg">{t("verify")}</SubmitButton>
+        <SubmitWhenReady size="lg">{t("verify")}</SubmitWhenReady>
       </ActionForm>
       <ActionForm action={resendEmailCodeAction} successMessage={message("code_sent")} className="items-center">
         <SubmitButton variant="ghost" size="sm">{t("resendCode")}</SubmitButton>
@@ -171,20 +161,9 @@ export function VerifyEmailForm() {
   );
 }
 
-/** The six digits an authenticator app shows: typed by hand or filled in by the phone. */
-export function AppCodeInput(props: ComponentProps<typeof Input>) {
-  return (
-    <Input
-      {...props}
-      inputMode="numeric"
-      autoComplete="one-time-code"
-      pattern="[0-9 ]{6,7}"
-      maxLength={7}
-      required
-      dir="ltr"
-      className="text-center font-display text-2xl tracking-[0.4em]"
-    />
-  );
+/** The six digits an authenticator app shows ("123 456" works too), one box each. */
+export function AppCodeInput(props: Omit<ComponentProps<typeof OtpInput>, "length" | "maxLength">) {
+  return <OtpInput {...props} length={6} required />;
 }
 
 export function SecondStepForm({ next }: { next: string }) {
@@ -195,7 +174,7 @@ export function SecondStepForm({ next }: { next: string }) {
       <FormField name="code" label={t("appCode")} hint={t("appCodeHint")} required>
         {(a) => <AppCodeInput {...a} autoFocus />}
       </FormField>
-      <SubmitButton size="lg">{t("verify")}</SubmitButton>
+      <SubmitWhenReady size="lg">{t("verify")}</SubmitWhenReady>
     </ActionForm>
   );
 }
