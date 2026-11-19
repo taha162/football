@@ -5,7 +5,7 @@ import type { Locale } from "@/i18n/routing";
 import { Link } from "@/i18n/navigation";
 import { requireOnboardedUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { getMyMatches, searchMatches } from "@/server/matches/queries";
+import { getFaces, getMyMatches, searchMatches } from "@/server/matches/queries";
 import { respondMatchInvitationAction } from "@/server/matches/actions";
 import { respondTeamInvitationAction } from "@/server/teams/actions";
 import { MatchCard } from "@/components/match/match-card";
@@ -33,7 +33,10 @@ export default async function DashboardPage({ params }: PageProps<"/[locale]/das
     supabase.from("venue_staff").select("venue:venues(id, name)").eq("user_id", user.id),
   ]);
   const mineIds = new Set(upcoming.map((m) => m.id));
+  const mine = upcoming.slice(0, 6);
   const suggestions = recommended.items.filter((m) => !mineIds.has(m.id)).slice(0, 4);
+  // Both lists' faces in one request.
+  const faces = await getFaces([...mine, ...suggestions].map((m) => m.id));
   let pendingBookings = 0;
   if ((venues ?? []).length > 0) {
     const { count } = await supabase
@@ -124,8 +127,8 @@ export default async function DashboardPage({ params }: PageProps<"/[locale]/das
       <Section title={t("upcoming")} id="upcoming" actions={<LinkButton href="/my/matches" className={buttonClass("ghost", "sm")}>{t("allMine")}</LinkButton>}>
         {upcoming.length > 0 ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {upcoming.slice(0, 6).map((m) => (
-              <MatchCard key={m.id} match={m} role={m.role} />
+            {mine.map((m) => (
+              <MatchCard key={m.id} match={{ ...m, faces: faces.get(m.id) }} role={m.role} />
             ))}
           </div>
         ) : (
@@ -139,7 +142,7 @@ export default async function DashboardPage({ params }: PageProps<"/[locale]/das
         {suggestions.length > 0 ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {suggestions.map((m) => (
-              <MatchCard key={m.id} match={m} />
+              <MatchCard key={m.id} match={{ ...m, faces: faces.get(m.id) }} />
             ))}
           </div>
         ) : (

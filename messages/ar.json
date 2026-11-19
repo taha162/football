@@ -255,6 +255,8 @@
     "slotsLeft": "{count, plural, zero {لا أماكن} one {مكان واحد متبقٍ} two {مكانان متبقيان} few {# أماكن متبقية} many {# مكاناً متبقياً} other {# مكان متبقٍ}}",
     "players": "{filled}/{total} لاعب",
     "waitlistCount": "{count} بالانتظار",
+    "facesLabel": "في المباراة: {list}",
+    "facesMore": "{count, plural, one {لاعب آخر} two {لاعبان آخران} few {# لاعبين آخرين} many {# لاعباً آخر} other {# لاعب آخر}}",
     "perPlayer": "للاعب",
     "perPlayerEstimate": "للاعب (تقديري)",
     "free": "مجانية"

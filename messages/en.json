@@ -255,6 +255,8 @@
     "slotsLeft": "{count, plural, one {# spot left} other {# spots left}}",
     "players": "{filled}/{total} players",
     "waitlistCount": "{count} waiting",
+    "facesLabel": "In this match: {list}",
+    "facesMore": "{count, plural, one {# other player} other {# other players}}",
     "perPlayer": "per player",
     "perPlayerEstimate": "per player (estimate)",
     "free": "Free"

@@ -5,6 +5,8 @@ import { availability, openSlots } from "@/lib/domain/match";
 import { formatMoney } from "@/lib/domain/money";
 import { formatDateTime } from "@/lib/format";
 import { localizedName } from "@/server/reference";
+import { publicStorageUrl } from "@/lib/storage";
+import { AvatarGroup } from "@/components/ui/avatar-group";
 import type { MatchCardData } from "@/server/matches/queries";
 import { Badge, type Tone } from "@/components/ui/primitives";
 import { cn } from "@/lib/cn";
@@ -26,6 +28,17 @@ export async function MatchCard({ match, role }: { match: MatchCardData; role?: 
   const capacity = match.total_players - match.reserved_spots;
   const filled = Math.min(capacity, match.confirmed_count);
   const place = match.venue?.name ?? localizedName(match.area, locale) ?? localizedName(match.city, locale);
+  // Who is in it: the first players' faces, then +N (only for those allowed to see the roster).
+  const faces = match.faces ?? [];
+  const others = Math.max(0, match.confirmed_count - faces.length);
+  const facesLabel = faces.length
+    ? t("facesLabel", {
+        list: new Intl.ListFormat(locale === "ar" ? "ar" : "en", { type: "conjunction" }).format([
+          ...faces.map((f) => f.display_name),
+          ...(others > 0 ? [t("facesMore", { count: others })] : []),
+        ]),
+      })
+    : "";
 
   return (
     <article className="reveal card-hover spotlight group relative flex flex-col gap-4 rounded-[var(--radius-card)] border border-line bg-surface p-4 hover:border-line-strong">
@@ -77,7 +90,16 @@ export async function MatchCard({ match, role }: { match: MatchCardData; role?: 
       <div className="mt-auto flex items-end justify-between gap-3">
         <div className="flex flex-1 flex-col gap-1.5">
           <div className="flex items-center gap-1.5 text-xs text-muted">
-            <Users aria-hidden="true" className="size-3.5" />
+            {faces.length ? (
+              <AvatarGroup
+                className="me-1"
+                label={facesLabel}
+                total={match.confirmed_count}
+                people={faces.map((f) => ({ id: f.id, name: f.display_name, src: publicStorageUrl("avatars", f.avatar_path) }))}
+              />
+            ) : (
+              <Users aria-hidden="true" className="size-3.5" />
+            )}
             <span className="num">{t("players", { filled: filled + match.reserved_spots, total: match.total_players })}</span>
             {match.waitlist_count > 0 ? <span className="num">· {t("waitlistCount", { count: match.waitlist_count })}</span> : null}
           </div>
