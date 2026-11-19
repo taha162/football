@@ -424,8 +424,7 @@ export function Thread({
               <div className="flex items-center gap-1">
                 {time}
                 {m.id === lastMine ? (
-                  <span className={cn("inline-flex items-center gap-0.5 text-[11px]", seenLast(m) ? "text-accent" : "text-faint")} data-testid="message-status">
-                    <span aria-hidden="true">·</span>
+                  <span className={cn("ms-1 inline-flex items-center gap-0.5 text-[11px]", seenLast(m) ? "text-accent" : "text-faint")} data-testid="message-status">
                     {seenLast(m) ? <CheckCheck aria-hidden="true" className="size-3.5" /> : <Check aria-hidden="true" className="size-3.5" />}
                     {seenLast(m) ? t("seen") : t("sent")}
                   </span>

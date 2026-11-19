@@ -6,6 +6,7 @@ import { Building2, CalendarCheck, LayoutDashboard, LogOut, Settings, ShieldChec
 import { usePathname } from "@/i18n/navigation";
 import { signOutAction } from "@/server/auth";
 import { Avatar } from "@/components/ui/avatar";
+import { cn } from "@/lib/cn";
 import { LinkButton, type Href } from "@/components/ui/link-button";
 
 const itemClass =
@@ -165,7 +166,7 @@ export function UserMenu({
           ) : null}
           <Divider />
           <form action={signOutAction} role="none">
-            <button type="submit" role="menuitem" tabIndex={-1} className={`${itemClass} text-danger`}>
+            <button type="submit" role="menuitem" tabIndex={-1} className={cn(itemClass, "text-danger")}>
               <LogOut aria-hidden="true" className="size-4 shrink-0" />
               {t("signOut")}
             </button>
