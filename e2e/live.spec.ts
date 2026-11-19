@@ -6,6 +6,8 @@ test.describe("Live updates", () => {
     await signIn(page, me);
     await expect(page.getByRole("link", { name: "الإشعارات", exact: true })).toBeVisible();
     await expect(page.getByRole("link", { name: "الرسائل", exact: true })).toBeVisible();
+    // Once the page really listens (Realtime: "Subscribed to PostgreSQL"; after a cold start that can take seconds).
+    await expect(page.locator('html[data-live="on"]')).toHaveCount(1, { timeout: 15_000 });
 
     // A friend writes: the bell and the messages button show it, with no reload.
     const conv = await rpc<string>(friend.id, "start_direct_conversation", { p_user_id: me.id });

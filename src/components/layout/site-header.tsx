@@ -1,9 +1,9 @@
 import { Bell, MessageCircle, Plus, ShieldCheck } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import type { CurrentUser } from "@/lib/auth";
+import { displayPhone, isPhoneAccountEmail } from "@/lib/phone";
 import { publicStorageUrl } from "@/lib/storage";
 import { getManagedThings, getUnreadCounts } from "@/server/reference";
-import { Avatar } from "@/components/ui/avatar";
 import { buttonClass } from "@/components/ui/button";
 import { HeaderFrame } from "./header-frame";
 import { Logo } from "./logo";
@@ -11,6 +11,12 @@ import { CountLink } from "./count-link";
 import { NavLinks } from "./nav-links";
 import { UserMenu } from "./user-menu";
 import { LinkButton } from "@/components/ui/link-button";
+
+/** Under the name in the account menu: the e-mail, or for accounts made with a number, the number. */
+function accountContact(user: CurrentUser): string | null {
+  if (user.email && !isPhoneAccountEmail(user.email)) return user.email;
+  return user.phone ? displayPhone(user.phone) : null;
+}
 
 export async function SiteHeader({ user }: { user: CurrentUser | null }) {
   const t = await getTranslations("nav");
@@ -54,7 +60,8 @@ export async function SiteHeader({ user }: { user: CurrentUser | null }) {
               </CountLink>
               <UserMenu
                 name={user.profile.display_name}
-                avatar={<Avatar src={publicStorageUrl("avatars", user.profile.avatar_path)} name={user.profile.display_name} size={32} />}
+                avatarSrc={publicStorageUrl("avatars", user.profile.avatar_path)}
+                contact={accountContact(user)}
                 isModerator={user.isModerator}
                 managesVenues={roles.venues}
                 organizesTournaments={roles.tournaments}

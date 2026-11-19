@@ -21,10 +21,16 @@ test.describe("Mobile (Arabic, RTL)", () => {
     await expect(page.getByRole("heading", { name: "احجز ملعباً" })).toBeVisible();
 
     // The account menu keeps to the essentials: no venue or tournament pages for someone who manages neither.
-    await page.getByLabel(`قائمة حساب ${player.name}`).click();
-    const menu = page.locator("details[open] .menu-panel");
-    await expect(menu.getByRole("link")).toHaveText(["لوحتي", "ملفي الشخصي", "فرقي", "حجوزاتي", "الإعدادات"]);
-    await page.getByLabel(`قائمة حساب ${player.name}`).click();
+    const account = page.getByRole("button", { name: `قائمة حساب ${player.name}` });
+    await account.click();
+    const menu = page.getByRole("menu");
+    await expect(menu.getByRole("menuitem")).toHaveText(["لوحتي", "ملفي الشخصي", "فرقي", "حجوزاتي", "الإعدادات", "تسجيل الخروج"]);
+    // On a phone the menu stays on the screen.
+    const box = (await menu.boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+    await account.click();
+    await expect(menu).toHaveCount(0);
 
     await quickNav.getByRole("link", { name: "المباريات" }).click();
     await page.waitForURL(/\/ar\/matches/);

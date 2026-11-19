@@ -1,7 +1,7 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import type { Locale } from "@/i18n/routing";
 import { requireOnboardedUser } from "@/lib/auth";
-import { getMyMatches } from "@/server/matches/queries";
+import { attachFaces, getMyMatches } from "@/server/matches/queries";
 import { MatchCard } from "@/components/match/match-card";
 import { buttonClass } from "@/components/ui/button";
 import { Container, EmptyState, PageHeader } from "@/components/ui/primitives";
@@ -14,7 +14,7 @@ export default async function MyMatchesPage({ params, searchParams }: PageProps<
   const user = await requireOnboardedUser(locale as Locale, "/my/matches");
   const tab = (await searchParams).tab === "past" ? "past" : "upcoming";
   const t = await getTranslations("myMatches");
-  const matches = await getMyMatches(user.id, tab);
+  const matches = await attachFaces(await getMyMatches(user.id, tab));
   return (
     <Container className="py-10">
       <PageHeader title={t("title")} actions={<LinkButton href="/matches/new" className={buttonClass("primary", "md")}>{t("create")}</LinkButton>} />

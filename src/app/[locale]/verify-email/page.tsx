@@ -3,7 +3,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link, redirect } from "@/i18n/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { getPendingEmail } from "@/lib/pending-email";
-import { AuthShell } from "@/components/auth/auth-shell";
+import { AuthShell, SignUpSteps } from "@/components/auth/auth-shell";
 import { VerifyEmailForm } from "@/components/auth/auth-forms";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/verify-email">): Promise<Metadata> {
@@ -20,6 +20,7 @@ export default async function VerifyEmailPage({ params }: PageProps<"/[locale]/v
   const t = await getTranslations("auth");
   return (
     <AuthShell
+      steps={<SignUpSteps current={1} />}
       title={t("verifyEmailTitle")}
       subtitle={t.rich("verifyEmailSubtitle", {
         email: () => (

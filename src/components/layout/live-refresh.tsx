@@ -83,11 +83,23 @@ export function LiveRefresh({ userId, checkSeconds = 30 }: { userId: string; che
     // Joined as the person (see getRealtimeClient), so only their own rows arrive.
     void getRealtimeClient(userId).then((supabase) => {
       if (closed) return;
+      // Joining the channel isn't listening yet: database changes flow once Realtime says "Subscribed
+      // to PostgreSQL", which after a cold start can take seconds. The page says so then
+      // (html[data-live="on"]), and if it took a while, catches up on what came in meanwhile.
+      let joinedAt = 0;
       let live = supabase
         .channel(`live:${userId}`)
-        .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` }, () => schedule());
+        .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` }, () => schedule())
+        .on("system", {}, (payload: { extension?: string; status?: string }) => {
+          if (payload?.extension !== "postgres_changes" || payload.status !== "ok") return;
+          document.documentElement.dataset.live = "on";
+          if (joinedAt && Date.now() - joinedAt > 1_000) schedule(300);
+        });
       if (onMessages) live = live.on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, () => schedule());
-      channel = live.subscribe();
+      channel = live.subscribe((status) => {
+        if (status === "SUBSCRIBED") joinedAt = Date.now();
+        else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") delete document.documentElement.dataset.live;
+      });
     });
 
     return () => {
@@ -98,6 +110,7 @@ export function LiveRefresh({ userId, checkSeconds = 30 }: { userId: string; che
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("online", onOnline);
       if (channel) void getBrowserClient().removeChannel(channel);
+      delete document.documentElement.dataset.live;
     };
   }, [router, userId, onMessages, checkSeconds]);
 

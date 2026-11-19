@@ -13,6 +13,8 @@ export type { Profile };
 export interface CurrentUser {
   id: string;
   email: string | null;
+  /** The confirmed number (E.164 digits), for accounts verified with one. */
+  phone: string | null;
   emailConfirmed: boolean;
   profile: Profile;
   roles: ("admin" | "moderator")[];
@@ -40,6 +42,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   return {
     id: data.user.id,
     email: data.user.email ?? null,
+    phone: data.user.phone || null,
     emailConfirmed: Boolean(data.user.email_confirmed_at),
     profile,
     roles: roleList,

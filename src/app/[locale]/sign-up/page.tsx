@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link, redirect } from "@/i18n/navigation";
 import { getCurrentUser } from "@/lib/auth";
-import { AuthShell, OtherWay } from "@/components/auth/auth-shell";
+import { AuthShell, OtherWay, SignUpSteps } from "@/components/auth/auth-shell";
 import { SignUpForm, WhatsappSignUpForm } from "@/components/auth/auth-forms";
 import { whatsappConfig } from "@/lib/whatsapp";
 
@@ -28,6 +28,7 @@ export default async function SignUpPage({ params, searchParams }: PageProps<"/[
     <AuthShell
       title={t("signUpTitle")}
       subtitle={t("signUpSubtitle")}
+      steps={<SignUpSteps current={0} />}
       footer={
         <>
           {t("haveAccount")}{" "}

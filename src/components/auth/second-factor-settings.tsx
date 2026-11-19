@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { CheckCircle2, Copy, ShieldCheck } from "lucide-react";
 import { confirmSecondFactorAction, startSecondFactorAction, turnOffSecondFactorAction } from "@/server/mfa";
 import { AppCodeInput } from "@/components/auth/auth-forms";
-import { ActionForm, FormField, Hidden, SubmitButton } from "@/components/ui/action-form";
+import { ActionForm, FormField, Hidden, SubmitButton, SubmitWhenReady } from "@/components/ui/action-form";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/primitives";
 
@@ -40,7 +40,7 @@ export function SecondFactorSettings({ enabled }: { enabled: boolean }) {
           <FormField name="code" id="second-factor-off-code" label={t("secondFactorOffLabel")} hint={t("secondFactorOffHint")} required>
             {(a) => <AppCodeInput {...a} />}
           </FormField>
-          <SubmitButton variant="outline" className="self-start">{t("secondFactorTurnOff")}</SubmitButton>
+          <SubmitWhenReady variant="outline" className="self-start">{t("secondFactorTurnOff")}</SubmitWhenReady>
         </ActionForm>
       </div>
     );
@@ -94,7 +94,7 @@ export function SecondFactorSettings({ enabled }: { enabled: boolean }) {
           {(a) => <AppCodeInput {...a} autoFocus />}
         </FormField>
         <div className="flex flex-wrap gap-2">
-          <SubmitButton>{t("secondFactorConfirm")}</SubmitButton>
+          <SubmitWhenReady>{t("secondFactorConfirm")}</SubmitWhenReady>
           <Button type="button" variant="ghost" onClick={() => setSetup(null)}>
             {t("secondFactorCancel")}
           </Button>

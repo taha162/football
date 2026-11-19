@@ -10,7 +10,7 @@ import { getMapProvider } from "@/lib/maps";
 import { publicStorageUrl } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 import { localizedName } from "@/server/reference";
-import { MATCH_CARD_SELECT, type MatchCardData } from "@/server/matches/queries";
+import { attachFaces, MATCH_CARD_SELECT, type MatchCardData } from "@/server/matches/queries";
 import { getDepositSettings, getVenue } from "@/server/venues/queries";
 import { MatchCard } from "@/components/match/match-card";
 import { ReportButton } from "@/components/report-button";
@@ -153,7 +153,7 @@ export default async function VenuePage({ params }: PageProps<"/[locale]/venues/
               <p className="text-sm text-muted">{t("noMatches")}</p>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2">
-                {((matches ?? []) as unknown as MatchCardData[]).map((m) => <MatchCard key={m.id} match={m} />)}
+                {(await attachFaces((matches ?? []) as unknown as MatchCardData[])).map((m) => <MatchCard key={m.id} match={m} />)}
               </div>
             )}
           </Section>

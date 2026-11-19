@@ -1,5 +1,6 @@
 import "server-only";
 import { cache } from "react";
+import { getCurrentUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import type { Database, Tables } from "@/lib/supabase/types";
 
@@ -32,6 +33,51 @@ export interface MatchCardData {
   venue: { id: string; name: string; latitude: number | null; longitude: number | null } | null;
   home_team: { id: string; name: string } | null;
   away_team: { id: string; name: string } | null;
+  /** The first confirmed players, for the faces on the card (attachFaces). */
+  faces?: Face[];
+}
+
+export interface Face {
+  id: string;
+  display_name: string;
+  avatar_path: string | null;
+}
+
+/** How many players' faces a match card shows before "+N". */
+export const FACES_ON_CARD = 4;
+
+/**
+ * The first confirmed players of each match, in the order they joined, for
+ * the faces on match cards: one request for the whole list. Rosters follow
+ * their own rules (RLS): only signed-in members who may see the match get
+ * them, so for a visitor nothing is asked and the card shows the count alone.
+ * The first 24 matches only: a long history stays one small request (the rest
+ * show the count alone).
+ */
+export async function getFaces(matchIds: string[]): Promise<Map<string, Face[]>> {
+  const byMatch = new Map<string, Face[]>();
+  const ids = [...new Set(matchIds)].slice(0, 24);
+  if (ids.length === 0 || !(await getCurrentUser())) return byMatch;
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("match_participants")
+    .select("match_id, profile:profiles!match_participants_user_id_fkey(id, display_name, avatar_path)")
+    .in("match_id", ids)
+    .eq("status", "confirmed")
+    .order("joined_at")
+    .limit(ids.length * 30);
+  for (const row of (data ?? []) as unknown as { match_id: string; profile: Face | null }[]) {
+    const list = byMatch.get(row.match_id) ?? [];
+    if (row.profile && list.length < FACES_ON_CARD) list.push(row.profile);
+    byMatch.set(row.match_id, list);
+  }
+  return byMatch;
+}
+
+/** The list with each match's faces (getFaces). */
+export async function attachFaces<T extends { id: string }>(matches: T[]): Promise<(T & { faces: Face[] })[]> {
+  const faces = await getFaces(matches.map((m) => m.id));
+  return matches.map((m) => ({ ...m, faces: faces.get(m.id) ?? [] }));
 }
 
 export type MatchSort = "time" | "relevance" | "distance";

@@ -1,4 +1,4 @@
-import { admin, createAuthUser, expect, rpc, signIn, test } from "./fixtures";
+import { admin, createAuthUser, createMatchFor, expect, rpc, signIn, test } from "./fixtures";
 
 // A 2×2 PNG: the page shrinks it to a JPEG before sending, as it does phone photos.
 const PNG = Buffer.from(
@@ -56,7 +56,7 @@ test.describe("Conversations", () => {
       expect(box!.x + box!.width - (a!.x + a!.width)).toBeLessThan(40);
       expect(b!.x - box!.x).toBeLessThan(40);
       // Own is the green one.
-      const colour = (text: string) => list.getByText(text).evaluate((el) => getComputedStyle(el).backgroundColor);
+      const colour = (text: string) => list.getByText(text).evaluate((el) => getComputedStyle(el.closest(".bubble") ?? el).backgroundColor);
       expect(await colour(own)).not.toBe(await colour(other));
     };
     await signIn(page, me);
@@ -67,6 +67,74 @@ test.describe("Conversations", () => {
     await other.goto(`/ar/messages/${conv}`);
     await sides(other, "Sent by Friend", "Sent by Me");
     await other.context().close();
+  });
+
+  test("bubbles end a run with a tail; my last message says «أُرسلت», then «شوهدت» as the other reads; dots while they type", async ({ page, browser }) => {
+    test.setTimeout(90_000);
+    const [me, friend] = [await createAuthUser("Seen me"), await createAuthUser("Seen friend")];
+    const conv = await rpc<string>(me.id, "start_direct_conversation", { p_user_id: friend.id });
+    await rpc(friend.id, "send_message", { p_conversation_id: conv, p_body: "Are we still on for 3?" });
+    await signIn(page, me);
+    await page.goto(`/ar/messages/${conv}`);
+    await page.waitForLoadState("networkidle");
+    const list = page.getByRole("list", { name: "سجل الرسائل" });
+    const bubble = (text: string) => list.getByText(text).locator("xpath=ancestor::div[contains(@class, 'bubble')][1]");
+
+    // Two of mine in a row: only the last one has the tail, on the outer side.
+    for (const text of ["Yes!", "Booking the room now"]) {
+      await page.getByRole("textbox", { name: "اكتب رسالة" }).fill(text);
+      await page.getByRole("button", { name: "إرسال", exact: true }).click();
+      await expect(list.locator("[data-mine]").getByText(text)).toBeVisible();
+    }
+    await expect(bubble("Are we still on for 3?")).toHaveClass(/bubble-tail/);
+    await expect(bubble("Are we still on for 3?")).toHaveAttribute("data-side", "end");
+    await expect(bubble("Yes!")).not.toHaveClass(/bubble-tail/);
+    await expect(bubble("Booking the room now")).toHaveClass(/bubble-tail/);
+    await expect(bubble("Booking the room now")).toHaveAttribute("data-side", "start");
+    // The tail really shows: a corner of the bubble's colour just outside it.
+    const tail = await bubble("Booking the room now").evaluate((el) => {
+      const before = getComputedStyle(el, "::before");
+      return { content: before.content, colour: before.backgroundColor, own: getComputedStyle(el).backgroundColor };
+    });
+    expect(tail.content).toBe('""');
+    expect(tail.colour).toBe(tail.own);
+    // Only under my last message: «أُرسلت» while the other hasn't read it.
+    const status = page.getByTestId("message-status");
+    await expect(status).toHaveCount(1);
+    await expect(status).toHaveText(/أُرسلت/);
+    await expect(list.locator("li", { has: status })).toContainText("Booking the room now");
+
+    // The friend opens the conversation: on my page it turns to «شوهدت», live.
+    const other = await (await browser.newContext()).newPage();
+    await signIn(other, friend);
+    await other.goto(`/ar/messages/${conv}`);
+    await expect(other.getByText("Booking the room now")).toBeVisible();
+    await expect(status).toHaveText(/شوهدت/, { timeout: 15_000 });
+
+    // The friend types: three dots on my page, gone when their message arrives.
+    await other.waitForLoadState("networkidle");
+    await other.getByRole("textbox", { name: "اكتب رسالة" }).pressSequentially("See you at the pitch", { delay: 150 });
+    await expect(page.getByTestId("typing")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole("status").filter({ hasText: "يكتب الآن…" })).toHaveCount(1);
+    await other.getByRole("button", { name: "إرسال", exact: true }).click();
+    await expect(list.getByText("See you at the pitch")).toBeVisible();
+    await expect(page.getByTestId("typing")).toHaveCount(0);
+    // And now their message is the last word: my status stays on my last message.
+    await expect(status).toHaveText(/شوهدت/);
+    await other.context().close();
+  });
+
+  test("in a group chat there is no «شوهدت», only «أُرسلت»", async ({ page }) => {
+    const organizer = await createAuthUser("Group seen");
+    const player = await createAuthUser("Group reader");
+    const match = await createMatchFor(organizer);
+    await rpc(player.id, "join_match", { p_match_id: match });
+    const conv = await rpc<string>(organizer.id, "entity_conversation_id", { p_kind: "match", p_entity_id: match });
+    await rpc(organizer.id, "send_message", { p_conversation_id: conv, p_body: "Bring white shirts" });
+    await rpc(player.id, "mark_conversation_read", { p_conversation_id: conv });
+    await signIn(page, organizer);
+    await page.goto(`/ar/messages/${conv}`);
+    await expect(page.getByTestId("message-status")).toHaveText(/أُرسلت/);
   });
 
   test("a text message is in the conversation the moment it is sent, and comes back to the box if it can't be sent", async ({ page }) => {

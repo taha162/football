@@ -8,7 +8,12 @@ test.describe("Journey A — register, onboard, discover and join", () => {
     const matchId = await createMatchFor(organizer, { p_title: title });
 
     const email = `e2e-a-${Date.now()}@example.test`;
+    // The way in, in three steps: the account, its confirmation, the player profile.
+    const steps = page.getByRole("navigation", { name: "خطوات التسجيل" });
+    const currentStep = steps.locator('[aria-current="step"]');
     await page.goto("/ar/sign-up?method=email");
+    await expect(steps.getByRole("listitem")).toHaveText(["1الحساب", "2التأكيد", "3ملفك"]);
+    await expect(currentStep).toHaveText("1الحساب");
     await page.getByLabel("الاسم الظاهر").fill("Journey Player");
     await page.getByRole("textbox", { name: "البريد الإلكتروني" }).fill(email);
     await page.getByRole("textbox", { name: "كلمة المرور" }).fill("Str0ng-pass-123");
@@ -18,13 +23,33 @@ test.describe("Journey A — register, onboard, discover and join", () => {
     // E-mail confirmation is on: enter the code that was e-mailed.
     await page.waitForURL(/\/ar\/verify-email/);
     await expect(page.getByText(email)).toBeVisible();
-    await page.getByRole("textbox", { name: "رمز التحقق" }).fill("000000");
-    await page.getByRole("button", { name: "تأكيد" }).click();
+    await expect(currentStep).toHaveText("2التأكيد");
+    await expect(steps.locator('[data-state="done"]')).toHaveText("الحساب (مكتملة)");
+    // The code goes in a row of boxes, one digit each; «تأكيد» waits for the whole code.
+    const code = page.getByRole("textbox", { name: "رمز التحقق" });
+    const boxes = page.locator("[data-otp-box]");
+    const verify = page.getByRole("button", { name: "تأكيد" });
+    await expect(boxes).toHaveCount(6);
+    await expect(verify).toBeDisabled();
+    await code.pressSequentially("١٢٣"); // typed on an Arabic keyboard
+    await expect(boxes).toHaveText(["1", "2", "3", "", "", ""]);
+    await expect(verify).toBeDisabled();
+    // A project set to longer codes (up to 10): the boxes grow with the code.
+    await code.fill("1234 5678");
+    await expect(boxes).toHaveCount(8);
+    await expect(verify).toBeEnabled();
+    await code.fill("000000");
+    await expect(boxes).toHaveCount(6);
+    await verify.click();
     await expect(page.getByText("الرمز غير صحيح أو انتهت صلاحيته.")).toBeVisible();
+    // A wrong code isn't put back: the boxes are empty for the next one.
+    await expect(code).toHaveValue("");
+    await expect(boxes).toHaveText(["", "", "", "", "", ""]);
     await page.getByRole("textbox", { name: "رمز التحقق" }).fill(await emailedCode(email));
     await page.getByRole("button", { name: "تأكيد" }).click();
     await page.waitForURL(/\/ar\/onboarding/);
     await expect(page.getByRole("heading", { name: "جهّز ملفك كلاعب" })).toBeVisible();
+    await expect(currentStep).toHaveText("3ملفك");
     // Every governorate is listed and none is assumed: the player picks theirs.
     const city = page.getByRole("combobox", { name: "المدينة" });
     await expect(city).toHaveValue("");

@@ -6,7 +6,9 @@ import {
   useContext,
   useEffect,
   useRef,
+  useState,
   type ReactNode,
+  type Ref,
 } from "react";
 import { useFormStatus } from "react-dom";
 import { unstable_rethrow } from "next/navigation";
@@ -249,14 +251,39 @@ export function FormField({
   );
 }
 
-export function SubmitButton({ children, pendingLabel, ...props }: ButtonProps & { pendingLabel?: ReactNode }) {
+export function SubmitButton({ children, pendingLabel, disabled, ref, ...props }: ButtonProps & { pendingLabel?: ReactNode; ref?: Ref<HTMLButtonElement> }) {
   const { pending } = useFormStatus();
+  // Off while the form is on its way, whatever else is asked: one send at a time.
   return (
-    <Button type="submit" disabled={pending || props.disabled} aria-disabled={pending} {...props}>
+    <Button ref={ref} type="submit" {...props} disabled={pending || disabled} aria-disabled={pending}>
       {pending ? <BallSpinner /> : null}
       {pending && pendingLabel ? pendingLabel : children}
     </Button>
   );
+}
+
+/**
+ * A submit button that stays off until its form's own checks pass: every box
+ * of a code filled, say (OtpInput's pattern). Checked as the person types,
+ * and again when the form is emptied after a send.
+ */
+export function SubmitWhenReady(props: ButtonProps & { pendingLabel?: ReactNode }) {
+  const ref = useRef<HTMLButtonElement>(null);
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    const form = ref.current?.form;
+    if (!form) return;
+    // After React has written the field's cleaned-up value (digits only).
+    const check = () => requestAnimationFrame(() => setReady(form.checkValidity()));
+    check();
+    form.addEventListener("input", check);
+    form.addEventListener("reset", check);
+    return () => {
+      form.removeEventListener("input", check);
+      form.removeEventListener("reset", check);
+    };
+  }, []);
+  return <SubmitButton ref={ref} {...props} disabled={!ready || props.disabled} />;
 }
 
 /** Hidden inputs from a record. */

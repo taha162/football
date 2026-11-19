@@ -39,12 +39,21 @@ type Mode = "text" | "location" | "voice";
  * `onSending` puts a text message in the conversation the moment it is sent
  * (the thread takes it back if sending fails).
  */
-export function Composer({ conversationId, onSending }: { conversationId: string; onSending?: (body: string) => void }) {
+export function Composer({
+  conversationId,
+  onSending,
+  onTyping,
+}: {
+  conversationId: string;
+  onSending?: (body: string) => void;
+  /** Called as text is typed: the thread tells the others (at most every few seconds). */
+  onTyping?: () => void;
+}) {
   const [mode, setMode] = useState<Mode>("text");
   const back = () => setMode("text");
   if (mode === "location") return <LocationPanel conversationId={conversationId} onDone={back} />;
   if (mode === "voice") return <VoiceRecorder conversationId={conversationId} onDone={back} />;
-  return <TextComposer conversationId={conversationId} onMode={setMode} onSending={onSending} />;
+  return <TextComposer conversationId={conversationId} onMode={setMode} onSending={onSending} onTyping={onTyping} />;
 }
 
 /**
@@ -53,7 +62,17 @@ export function Composer({ conversationId, onSending }: { conversationId: string
  * written while it is on its way; if it can't be sent, it comes back to the
  * box with the reason. A picture waits for its upload, as before.
  */
-function TextComposer({ conversationId, onMode, onSending }: { conversationId: string; onMode: (mode: Mode) => void; onSending?: (body: string) => void }) {
+function TextComposer({
+  conversationId,
+  onMode,
+  onSending,
+  onTyping,
+}: {
+  conversationId: string;
+  onMode: (mode: Mode) => void;
+  onSending?: (body: string) => void;
+  onTyping?: () => void;
+}) {
   const t = useTranslations("messages");
   const fileInput = useRef<HTMLInputElement>(null);
   const box = useRef<HTMLTextAreaElement>(null);
@@ -135,6 +154,7 @@ function TextComposer({ conversationId, onMode, onSending }: { conversationId: s
         dir="auto"
         onInput={(e) => {
           if (sending.current) typed.current = e.currentTarget.value;
+          if (e.currentTarget.value.trim()) onTyping?.();
         }}
       />
       {/* Send on the right, the picture/location/voice tools on the left. */}

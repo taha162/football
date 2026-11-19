@@ -9,7 +9,7 @@ import { JOIN_POLICIES, MATCH_FORMATS, POSITIONS, SKILL_LEVELS } from "@/lib/dom
 import { parseMoneyInput } from "@/lib/domain/money";
 import { getMapProvider } from "@/lib/maps";
 import { getAreas, getCities, localizedName } from "@/server/reference";
-import { searchMatches, type MatchSearch } from "@/server/matches/queries";
+import { attachFaces, searchMatches, type MatchSearch } from "@/server/matches/queries";
 import { MatchCard } from "@/components/match/match-card";
 import { NearMe } from "@/components/match/near-me";
 import { buttonClass } from "@/components/ui/button";
@@ -85,7 +85,7 @@ export default async function MatchesPage({ params, searchParams }: PageProps<"/
     query: q.q,
   };
   const outcome = await searchMatches(search).then(
-    (r) => ({ ...r, error: false }),
+    async (r) => ({ ...r, items: await attachFaces(r.items), error: false }),
     () => ({ items: [], hasMore: false, error: true }),
   );
   const { error, ...result } = outcome;

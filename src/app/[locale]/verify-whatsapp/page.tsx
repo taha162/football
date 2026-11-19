@@ -5,7 +5,7 @@ import { displayPhone } from "@/lib/phone";
 import { getVerifyTicket, hashTicket } from "@/lib/phone-verification";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { chatLink, whatsappConfig } from "@/lib/whatsapp";
-import { AuthShell } from "@/components/auth/auth-shell";
+import { AuthShell, SignUpSteps } from "@/components/auth/auth-shell";
 import { WhatsappWaiter } from "@/components/auth/whatsapp-waiter";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/verify-whatsapp">): Promise<Metadata> {
@@ -24,6 +24,8 @@ export default async function VerifyWhatsappPage({ params }: PageProps<"/[locale
   const t = await getTranslations("auth");
   return (
     <AuthShell
+      // Signing up: the second of three steps. Recovering a password is no such path.
+      steps={row!.purpose === "signup" ? <SignUpSteps current={1} /> : undefined}
       title={t("waTitle")}
       subtitle={row!.purpose === "signup" ? t("waSubtitleSignup") : t("waSubtitleReset")}
       footer={

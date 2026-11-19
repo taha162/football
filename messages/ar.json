@@ -154,9 +154,15 @@
     "showPassword": "إظهار كلمة المرور"
   },
   "onboarding": {
-    "eyebrow": "الخطوة 1 من 1",
     "title": "جهّز ملفك كلاعب",
     "description": "يساعدنا هذا في عرض مباريات تناسبك. فقط اسمك الظاهر ومدينتك وما تختاره من تفاصيل يكون عاماً."
+  },
+  "steps": {
+    "signUp": "خطوات التسجيل",
+    "account": "الحساب",
+    "confirm": "التأكيد",
+    "profile": "ملفك",
+    "done": "مكتملة"
   },
   "profile": {
     "title": "ملفي الشخصي",
@@ -249,6 +255,8 @@
     "slotsLeft": "{count, plural, zero {لا أماكن} one {مكان واحد متبقٍ} two {مكانان متبقيان} few {# أماكن متبقية} many {# مكاناً متبقياً} other {# مكان متبقٍ}}",
     "players": "{filled}/{total} لاعب",
     "waitlistCount": "{count} بالانتظار",
+    "facesLabel": "في المباراة: {list}",
+    "facesMore": "{count, plural, one {لاعب آخر} two {لاعبان آخران} few {# لاعبين آخرين} many {# لاعباً آخر} other {# لاعب آخر}}",
     "perPlayer": "للاعب",
     "perPlayerEstimate": "للاعب (تقديري)",
     "free": "مجانية"
@@ -1960,6 +1968,10 @@
     "sendVoice": "إرسال الرسالة الصوتية",
     "sendingVoice": "جارٍ الإرسال…",
     "sending": "جارٍ الإرسال…",
+    "sent": "أُرسلت",
+    "seen": "شوهدت",
+    "typing": "يكتب الآن…",
+    "typingNamed": "{names} يكتب الآن…",
     "discardRecording": "حذف التسجيل",
     "recordLimit": "وصلت إلى الحد الأقصى: دقيقتان.",
     "micDenied": "لم يُسمح باستخدام الميكروفون. اسمح به من إعدادات المتصفح ثم حاول مجدداً.",

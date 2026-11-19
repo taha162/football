@@ -154,9 +154,15 @@
     "showPassword": "Show password"
   },
   "onboarding": {
-    "eyebrow": "Step 1 of 1",
     "title": "Set up your player profile",
     "description": "This helps us show relevant matches. Only your display name, city and the details you choose are public."
+  },
+  "steps": {
+    "signUp": "Sign-up steps",
+    "account": "Account",
+    "confirm": "Confirm",
+    "profile": "Profile",
+    "done": "done"
   },
   "profile": {
     "title": "My profile",
@@ -249,6 +255,8 @@
     "slotsLeft": "{count, plural, one {# spot left} other {# spots left}}",
     "players": "{filled}/{total} players",
     "waitlistCount": "{count} waiting",
+    "facesLabel": "In this match: {list}",
+    "facesMore": "{count, plural, one {# other player} other {# other players}}",
     "perPlayer": "per player",
     "perPlayerEstimate": "per player (estimate)",
     "free": "Free"
@@ -1960,6 +1968,10 @@
     "sendVoice": "Send voice message",
     "sendingVoice": "Sending…",
     "sending": "Sending…",
+    "sent": "Sent",
+    "seen": "Seen",
+    "typing": "Typing…",
+    "typingNamed": "{names} typing…",
     "discardRecording": "Delete recording",
     "recordLimit": "That's the limit: two minutes.",
     "micDenied": "The microphone isn't allowed. Allow it in your browser settings, then try again.",
