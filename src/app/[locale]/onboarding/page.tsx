@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getAreas, getCities } from "@/server/reference";
 import { ProfileForm } from "@/components/forms/profile-form";
 import { Container, PageHeader } from "@/components/ui/primitives";
+import { SignUpSteps } from "@/components/auth/auth-shell";
 import type { Locale } from "@/i18n/routing";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/onboarding">): Promise<Metadata> {
@@ -23,7 +24,8 @@ export default async function OnboardingPage({ params, searchParams }: PageProps
   const p = user.profile;
   return (
     <Container className="max-w-2xl py-10">
-      <PageHeader eyebrow={t("eyebrow")} title={t("title")} description={t("description")} />
+      <SignUpSteps current={2} className="reveal mb-6" />
+      <PageHeader title={t("title")} description={t("description")} />
       <ProfileForm
         onboarding
         next={next}

@@ -8,7 +8,12 @@ test.describe("Journey A — register, onboard, discover and join", () => {
     const matchId = await createMatchFor(organizer, { p_title: title });
 
     const email = `e2e-a-${Date.now()}@example.test`;
+    // The way in, in three steps: the account, its confirmation, the player profile.
+    const steps = page.getByRole("navigation", { name: "خطوات التسجيل" });
+    const currentStep = steps.locator('[aria-current="step"]');
     await page.goto("/ar/sign-up?method=email");
+    await expect(steps.getByRole("listitem")).toHaveText(["1الحساب", "2التأكيد", "3ملفك"]);
+    await expect(currentStep).toHaveText("1الحساب");
     await page.getByLabel("الاسم الظاهر").fill("Journey Player");
     await page.getByRole("textbox", { name: "البريد الإلكتروني" }).fill(email);
     await page.getByRole("textbox", { name: "كلمة المرور" }).fill("Str0ng-pass-123");
@@ -18,6 +23,8 @@ test.describe("Journey A — register, onboard, discover and join", () => {
     // E-mail confirmation is on: enter the code that was e-mailed.
     await page.waitForURL(/\/ar\/verify-email/);
     await expect(page.getByText(email)).toBeVisible();
+    await expect(currentStep).toHaveText("2التأكيد");
+    await expect(steps.locator('[data-state="done"]')).toHaveText("الحساب (مكتملة)");
     await page.getByRole("textbox", { name: "رمز التحقق" }).fill("000000");
     await page.getByRole("button", { name: "تأكيد" }).click();
     await expect(page.getByText("الرمز غير صحيح أو انتهت صلاحيته.")).toBeVisible();
@@ -25,6 +32,7 @@ test.describe("Journey A — register, onboard, discover and join", () => {
     await page.getByRole("button", { name: "تأكيد" }).click();
     await page.waitForURL(/\/ar\/onboarding/);
     await expect(page.getByRole("heading", { name: "جهّز ملفك كلاعب" })).toBeVisible();
+    await expect(currentStep).toHaveText("3ملفك");
     // Every governorate is listed and none is assumed: the player picks theirs.
     const city = page.getByRole("combobox", { name: "المدينة" });
     await expect(city).toHaveValue("");

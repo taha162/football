@@ -154,9 +154,15 @@
     "showPassword": "Show password"
   },
   "onboarding": {
-    "eyebrow": "Step 1 of 1",
     "title": "Set up your player profile",
     "description": "This helps us show relevant matches. Only your display name, city and the details you choose are public."
+  },
+  "steps": {
+    "signUp": "Sign-up steps",
+    "account": "Account",
+    "confirm": "Confirm",
+    "profile": "Profile",
+    "done": "done"
   },
   "profile": {
     "title": "My profile",
