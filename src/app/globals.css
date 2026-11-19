@@ -776,6 +776,73 @@ dialog[open]::backdrop {
     transform: translateY(-6px) scale(0.96);
   }
 }
+/*
+ * Chat bubbles (messages/thread.tsx): the last bubble of a run from one person
+ * gets a tail at its bottom corner on the outer side ("start" for mine, "end"
+ * for theirs). ::before is a corner of the bubble's own colour sticking out;
+ * ::after, in the conversation's background colour, carves it into a curve.
+ * Logical sides, so it follows the page's direction; 10px out at most, inside
+ * the list's padding.
+ */
+.bubble {
+  position: relative;
+  isolation: isolate;
+}
+.bubble-tail::before,
+.bubble-tail::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  height: 18px;
+  z-index: -1;
+  pointer-events: none;
+}
+.bubble-tail::before {
+  width: 18px;
+  background: inherit;
+}
+.bubble-tail::after {
+  width: 10px;
+  background: var(--color-surface);
+}
+.bubble-tail[data-side="start"]::before {
+  inset-inline-start: -7px;
+  border-end-end-radius: 15px;
+}
+.bubble-tail[data-side="start"]::after {
+  inset-inline-start: -10px;
+  border-end-end-radius: 10px;
+}
+.bubble-tail[data-side="end"]::before {
+  inset-inline-end: -7px;
+  border-end-start-radius: 15px;
+}
+.bubble-tail[data-side="end"]::after {
+  inset-inline-end: -10px;
+  border-end-start-radius: 10px;
+}
+/* Three dots while someone types, rising one after another. With reduced motion they stay still. */
+.typing-dot {
+  animation: typing-bounce 1.2s ease-in-out infinite;
+}
+.typing-dot:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.typing-dot:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes typing-bounce {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.45;
+  }
+  30% {
+    transform: translateY(-3px);
+    opacity: 1;
+  }
+}
 /* The caret in the box a code is typed into next (OtpInput). With reduced motion it stays still. */
 .otp-caret {
   animation: otp-blink 1.06s step-end infinite;

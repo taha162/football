@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useOptimistic, useRef, useState } from "react";
-import { Phone, PhoneIncoming, PhoneMissed } from "lucide-react";
+import { Check, CheckCheck, Phone, PhoneIncoming, PhoneMissed } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { ReportButton } from "@/components/report-button";
@@ -66,11 +66,23 @@ const erased = (m: ThreadMessage, at: string): ThreadMessage => ({
   voice_url: null,
 });
 
+/** How long «يكتب…» stays after the last keystroke heard, and how often typing is told. */
+const TYPING_SHOWN_MS = 4000;
+const TYPING_SEND_EVERY_MS = 2500;
+
 /**
  * Message thread. Initial history is server-rendered; new messages, edits and
  * deletions arrive via Supabase Realtime (postgres_changes on `messages`,
  * filtered by RLS so only members receive them). Without realtime, the page
  * still works by reloading. The sender can edit or delete their messages.
+ *
+ * Bubbles carry a tail on the last of a run from one person, on the outer
+ * side. Under my last message: the time, then «أُرسلت», or in a one-to-one
+ * conversation «شوهدت» once the other person has read it (`seenAt`, and live
+ * from conversation_reads, migration 0033). While someone types, three dots
+ * (a private broadcast channel per conversation, members only, nothing
+ * stored). Each of these extra channels is on its own, so without 0033 the
+ * messages still arrive live, with «أُرسلت» and no dots.
  */
 export function Thread({
   conversationId,
@@ -79,6 +91,8 @@ export function Thread({
   initial,
   locked,
   timeZone,
+  direct = false,
+  seenAt = null,
 }: {
   conversationId: string;
   me: string;
@@ -86,6 +100,10 @@ export function Thread({
   initial: ThreadMessage[];
   locked: boolean;
   timeZone: string;
+  /** A conversation between two people: the only kind that says «شوهدت». */
+  direct?: boolean;
+  /** When the other person last read it (direct conversations). */
+  seenAt?: string | null;
 }) {
   const t = useTranslations("messages");
   const locale = useLocale();
@@ -102,6 +120,19 @@ export function Thread({
   const pendingKey = useRef(0);
   // Held only while sending is under way, then dropped: by then the sent copy is in `messages`.
   const [pending, addPending] = useOptimistic<PendingMessage[], PendingMessage>([], (queue, p) => [...queue, p]);
+  // When the other person last read the conversation (direct conversations): live, or newer from a server render.
+  const [seen, setSeen] = useState<string | null>(seenAt);
+  const [prevSeenAt, setPrevSeenAt] = useState(seenAt);
+  if (seenAt !== prevSeenAt) {
+    setPrevSeenAt(seenAt);
+    if (seenAt && (!seen || Date.parse(seenAt) > Date.parse(seen))) setSeen(seenAt);
+  }
+  // Who is typing now, until when.
+  const [typing, setTyping] = useState<Record<string, number>>({});
+  const typingChannel = useRef<RealtimeChannel | null>(null);
+  const lastTypingSent = useRef(0);
+  // A message that arrived while the page was hidden is read when the page is seen again.
+  const unseenArrival = useRef(false);
 
   // Server re-render (e.g. after sending) brings fresh history: merge by id
   // so realtime-delivered messages aren't lost, keeping whichever copy of a
@@ -119,12 +150,58 @@ export function Thread({
   }
 
   useEffect(() => {
-    void markConversationReadAction(conversationId);
+    // Read means seen: a message that arrives while the page is in the background counts once the page is back.
+    const markRead = () => {
+      if (document.visibilityState === "visible") void markConversationReadAction(conversationId);
+      else unseenArrival.current = true;
+    };
+    const onVisible = () => {
+      if (document.visibilityState === "visible" && unseenArrival.current) {
+        unseenArrival.current = false;
+        void markConversationReadAction(conversationId);
+      }
+    };
+    markRead();
+    document.addEventListener("visibilitychange", onVisible);
     let channel: RealtimeChannel | null = null;
+    let reads: RealtimeChannel | null = null;
+    let typers: RealtimeChannel | null = null;
     let closed = false;
     // Joined as the member (RLS decides what reaches them), once the session has loaded.
     void getRealtimeClient().then((supabase) => {
       if (closed) return;
+      // «شوهدت»: the other person's read time, as it changes (their row only reaches members of a direct conversation).
+      if (direct) {
+        reads = supabase
+          .channel(`conversation-reads:${conversationId}`)
+          .on(
+            "postgres_changes",
+            { event: "*", schema: "public", table: "conversation_reads", filter: `conversation_id=eq.${conversationId}` },
+            (payload) => {
+              const row = payload.new as { user_id?: string; last_read_at?: string };
+              if (!row.user_id || row.user_id === me || !row.last_read_at) return;
+              const at = row.last_read_at;
+              setSeen((prev) => (!prev || Date.parse(at) > Date.parse(prev) ? at : prev));
+            },
+          )
+          .subscribe();
+      }
+      // «يكتب…»: a private channel only the conversation's members may join; refused, it is simply left.
+      typers = supabase
+        .channel(`typing:${conversationId}`, { config: { private: true, broadcast: { self: false } } })
+        .on("broadcast", { event: "typing" }, ({ payload }) => {
+          const who = (payload as { user?: unknown })?.user;
+          if (typeof who !== "string" || who === me) return;
+          setTyping((prev) => ({ ...prev, [who]: Date.now() + TYPING_SHOWN_MS }));
+        })
+        .subscribe((status) => {
+          if (status === "SUBSCRIBED") typingChannel.current = typers;
+          else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+            typingChannel.current = null;
+            if (typers) void supabase.removeChannel(typers);
+            typers = null;
+          }
+        });
       channel = supabase
         .channel(`conversation:${conversationId}`)
         .on(
@@ -142,7 +219,17 @@ export function Thread({
               msg.voice_url = data?.signedUrl ?? null;
             }
             setMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]));
-            void markConversationReadAction(conversationId);
+            // Their message is here: they're no longer typing it.
+            if (msg.sender_id) {
+              const sender = msg.sender_id;
+              setTyping((prev) => {
+                if (!(sender in prev)) return prev;
+                const rest = { ...prev };
+                delete rest[sender];
+                return rest;
+              });
+            }
+            markRead();
           },
         )
         // An edit or a deletion: the new text, or «رسالة محذوفة».
@@ -164,9 +251,30 @@ export function Thread({
     });
     return () => {
       closed = true;
-      if (channel) void getBrowserClient().removeChannel(channel);
+      document.removeEventListener("visibilitychange", onVisible);
+      typingChannel.current = null;
+      for (const c of [channel, reads, typers]) if (c) void getBrowserClient().removeChannel(c);
     };
-  }, [conversationId]);
+  }, [conversationId, direct, me]);
+
+  // «يكتب…» fades once nobody has been heard typing for a few seconds.
+  const typingUntil = Object.values(typing).reduce((max, at) => Math.max(max, at), 0);
+  useEffect(() => {
+    if (!typingUntil) return;
+    const id = window.setTimeout(() => {
+      const now = Date.now();
+      setTyping((prev) => Object.fromEntries(Object.entries(prev).filter(([, until]) => until > now)));
+    }, Math.max(0, typingUntil - Date.now()) + 50);
+    return () => window.clearTimeout(id);
+  }, [typingUntil]);
+
+  /** Tells the others I'm typing: at most every few seconds, only on the joined members' channel. */
+  const onTyping = () => {
+    const now = Date.now();
+    if (!typingChannel.current || now - lastTypingSent.current < TYPING_SEND_EVERY_MS) return;
+    lastTypingSent.current = now;
+    void typingChannel.current.send({ type: "broadcast", event: "typing", payload: { user: me } });
+  };
 
   // A message on its way gives way to its sent copy, which can arrive (live)
   // before sending has finished: the next of mine with the same text, newer
@@ -177,7 +285,20 @@ export function Thread({
     if (copy) taken.add(copy.id);
     return !copy;
   });
-  const shown = messages.length + waiting.length;
+  const typers = Object.keys(typing).filter((u) => u !== me);
+  const shown = messages.length + waiting.length + (typers.length ? 1 : 0);
+  // The tail goes on the last bubble of a run from one person (a call line ends a run).
+  const endsRun = (i: number) => {
+    const m = messages[i];
+    const next = messages[i + 1];
+    if (!next) return !(m.sender_id === me && waiting.length > 0);
+    return next.sender_id !== m.sender_id || Boolean(next.call_outcome && !next.deleted_at);
+  };
+  // My last message carries «أُرسلت» or «شوهدت» (a message still on its way says «جارٍ الإرسال» itself).
+  const lastMine = waiting.length
+    ? null
+    : ([...messages].reverse().find((m) => m.sender_id === me && !m.call_outcome && !m.deleted_at)?.id ?? null);
+  const seenLast = (m: ThreadMessage) => direct && seen !== null && Date.parse(seen) >= Date.parse(m.created_at);
 
   // The newest message is at the bottom: open there, then glide down to each
   // new one. Only the list scrolls, so the composer stays where it is.
@@ -218,7 +339,7 @@ export function Thread({
     <div className="flex flex-col gap-4">
       <ol ref={list} className="flex max-h-[60vh] min-h-64 flex-col gap-3 overflow-y-auto rounded-[var(--radius-card)] border border-line bg-surface p-4" aria-live="polite" aria-label={t("history")}>
         {shown === 0 ? <li className="m-auto text-sm text-muted">{t("noMessages")}</li> : null}
-        {messages.map((m) => {
+        {messages.map((m, i) => {
           const mine = m.sender_id === me;
           const time = <time className="text-[11px] text-faint" dateTime={m.created_at}>{fmt.format(new Date(m.created_at))}</time>;
           // A call's record sits in the middle: it belongs to both.
@@ -286,12 +407,29 @@ export function Thread({
                   </div>
                 </form>
               ) : m.deleted_at || m.body ? (
-                <div className={cn("whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2 text-sm", mine ? "bg-accent text-accent-ink" : "bg-surface-3 text-ink", m.deleted_at && "italic opacity-60")} dir="auto">
-                  {m.deleted_at ? t("deleted") : m.body}
+                // The bubble keeps the page's direction, so its tail stays on the outer side; the text finds its own.
+                <div
+                  className={cn(
+                    "bubble rounded-2xl px-3.5 py-2 text-sm",
+                    mine ? "bg-accent text-accent-ink" : "bg-surface-3 text-ink",
+                    m.deleted_at ? "italic opacity-60" : endsRun(i) && "bubble-tail",
+                  )}
+                  data-side={mine ? "start" : "end"}
+                >
+                  <span className="block whitespace-pre-wrap break-words" dir="auto">
+                    {m.deleted_at ? t("deleted") : m.body}
+                  </span>
                 </div>
               ) : null}
               <div className="flex items-center gap-1">
                 {time}
+                {m.id === lastMine ? (
+                  <span className={cn("inline-flex items-center gap-0.5 text-[11px]", seenLast(m) ? "text-accent" : "text-faint")} data-testid="message-status">
+                    <span aria-hidden="true">·</span>
+                    {seenLast(m) ? <CheckCheck aria-hidden="true" className="size-3.5" /> : <Check aria-hidden="true" className="size-3.5" />}
+                    {seenLast(m) ? t("seen") : t("sent")}
+                  </span>
+                ) : null}
                 {m.edited_at && !m.deleted_at ? <span className="text-[11px] text-faint">· {t("edited")}</span> : null}
                 {!mine && !m.deleted_at ? <ReportButton targetType="message" targetId={String(m.id)} compact /> : null}
                 {mine && !m.deleted_at && editing !== m.id ? (
@@ -307,20 +445,37 @@ export function Thread({
           );
         })}
         {/* Hidden from screen readers: they hear the message once, when it has been sent (the list is live). */}
-        {waiting.map((p) => (
+        {waiting.map((p, i) => (
           <li key={`pending-${p.key}`} className="flex max-w-[85%] flex-col items-start gap-1 self-start" data-pending="" aria-hidden="true">
-            <div className="whitespace-pre-wrap break-words rounded-2xl bg-accent px-3.5 py-2 text-sm text-accent-ink opacity-70" dir="auto">
-              {p.body}
+            <div className={cn("bubble rounded-2xl bg-accent px-3.5 py-2 text-sm text-accent-ink opacity-70", i === waiting.length - 1 && "bubble-tail")} data-side="start">
+              <span className="block whitespace-pre-wrap break-words" dir="auto">
+                {p.body}
+              </span>
             </div>
             <span className="text-[11px] text-faint">{t("sending")}</span>
           </li>
         ))}
+        {/* Someone is typing: three dots in their bubble (said once to screen readers, below). */}
+        {typers.length ? (
+          <li className="flex max-w-[85%] flex-col items-end gap-1 self-end" aria-hidden="true" data-testid="typing">
+            {!direct ? <span className="text-xs text-muted">{typers.map((u) => names[u] ?? t("member")).join("، ")}</span> : null}
+            <div className="bubble bubble-tail flex h-9 items-center gap-1 rounded-2xl bg-surface-3 px-4" data-side="end">
+              <span className="typing-dot size-1.5 rounded-full bg-muted" />
+              <span className="typing-dot size-1.5 rounded-full bg-muted" />
+              <span className="typing-dot size-1.5 rounded-full bg-muted" />
+            </div>
+          </li>
+        ) : null}
       </ol>
+      <p role="status" className="sr-only">
+        {typers.length ? (direct ? t("typing") : t("typingNamed", { names: typers.map((u) => names[u] ?? t("member")).join("، ") })) : ""}
+      </p>
       {locked ? (
         <p className="text-sm text-muted">{t("lockedNote")}</p>
       ) : (
         <Composer
           conversationId={conversationId}
+          onTyping={onTyping}
           onSending={(body) => addPending({ key: ++pendingKey.current, body, after: messages.reduce((max, m) => Math.max(max, m.id), 0) })}
         />
       )}

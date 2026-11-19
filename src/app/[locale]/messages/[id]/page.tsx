@@ -61,8 +61,14 @@ export default async function ConversationPage({ params, searchParams }: PagePro
   else if (conv.challenge_id) link = "/opponents";
   // A direct conversation: the other person, for the title and the call button.
   let peer: CallPeer | null = null;
+  // And when they last read it, for «شوهدت» (their read time reaches members of a direct conversation, 0033).
+  let seenAt: string | null = null;
   if (conv.kind === "direct") {
-    const { data: members } = await supabase.from("conversation_members").select("user_id, profile:profiles(display_name, avatar_path)").eq("conversation_id", id).neq("user_id", user.id);
+    const [{ data: members }, { data: read }] = await Promise.all([
+      supabase.from("conversation_members").select("user_id, profile:profiles(display_name, avatar_path)").eq("conversation_id", id).neq("user_id", user.id),
+      supabase.from("conversation_reads").select("last_read_at").eq("conversation_id", id).neq("user_id", user.id).maybeSingle(),
+    ]);
+    seenAt = read?.last_read_at ?? null;
     const other = members?.[0];
     if (!meta?.title) title = other?.profile?.display_name ?? title;
     if (other) peer = { id: other.user_id, name: other.profile?.display_name ?? title, avatarUrl: publicStorageUrl("avatars", other.profile?.avatar_path) };
@@ -86,7 +92,16 @@ export default async function ConversationPage({ params, searchParams }: PagePro
           {t("older")}
         </LinkButton>
       ) : null}
-      <Thread conversationId={id} me={user.id} names={names} initial={messages} locked={conv.is_locked} timeZone="Asia/Baghdad" />
+      <Thread
+        conversationId={id}
+        me={user.id}
+        names={names}
+        initial={messages}
+        locked={conv.is_locked}
+        timeZone="Asia/Baghdad"
+        direct={conv.kind === "direct"}
+        seenAt={seenAt}
+      />
       <p className="mt-4 text-xs text-muted">{t("safetyNote")}</p>
     </Container>
   );
