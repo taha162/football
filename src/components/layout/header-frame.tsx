@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { usePathname } from "@/i18n/navigation";
 import { cn } from "@/lib/cn";
+import { isConversationPath } from "@/lib/chat-path";
 
 /**
  * The site header's outer frame. On the home page it floats transparently over
@@ -11,7 +12,8 @@ import { cn } from "@/lib/cn";
  * named for view transitions, so it holds still while pages change below it.
  */
 export function HeaderFrame({ children }: { children: ReactNode }) {
-  const isHome = usePathname() === "/";
+  const pathname = usePathname();
+  const isHome = pathname === "/";
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -22,6 +24,8 @@ export function HeaderFrame({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("scroll", onScroll);
   }, [isHome]);
 
+  // A conversation fills the screen on its own, with its own way back (messages/[id]).
+  if (isConversationPath(pathname)) return null;
   const overlay = isHome && !scrolled;
   return (
     <header

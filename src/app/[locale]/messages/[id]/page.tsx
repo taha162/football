@@ -6,8 +6,11 @@ import { publicStorageUrl } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 import { CallButton } from "@/components/calls/call-button";
 import type { CallPeer } from "@/components/calls/call-provider";
+import { ArrowLeft, ExternalLink, MessageCircle } from "lucide-react";
+import { Link } from "@/i18n/navigation";
+import { ChatScreen } from "@/components/messages/chat-screen";
 import { Thread, type ThreadMessage } from "@/components/messages/thread";
-import { Badge, Container, PageHeader } from "@/components/ui/primitives";
+import { Avatar } from "@/components/ui/avatar";
 import { buttonClass } from "@/components/ui/button";
 import { LinkButton } from "@/components/ui/link-button";
 
@@ -74,24 +77,45 @@ export default async function ConversationPage({ params, searchParams }: PagePro
     if (other) peer = { id: other.user_id, name: other.profile?.display_name ?? title, avatarUrl: publicStorageUrl("avatars", other.profile?.avatar_path) };
   }
 
+  // Round, quiet buttons for the bar: back, call, open.
+  const barButton = "ripple flex size-11 shrink-0 items-center justify-center rounded-full text-ink transition-colors hover:bg-surface-2";
+  const heading = (
+    <span className="flex min-w-0 flex-col">
+      <h1 className="truncate text-base font-semibold leading-tight">{title}</h1>
+      <span className="truncate text-xs text-muted">{t(`kind.${conv.kind}`)}</span>
+    </span>
+  );
   return (
-    <Container className="max-w-3xl py-8">
-      <PageHeader
-        title={title}
-        eyebrow={<Badge>{t(`kind.${conv.kind}`)}</Badge>}
-        actions={
-          <>
-            {peer && !conv.is_locked ? <CallButton conversationId={id} peer={peer} /> : null}
-            <LinkButton href="/messages" className={buttonClass("ghost", "sm")}>{t("all")}</LinkButton>
-            {link ? <LinkButton href={link} className={buttonClass("outline", "sm")}>{t("open")}</LinkButton> : null}
-          </>
-        }
-      />
-      {hasOlder ? (
-        <LinkButton href={{ pathname: `/messages/${id}`, query: { before: String(messages[0]?.id) } }} className={buttonClass("ghost", "sm", "mb-3")}>
-          {t("older")}
-        </LinkButton>
-      ) : null}
+    // Its own screen: the site's header and bottom bar step aside (lib/chat-path.ts).
+    <ChatScreen>
+      <header className="chat-bar shrink-0 border-b border-line bg-bg/95 pt-[env(safe-area-inset-top)] backdrop-blur">
+        <div className="mx-auto flex h-16 w-full max-w-3xl items-center gap-1.5 px-2 sm:px-4">
+          {/* Back to all conversations. The page is right to left: back points right. */}
+          <LinkButton href="/messages" aria-label={t("back")} title={t("back")} className={barButton}>
+            <ArrowLeft aria-hidden="true" className="size-5 rtl:-scale-x-100" />
+          </LinkButton>
+          {peer ? (
+            // Who it is with: their page (where «اتصال» and «مراسلة» are too).
+            <Link href={`/players/${peer.id}`} className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl py-1 pe-2">
+              <Avatar src={peer.avatarUrl} name={peer.name} size={40} />
+              {heading}
+            </Link>
+          ) : (
+            <span className="flex min-w-0 flex-1 items-center gap-2.5 py-1">
+              <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-full bg-surface-3 text-muted">
+                <MessageCircle className="size-5" />
+              </span>
+              {heading}
+            </span>
+          )}
+          {peer && !conv.is_locked ? <CallButton conversationId={id} peer={peer} compact /> : null}
+          {link ? (
+            <LinkButton href={link} aria-label={t("open")} title={t("open")} className={barButton}>
+              <ExternalLink aria-hidden="true" className="size-5" />
+            </LinkButton>
+          ) : null}
+        </div>
+      </header>
       <Thread
         conversationId={id}
         me={user.id}
@@ -101,8 +125,17 @@ export default async function ConversationPage({ params, searchParams }: PagePro
         timeZone="Asia/Baghdad"
         direct={conv.kind === "direct"}
         seenAt={seenAt}
+        top={
+          <>
+            <p className="mx-auto mb-3 max-w-sm rounded-xl bg-surface-2/70 px-3 py-2 text-center text-[11px] leading-relaxed text-muted">{t("safetyNote")}</p>
+            {hasOlder ? (
+              <LinkButton href={{ pathname: `/messages/${id}`, query: { before: String(messages[0]?.id) } }} className={buttonClass("ghost", "sm", "mx-auto mb-2")}>
+                {t("older")}
+              </LinkButton>
+            ) : null}
+          </>
+        }
       />
-      <p className="mt-4 text-xs text-muted">{t("safetyNote")}</p>
-    </Container>
+    </ChatScreen>
   );
 }

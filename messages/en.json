@@ -1924,7 +1924,6 @@
     "noMessages": "No messages yet.",
     "unread": "{count} unread",
     "untitled": "Conversation",
-    "all": "All conversations",
     "open": "Open",
     "older": "Load older messages",
     "history": "Message history",
@@ -1983,7 +1982,10 @@
     "call": "Call",
     "callAnswered": "Voice call · {duration}",
     "callMissed": "Missed call",
-    "callNoAnswer": "Call not answered"
+    "callNoAnswer": "Call not answered",
+    "back": "Back",
+    "today": "Today",
+    "yesterday": "Yesterday"
   },
   "notificationsPage": {
     "title": "Notifications",

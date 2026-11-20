@@ -4,6 +4,7 @@ import { CalendarSearch, Home, MapPinned, MessageCircle, Plus } from "lucide-rea
 import { useTranslations } from "next-intl";
 import { usePathname } from "@/i18n/navigation";
 import { cn } from "@/lib/cn";
+import { isConversationPath } from "@/lib/chat-path";
 import { LinkButton } from "@/components/ui/link-button";
 
 /**
@@ -16,6 +17,8 @@ const BOOK_HREF = { pathname: "/venues", query: { bookable: "1" } };
 export function MobileNav({ signedIn, unreadMessages = 0 }: { signedIn: boolean; unreadMessages?: number }) {
   const t = useTranslations("nav");
   const pathname = usePathname();
+  // A conversation fills the screen on its own, with its own way back.
+  if (isConversationPath(pathname)) return null;
   // «+» in the middle books a pitch: the venues taking bookings, each opening its booking page.
   const items = [
     { href: signedIn ? "/dashboard" : "/", label: t("home"), icon: Home },

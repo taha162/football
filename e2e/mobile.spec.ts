@@ -99,6 +99,49 @@ test.describe("Mobile (Arabic, RTL)", () => {
     await expect(cards.getByRole("link", { name: `ملعب الحجز ${tag}` })).toHaveAttribute("href", `/ar/venues/${bookable}/book`);
   });
 
+  test("a new message is a red dot on the messages tab; a conversation fills the phone and its box stays above the keyboard", async ({ page }) => {
+    const [me, friend] = [await createAuthUser("Phone chat"), await createAuthUser("Phone friend")];
+    const conv = await rpc<string>(friend.id, "start_direct_conversation", { p_user_id: me.id });
+    await rpc(friend.id, "send_message", { p_conversation_id: conv, p_body: "مرحبا، نلعب اليوم؟" });
+    await signIn(page, me);
+    const quickNav = page.getByRole("navigation", { name: "تنقل سريع" });
+    const tab = quickNav.getByRole("link", { name: "الرسائل (1 غير مقروءة)" });
+    await expect(tab.getByTestId("unread-dot")).toBeVisible();
+    // Not news for the bell.
+    await expect(page.getByRole("link", { name: "الإشعارات", exact: true })).toBeVisible();
+
+    await tab.click();
+    await page.waitForURL(/\/ar\/messages$/);
+    await page.getByRole("link", { name: new RegExp(friend.name) }).click();
+    await page.waitForURL(new RegExp(`/ar/messages/${conv}`));
+    // Its own screen, the whole phone: no site header, no bottom bar.
+    const screen = page.getByTestId("chat-screen");
+    await expect(screen).toBeVisible();
+    await expect(quickNav).toHaveCount(0);
+    await expect(page.locator("header.site-header")).toHaveCount(0);
+    const height = page.viewportSize()!.height;
+    expect((await screen.boundingBox())!.height).toBeCloseTo(height, 0);
+
+    // The keyboard: the visible part of the page shrinks. The screen follows, so the box to write in stays in view.
+    const write = page.getByRole("textbox", { name: "اكتب رسالة" });
+    await write.focus();
+    const { width } = page.viewportSize()!;
+    await page.setViewportSize({ width, height: 400 });
+    await expect.poll(async () => Math.round((await screen.boundingBox())!.height)).toBe(400);
+    const box = (await write.boundingBox())!;
+    expect(box.y + box.height).toBeLessThanOrEqual(400);
+    expect(box.y).toBeGreaterThan(0);
+    // The newest message stays in view above it.
+    await expect(page.getByText("مرحبا، نلعب اليوم؟")).toBeInViewport();
+    await page.setViewportSize({ width, height });
+
+    // Back: the bottom bar is there again, and the message has been read.
+    await page.getByRole("link", { name: "رجوع" }).click();
+    await page.waitForURL(/\/ar\/messages$/);
+    await expect(quickNav.getByRole("link", { name: "الرسائل", exact: true })).toBeVisible();
+    await expect(quickNav.getByTestId("unread-dot")).toHaveCount(0);
+  });
+
   test("public pages fit the phone viewport", async ({ page }) => {
     const screen = page.viewportSize()!.width;
     for (const path of ["/ar", "/ar/matches", "/ar/venues", "/ar/teams", "/ar/tournaments", "/ar/sign-in", "/ar/sign-up"]) {
