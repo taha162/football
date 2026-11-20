@@ -48,6 +48,7 @@
     "notifications": "الإشعارات",
     "withUnread": "{label} ({count} غير مقروءة)",
     "signIn": "تسجيل الدخول",
+    "signInShort": "دخول",
     "signUp": "انضم مجاناً",
     "signOut": "تسجيل الخروج",
     "dashboard": "لوحتي",

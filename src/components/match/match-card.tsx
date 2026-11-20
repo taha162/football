@@ -50,13 +50,14 @@ export async function MatchCard({ match, role }: { match: MatchCardData; role?: 
             {match.match_type === "team_vs_team" ? <Badge tone="info">{t("type.team_vs_team")}</Badge> : null}
             {role ? <Badge tone="accent">{t(`role.${role}`)}</Badge> : null}
           </div>
-          <h3 className="truncate font-display text-lg font-semibold">
+          {/* Up to two lines (narrow phones), so the name isn't cut to a few letters. */}
+          <h3 className="line-clamp-2 break-words font-display text-lg font-semibold leading-snug">
             <Link href={`/matches/${match.id}`} className="focus-visible:outline-none">
               {match.title}
             </Link>
           </h3>
         </div>
-        <Badge tone={availabilityTone[state]}>
+        <Badge tone={availabilityTone[state]} className="shrink-0 whitespace-nowrap">
           {state === "closed" ? t(`status.${match.status}`) : state === "full" ? t("full") : t("slotsLeft", { count: slots })}
         </Badge>
       </div>

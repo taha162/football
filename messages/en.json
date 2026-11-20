@@ -48,6 +48,7 @@
     "notifications": "Notifications",
     "withUnread": "{label} ({count} unread)",
     "signIn": "Sign in",
+    "signInShort": "Sign in",
     "signUp": "Join free",
     "signOut": "Sign out",
     "dashboard": "Dashboard",

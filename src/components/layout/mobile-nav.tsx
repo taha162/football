@@ -25,7 +25,7 @@ export function MobileNav({ signedIn, unreadMessages = 0 }: { signedIn: boolean;
     { href: "/venues", label: t("venues"), icon: MapPinned },
     { href: BOOK_HREF, label: t("book"), icon: Plus, primary: true },
     { href: "/matches", label: t("matches"), icon: CalendarSearch },
-    { href: signedIn ? "/messages" : "/sign-in", label: signedIn ? t("messages") : t("signIn"), icon: MessageCircle, unread: signedIn ? unreadMessages : 0 },
+    { href: signedIn ? "/messages" : "/sign-in", label: signedIn ? t("messages") : t("signInShort"), icon: MessageCircle, unread: signedIn ? unreadMessages : 0 },
   ] as const;
   return (
     <nav aria-label={t("mobile")} style={{ viewTransitionName: "mobile-nav" }} className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-bg/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">

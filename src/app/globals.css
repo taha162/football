@@ -84,6 +84,13 @@
   .num {
     font-variant-numeric: tabular-nums;
   }
+  /* A grid without columns of its own (most of them, on phones) has one
+     column as wide as its frame and never wider: a long word or number (a
+     match called "Journey 1795121121313") is cut short inside its card instead
+     of widening the whole page. grid-cols-* still set their own columns. */
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 /* =========================================================================
@@ -820,6 +827,18 @@ dialog[open]::backdrop {
 .bubble-tail[data-side="end"]::after {
   inset-inline-end: -10px;
   border-end-start-radius: 10px;
+}
+/*
+ * Phones zoom into a field whose text is under 16px as soon as it takes the
+ * focus, and stay zoomed in. On touch screens no field is smaller than that:
+ * neither the few set to 14px (text-sm, fine on a computer) nor those in a
+ * smaller text (filters). Fields set larger keep their size. Outside any
+ * layer, so it wins over text-sm.
+ */
+@media (pointer: coarse) {
+  :is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"]), select, textarea):not(.text-base, .text-lg, .text-xl, .text-2xl, .text-3xl) {
+    font-size: max(1rem, 1em);
+  }
 }
 /*
  * A conversation's own screen (messages/chat-screen.tsx): the page behind it

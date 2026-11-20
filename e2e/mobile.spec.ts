@@ -142,6 +142,28 @@ test.describe("Mobile (Arabic, RTL)", () => {
     await expect(quickNav.getByTestId("unread-dot")).toHaveCount(0);
   });
 
+  test("a member's pages fit the narrowest phone (320 px), even with long unbroken words", async ({ page }) => {
+    const me = await createAuthUser("Narrow");
+    const friend = await createAuthUser("Narrow friend");
+    // No space to break at: such a title used to widen the whole page by its overflow.
+    await createMatchFor(me, { p_title: `Journey${"1".repeat(24)}` });
+    const conv = await rpc<string>(friend.id, "start_direct_conversation", { p_user_id: me.id });
+    await rpc(friend.id, "send_message", { p_conversation_id: conv, p_body: `https://example.com/${"a".repeat(80)}` });
+    await page.setViewportSize({ width: 320, height: 640 });
+    await signIn(page, me);
+    for (const path of ["/ar/dashboard", "/ar/matches", "/ar/my/matches", "/ar/messages", `/ar/messages/${conv}`, "/ar/notifications", "/ar/profile", "/ar/settings", "/ar/matches/new", "/ar/teams/new", "/ar/venues", "/ar/tournaments"]) {
+      await page.goto(path);
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      expect(overflow, `horizontal overflow on ${path}`).toBeLessThanOrEqual(0);
+      expect(await page.evaluate(() => window.innerWidth), `layout wider than the screen on ${path}`).toBe(320);
+    }
+    // The conversation's box to write in: room for the words, and phones don't zoom into it (16 px).
+    await page.goto(`/ar/messages/${conv}`);
+    const write = page.getByRole("textbox", { name: "اكتب رسالة" });
+    expect((await write.boundingBox())!.width).toBeGreaterThan(120);
+    expect(await write.evaluate((el) => getComputedStyle(el).fontSize)).toBe("16px");
+  });
+
   test("public pages fit the phone viewport", async ({ page }) => {
     const screen = page.viewportSize()!.width;
     for (const path of ["/ar", "/ar/matches", "/ar/venues", "/ar/teams", "/ar/tournaments", "/ar/sign-in", "/ar/sign-up"]) {

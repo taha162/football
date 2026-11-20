@@ -96,7 +96,7 @@ export default async function TeamPage({ params }: PageProps<"/[locale]/teams/[i
           {team.description ? <p className="whitespace-pre-line text-muted">{team.description}</p> : null}
 
           <Section title={t("record")} id="record">
-            <dl className="grid grid-cols-4 gap-3">
+            <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <Stat label={t("played")} value={record.played} />
               <Stat label={t("won")} value={record.won} />
               <Stat label={t("drawn")} value={record.drawn} />
