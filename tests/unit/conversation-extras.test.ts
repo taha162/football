@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { formatDistance, formatDuration } from "@/lib/duration";
+import { formatListTime } from "@/lib/format";
 import { mapsUrl, metresPerPixel, readPoint, tilePosition, tilesAround } from "@/lib/geo";
 
 vi.mock("server-only", () => ({}));
@@ -89,5 +90,31 @@ describe("call connection servers", () => {
     vi.stubEnv("CLOUDFLARE_TURN_API_TOKEN", "token");
     expect(turnSetup()).toEqual({ kind: "cloudflare", keyId: "key", token: "token" });
     vi.unstubAllEnvs();
+  });
+});
+
+describe("when, in the list of conversations", () => {
+  // Friday 20 November 2026, 10:00 in Baghdad (UTC+3).
+  const now = new Date("2026-11-20T07:00:00Z");
+  const when = (iso: string, locale = "en") => formatListTime(iso, locale, "Asia/Baghdad", "Yesterday", now);
+
+  it("gives the time today, «أمس» yesterday, the weekday this week, then the date", () => {
+    expect(when("2026-11-20T05:30:00Z")).toBe("8:30");
+    expect(when("2026-11-19T12:00:00Z")).toBe("Yesterday");
+    expect(when("2026-11-16T12:00:00Z")).toBe("Monday");
+    expect(when("2026-11-13T12:00:00Z")).toBe("13/11/26");
+  });
+
+  it("counts days in the city's time, not the server's", () => {
+    // 22:30 UTC on the 19th is already 01:30 on the 20th in Baghdad: today, not yesterday.
+    expect(when("2026-11-19T22:30:00Z")).toBe("1:30");
+    // 20:30 UTC on the 19th is 23:30 on the 19th in Baghdad: yesterday.
+    expect(when("2026-11-19T20:30:00Z")).toBe("Yesterday");
+  });
+
+  it("speaks Arabic in Arabic", () => {
+    expect(when("2026-11-20T05:30:00Z", "ar")).toBe(formatListTime("2026-11-20T05:30:00Z", "ar", "Asia/Baghdad", "أمس", now));
+    expect(formatListTime("2026-11-19T12:00:00Z", "ar", "Asia/Baghdad", "أمس", now)).toBe("أمس");
+    expect(formatListTime("2026-11-16T12:00:00Z", "ar", "Asia/Baghdad", "أمس", now)).toBe("الاثنين");
   });
 });

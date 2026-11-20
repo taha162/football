@@ -587,10 +587,11 @@ function PricingForm({
         <fieldset key={i} className="flex flex-col gap-2 rounded-xl border border-line p-3">
           <legend className="px-1 text-xs text-muted">{t("rule", { n: i + 1 })}</legend>
           <ChoiceChips name={`rule_${i}_days`} legend={t("days")} defaultValue={(r?.weekdays ?? []).map(String)} options={[6, 0, 1, 2, 3, 4, 5].map((d) => ({ value: String(d), label: dayName(d) }))} />
-          <div className="grid grid-cols-3 gap-2">
+          {/* Phones: from and to side by side, the price under them. */}
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             <Input type="time" name={`rule_${i}_start`} defaultValue={r?.start_time.slice(0, 5) ?? "18:00"} aria-label={t("from")} dir="ltr" />
             <Input type="time" name={`rule_${i}_end`} defaultValue={r?.end_time.slice(0, 5) ?? "00:00"} aria-label={t("to")} dir="ltr" />
-            <Input name={`rule_${i}_price`} inputMode="numeric" defaultValue={r?.price_per_hour ?? ""} placeholder={t("pricePerHour")} aria-label={t("pricePerHour")} dir="ltr" />
+            <Input name={`rule_${i}_price`} inputMode="numeric" defaultValue={r?.price_per_hour ?? ""} placeholder={t("pricePerHour")} aria-label={t("pricePerHour")} dir="ltr" className="col-span-2 sm:col-span-1" />
           </div>
         </fieldset>
       ))}

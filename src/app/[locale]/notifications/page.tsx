@@ -34,6 +34,8 @@ export default async function NotificationsPage({ params, searchParams }: PagePr
       .from("notifications")
       .select("*")
       .eq("user_id", user.id)
+      // Messages aren't listed here: a red dot on the messages button says there are new ones.
+      .neq("type", "new_message")
       .order("created_at", { ascending: false })
       // Same-instant notifications keep one order, so none repeats or goes missing between pages.
       .order("id", { ascending: false })

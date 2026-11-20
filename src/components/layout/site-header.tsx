@@ -52,7 +52,7 @@ export async function SiteHeader({ user }: { user: CurrentUser | null }) {
                   <ShieldCheck aria-hidden="true" className="size-5" />
                 </LinkButton>
               ) : null}
-              <CountLink href="/messages" label={t("messages")} count={counts.messages} className="hidden lg:inline-flex">
+              <CountLink href="/messages" label={t("messages")} count={counts.messages} dot className="hidden lg:inline-flex">
                 <MessageCircle aria-hidden="true" className="size-5" />
               </CountLink>
               <CountLink href="/notifications" label={t("notifications")} count={counts.notifications}>

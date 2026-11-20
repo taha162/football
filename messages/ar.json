@@ -48,6 +48,7 @@
     "notifications": "الإشعارات",
     "withUnread": "{label} ({count} غير مقروءة)",
     "signIn": "تسجيل الدخول",
+    "signInShort": "دخول",
     "signUp": "انضم مجاناً",
     "signOut": "تسجيل الخروج",
     "dashboard": "لوحتي",
@@ -1924,7 +1925,6 @@
     "noMessages": "لا رسائل بعد.",
     "unread": "{count} غير مقروءة",
     "untitled": "محادثة",
-    "all": "كل المحادثات",
     "open": "فتح",
     "older": "تحميل رسائل أقدم",
     "history": "سجل الرسائل",
@@ -1983,7 +1983,10 @@
     "call": "مكالمة",
     "callAnswered": "مكالمة صوتية · {duration}",
     "callMissed": "مكالمة فائتة",
-    "callNoAnswer": "مكالمة لم يُرَد عليها"
+    "callNoAnswer": "مكالمة لم يُرَد عليها",
+    "back": "رجوع",
+    "today": "اليوم",
+    "yesterday": "أمس"
   },
   "notificationsPage": {
     "title": "الإشعارات",

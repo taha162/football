@@ -84,6 +84,13 @@
   .num {
     font-variant-numeric: tabular-nums;
   }
+  /* A grid without columns of its own (most of them, on phones) has one
+     column as wide as its frame and never wider: a long word or number (a
+     match called "Journey 1795121121313") is cut short inside its card instead
+     of widening the whole page. grid-cols-* still set their own columns. */
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 /* =========================================================================
@@ -820,6 +827,73 @@ dialog[open]::backdrop {
 .bubble-tail[data-side="end"]::after {
   inset-inline-end: -10px;
   border-end-start-radius: 10px;
+}
+/*
+ * Phones zoom into a field whose text is under 16px as soon as it takes the
+ * focus, and stay zoomed in. On touch screens no field is smaller than that:
+ * neither the few set to 14px (text-sm, fine on a computer) nor those in a
+ * smaller text (filters). Fields set larger keep their size. Outside any
+ * layer, so it wins over text-sm.
+ */
+@media (pointer: coarse) {
+  :is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"]), select, textarea):not(.text-base, .text-lg, .text-xl, .text-2xl, .text-3xl) {
+    font-size: max(1rem, 1em);
+  }
+}
+/*
+ * A conversation's own screen (messages/chat-screen.tsx): the page behind it
+ * doesn't scroll or bounce. The box to write in keeps clear of the home bar,
+ * except while the keyboard is up (the home bar is under the keyboard then).
+ */
+html.chat-open,
+html.chat-open body {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+.chat-composer {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+}
+.chat-screen[data-keyboard] .chat-composer {
+  padding-bottom: 0.5rem;
+}
+/* Ticks under my messages, as on WhatsApp: grey sent, blue once seen. */
+.tick {
+  color: var(--color-faint);
+  transition: color 300ms ease;
+}
+.tick[data-status="seen"] {
+  color: #53bdeb;
+}
+/*
+ * A message entering while the conversation is open (thread.tsx): mine rises
+ * out of the box from its corner, theirs grows in from theirs. History doesn't
+ * move; with reduced motion nothing does.
+ */
+.msg-anim-out {
+  animation: msg-out 340ms cubic-bezier(0.2, 0.9, 0.3, 1.15) both;
+}
+.msg-anim-in {
+  animation: msg-in 320ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+[dir="rtl"] .msg-anim-out,
+[dir="ltr"] .msg-anim-in {
+  transform-origin: 100% 100%;
+}
+[dir="ltr"] .msg-anim-out,
+[dir="rtl"] .msg-anim-in {
+  transform-origin: 0 100%;
+}
+@keyframes msg-out {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.86);
+  }
+}
+@keyframes msg-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.92);
+  }
 }
 /* Three dots while someone types, rising one after another. With reduced motion they stay still. */
 .typing-dot {

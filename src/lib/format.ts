@@ -27,6 +27,21 @@ export function formatTime(iso: string | Date, locale: string, timeZone: string)
   return new Intl.DateTimeFormat(intlLocale(locale), { timeZone, hour: "numeric", minute: "2-digit" }).format(new Date(iso));
 }
 
+/**
+ * When, as a list of conversations says it (as on WhatsApp): the time for
+ * today, «أمس» for yesterday, the weekday within the week, else the date.
+ * Days are counted in the given timezone.
+ */
+export function formatListTime(iso: string | Date, locale: string, timeZone: string, yesterday: string, now: Date = new Date()) {
+  const at = new Date(iso);
+  const day = (d: Date) => Date.parse(new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(d));
+  const daysAgo = Math.round((day(now) - day(at)) / 86_400_000);
+  if (daysAgo <= 0) return formatTime(at, locale, timeZone);
+  if (daysAgo === 1) return yesterday;
+  if (daysAgo < 7) return new Intl.DateTimeFormat(intlLocale(locale), { timeZone, weekday: "long" }).format(at);
+  return new Intl.DateTimeFormat(intlLocale(locale), { timeZone, day: "numeric", month: "numeric", year: "2-digit" }).format(at);
+}
+
 export function formatNumber(n: number, locale: string) {
   return new Intl.NumberFormat(intlLocale(locale)).format(n);
 }

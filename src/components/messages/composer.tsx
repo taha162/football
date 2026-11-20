@@ -7,6 +7,7 @@ import { ActionForm, Hidden, SubmitButton, useErrorText, type FormAction } from 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/field";
 import { Alert } from "@/components/ui/primitives";
+import { cn } from "@/lib/cn";
 import { formatDistance, formatDuration } from "@/lib/duration";
 import type { SharedPoint } from "@/lib/geo";
 import { shrinkImage } from "@/lib/shrink-image";
@@ -83,6 +84,17 @@ function TextComposer({
   const typed = useRef("");
   const sending = useRef(false);
   const [preview, setPreview] = useState<string | null>(null);
+  // While text is being written, location and voice step aside: the box gets their room (small phones).
+  const [hasText, setHasText] = useState(false);
+  /** The box grows with what is written, up to six lines, then scrolls. */
+  const fit = () => {
+    const el = box.current;
+    if (!el) return;
+    el.style.height = "auto";
+    // scrollHeight leaves out the border; without it the last line would scroll by a pixel or two.
+    el.style.height = `${Math.min(el.scrollHeight + el.offsetHeight - el.clientHeight, 152)}px`;
+    setHasText(Boolean(el.value.trim()));
+  };
 
   const send: FormAction = async (prev, fd) => {
     const body = String(fd.get("body") ?? "").trim();
@@ -91,6 +103,7 @@ function TextComposer({
     if (textOnly) {
       onSending!(body);
       if (box.current) box.current.value = "";
+      fit();
       typed.current = "";
       sending.current = true;
     }
@@ -109,6 +122,7 @@ function TextComposer({
     if (!draft || !box.current) return;
     const restored = box.current.value;
     box.current.value = restored && restored !== draft ? `${restored}\n${draft}` : draft;
+    fit();
   };
 
   const clear = () => {
@@ -119,7 +133,9 @@ function TextComposer({
     });
   };
 
-  const tool = "flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-line text-muted transition-colors hover:text-ink";
+  // Round, 44 px; 40 px on the narrowest phones (under 360 px), so the box keeps room to write.
+  const round = "size-10 shrink-0 rounded-full min-[360px]:size-11";
+  const tool = cn(round, "flex cursor-pointer items-center justify-center border border-line bg-surface-2 text-muted transition-colors hover:text-ink");
   return (
     <ActionForm
       action={send}
@@ -128,8 +144,12 @@ function TextComposer({
       onSuccess={() => {
         clear();
         keepTyped();
+        fit();
       }}
-      onError={keepTyped}
+      onError={() => {
+        keepTyped();
+        fit();
+      }}
       className="gap-2"
     >
       <Hidden values={{ conversation_id: conversationId }} />
@@ -142,26 +162,38 @@ function TextComposer({
           </button>
         </div>
       ) : null}
-      <label htmlFor="message-body" className="sr-only">{t("write")}</label>
-      <Textarea
-        ref={box}
-        id="message-body"
-        name="body"
-        required={!preview}
-        maxLength={2000}
-        placeholder={t("placeholder")}
-        className="min-h-20"
-        dir="auto"
-        onInput={(e) => {
-          if (sending.current) typed.current = e.currentTarget.value;
-          if (e.currentTarget.value.trim()) onTyping?.();
-        }}
-      />
-      {/* Send on the right, the picture/location/voice tools on the left. */}
-      <div className="flex items-center justify-between gap-2">
-        <SubmitButton>{t("send")}</SubmitButton>
-        <div className="flex items-center gap-2">
-          <label className={tool} title={t("attach")}>
+      {/* One row: send on the right, then the box (the picture button inside its left end), location and voice on the left. */}
+      <div className="flex items-end gap-1 min-[360px]:gap-1.5">
+        <SubmitButton aria-label={t("send")} title={t("send")} pendingLabel={<span className="sr-only">{t("send")}</span>} className={cn(round, "p-0")}>
+          <SendHorizontal aria-hidden="true" className="size-5 rtl:-scale-x-100" />
+        </SubmitButton>
+        <div className="relative min-w-0 flex-1">
+          <label htmlFor="message-body" className="sr-only">{t("write")}</label>
+          <Textarea
+            ref={box}
+            id="message-body"
+            name="body"
+            rows={1}
+            required={!preview}
+            maxLength={2000}
+            placeholder={t("placeholder")}
+            // 16px: phones don't zoom into the box when it takes the focus. The box keeps the page's direction, so
+            // the room for the picture button stays on its left; each line of text finds its own (plaintext).
+            className="block max-h-[152px] min-h-10 resize-none rounded-[22px] py-[7px] pe-11 text-base leading-6 [unicode-bidi:plaintext] min-[360px]:min-h-11 min-[360px]:py-[9px]"
+            onInput={(e) => {
+              if (sending.current) typed.current = e.currentTarget.value;
+              if (e.currentTarget.value.trim()) onTyping?.();
+              fit();
+            }}
+            onKeyDown={(e) => {
+              // A computer (a mouse or trackpad): Enter sends, Shift+Enter starts a new line. Phones keep Enter for new lines.
+              if (e.key !== "Enter" || e.shiftKey || e.nativeEvent.isComposing) return;
+              if (!window.matchMedia("(pointer: fine)").matches) return;
+              e.preventDefault();
+              e.currentTarget.form?.requestSubmit();
+            }}
+          />
+          <label className={cn(round, "absolute bottom-0 end-0 flex cursor-pointer items-center justify-center text-muted transition-colors hover:text-ink")} title={t("attach")}>
             <ImagePlus aria-hidden="true" className="size-5" />
             <span className="sr-only">{t("attach")}</span>
             <input
@@ -188,6 +220,8 @@ function TextComposer({
               }}
             />
           </label>
+        </div>
+        <div className={hasText ? "hidden" : "flex shrink-0 items-end gap-1 min-[360px]:gap-1.5"}>
           <button type="button" className={tool} title={t("shareLocation")} aria-label={t("shareLocation")} onClick={() => onMode("location")}>
             <MapPin aria-hidden="true" className="size-5" />
           </button>
