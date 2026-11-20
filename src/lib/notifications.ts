@@ -58,7 +58,7 @@ export const OPTIONAL_NOTIFICATION_TYPES = [
   "recruitment_response",
   "challenge_received",
   "team_match_scheduled",
-  "new_message",
+  // new_message isn't listed: messages never reach the bell (a red dot on the messages button instead).
   "tournament_update",
   "review_received",
 ] as const;

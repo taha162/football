@@ -50,9 +50,19 @@ export const getManagedThings = cache(async (userId: string): Promise<{ venues: 
   return { venues: (venues.count ?? 0) > 0, tournaments: (tournaments.count ?? 0) > 0 };
 });
 
+/**
+ * Unread messages (from the conversations themselves) and unread notifications.
+ * A message is never news for the bell: it shows as a red dot on the messages
+ * button instead, so the bell counts every other kind of notification only.
+ * (Message notifications are still written: their arrival is what refreshes an
+ * open page live, components/layout/live-refresh.tsx.)
+ */
 export const getUnreadCounts = cache(async (): Promise<{ notifications: number; messages: number }> => {
   const supabase = await createClient();
-  const { data } = await supabase.rpc("unread_counts");
+  const [{ data }, bell] = await Promise.all([
+    supabase.rpc("unread_counts"),
+    supabase.from("notifications").select("id", { count: "exact", head: true }).is("read_at", null).neq("type", "new_message"),
+  ]);
   const v = (data ?? {}) as { notifications?: number; messages?: number };
-  return { notifications: Number(v.notifications ?? 0), messages: Number(v.messages ?? 0) };
+  return { notifications: bell.error ? Number(v.notifications ?? 0) : (bell.count ?? 0), messages: Number(v.messages ?? 0) };
 });

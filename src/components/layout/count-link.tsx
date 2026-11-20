@@ -10,6 +10,8 @@ import { NOTIFICATIONS_SEEN } from "@/components/notifications/seen-list";
  * The header's messages and notifications buttons with their unread count.
  * The count comes from the server; the bell's clears as soon as the
  * notifications page has read them, without waiting for the page to reload.
+ * `dot`: a red dot instead of the number (messages); screen readers still
+ * hear how many.
  */
 export function CountLink({
   href,
@@ -17,12 +19,14 @@ export function CountLink({
   count,
   children,
   className,
+  dot = false,
 }: {
   href: "/messages" | "/notifications";
   label: string;
   count: number;
   children: ReactNode;
   className?: string;
+  dot?: boolean;
 }) {
   const t = useTranslations("nav");
   // A new count from the server replaces a cleared one.
@@ -44,7 +48,9 @@ export function CountLink({
       aria-label={shown > 0 ? t("withUnread", { label, count: shown }) : label}
     >
       {children}
-      {shown > 0 ? (
+      {shown > 0 && dot ? (
+        <span aria-hidden="true" data-testid="unread-dot" className="badge-pop absolute end-1.5 top-1.5 size-2.5 rounded-full bg-danger ring-2 ring-bg" />
+      ) : shown > 0 ? (
         <span key={shown} aria-hidden="true" className="badge-pop num absolute -end-0.5 -top-0.5 min-w-5 rounded-full bg-accent px-1 text-center text-[11px] font-bold leading-5 text-accent-ink">
           {shown > 99 ? "99+" : shown}
         </span>

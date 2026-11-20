@@ -13,7 +13,7 @@ import { LinkButton } from "@/components/ui/link-button";
  */
 const BOOK_HREF = { pathname: "/venues", query: { bookable: "1" } };
 
-export function MobileNav({ signedIn }: { signedIn: boolean }) {
+export function MobileNav({ signedIn, unreadMessages = 0 }: { signedIn: boolean; unreadMessages?: number }) {
   const t = useTranslations("nav");
   const pathname = usePathname();
   // «+» in the middle books a pitch: the venues taking bookings, each opening its booking page.
@@ -22,7 +22,7 @@ export function MobileNav({ signedIn }: { signedIn: boolean }) {
     { href: "/venues", label: t("venues"), icon: MapPinned },
     { href: BOOK_HREF, label: t("book"), icon: Plus, primary: true },
     { href: "/matches", label: t("matches"), icon: CalendarSearch },
-    { href: signedIn ? "/messages" : "/sign-in", label: signedIn ? t("messages") : t("signIn"), icon: MessageCircle },
+    { href: signedIn ? "/messages" : "/sign-in", label: signedIn ? t("messages") : t("signIn"), icon: MessageCircle, unread: signedIn ? unreadMessages : 0 },
   ] as const;
   return (
     <nav aria-label={t("mobile")} style={{ viewTransitionName: "mobile-nav" }} className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-bg/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
@@ -35,6 +35,8 @@ export function MobileNav({ signedIn }: { signedIn: boolean }) {
               <LinkButton
                 href={item.href}
                 aria-current={active ? "page" : undefined}
+                // New messages: a red dot on the tab; screen readers hear how many.
+                aria-label={"unread" in item && item.unread > 0 ? t("withUnread", { label: item.label, count: item.unread }) : undefined}
                 className={cn("mnav-link ripple flex h-16 flex-col items-center justify-center gap-1 text-[11px] font-medium", active ? "text-accent" : "text-muted")}
               >
                 {"primary" in item ? (
@@ -42,7 +44,12 @@ export function MobileNav({ signedIn }: { signedIn: boolean }) {
                     <Icon aria-hidden="true" className="size-5" />
                   </span>
                 ) : (
-                  <Icon aria-hidden="true" className="size-5" />
+                  <span className="relative">
+                    <Icon aria-hidden="true" className="size-5" />
+                    {"unread" in item && item.unread > 0 ? (
+                      <span aria-hidden="true" data-testid="unread-dot" className="badge-pop absolute -end-1 -top-1 size-2.5 rounded-full bg-danger ring-2 ring-bg" />
+                    ) : null}
+                  </span>
                 )}
                 <span className={"primary" in item ? "sr-only" : undefined}>{item.label}</span>
               </LinkButton>

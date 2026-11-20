@@ -9,11 +9,16 @@ test.describe("Live updates", () => {
     // Once the page really listens (Realtime: "Subscribed to PostgreSQL"; after a cold start that can take seconds).
     await expect(page.locator('html[data-live="on"]')).toHaveCount(1, { timeout: 15_000 });
 
-    // A friend writes: the bell and the messages button show it, with no reload.
+    // A friend writes: the messages button gets a red dot, with no reload (screen readers hear how many).
     const conv = await rpc<string>(friend.id, "start_direct_conversation", { p_user_id: me.id });
     await rpc(friend.id, "send_message", { p_conversation_id: conv, p_body: "Game tonight?" });
-    await expect(page.getByRole("link", { name: /^الإشعارات \(.+ غير مقروءة\)$/ })).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByRole("link", { name: /^الرسائل \(.+ غير مقروءة\)$/ })).toBeVisible();
+    const messages = page.getByRole("link", { name: "الرسائل (1 غير مقروءة)" });
+    await expect(messages).toBeVisible({ timeout: 15_000 });
+    await expect(messages.getByTestId("unread-dot")).toBeVisible();
+    // A message is never news for the bell: no count there, and not in the notifications list.
+    await expect(page.getByRole("link", { name: "الإشعارات", exact: true })).toBeVisible();
+    await page.goto("/ar/notifications");
+    await expect(page.getByText("رسالة جديدة", { exact: false })).toHaveCount(0);
   });
 
   test("an open page catches up with changes that don't notify me", async ({ page }) => {
