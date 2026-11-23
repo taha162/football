@@ -108,7 +108,7 @@ export async function PlayerSummary({ profile, viewerId }: { profile: Profile; v
                   {history.map((h) =>
                     h.match ? (
                       <li key={h.match.id} className="flex items-center justify-between gap-3 p-3 text-sm">
-                        <Link href={`/matches/${h.match.id}`} className="hover:underline">{h.match.title}</Link>
+                        <Link prefetch={false} href={`/matches/${h.match.id}`} className="hover:underline">{h.match.title}</Link>
                         <span className="text-xs text-muted">{formatDate(h.match.starts_at, locale, tz)}</span>
                       </li>
                     ) : null,

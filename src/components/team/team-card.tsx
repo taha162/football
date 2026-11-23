@@ -33,7 +33,7 @@ export async function TeamCard({ team, role }: { team: TeamCardData; role?: stri
         <TeamLogo path={team.logo_path} name={team.name} />
         <div className="min-w-0">
           <h3 className="truncate font-display text-lg font-semibold">
-            <Link href={`/teams/${team.id}`} className="focus-visible:outline-none">{team.name}</Link>
+            <Link prefetch={false} href={`/teams/${team.id}`} className="focus-visible:outline-none">{team.name}</Link>
           </h3>
           <p className="text-xs text-muted">{[localizedName(team.area, locale), localizedName(team.city, locale)].filter(Boolean).join("، ")}</p>
         </div>

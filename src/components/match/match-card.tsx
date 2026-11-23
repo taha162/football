@@ -52,7 +52,7 @@ export async function MatchCard({ match, role }: { match: MatchCardData; role?: 
           </div>
           {/* Up to two lines (narrow phones), so the name isn't cut to a few letters. */}
           <h3 className="line-clamp-2 break-words font-display text-lg font-semibold leading-snug">
-            <Link href={`/matches/${match.id}`} className="focus-visible:outline-none">
+            <Link prefetch={false} href={`/matches/${match.id}`} className="focus-visible:outline-none">
               {match.title}
             </Link>
           </h3>

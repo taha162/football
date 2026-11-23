@@ -47,6 +47,11 @@ export async function proxy(request: NextRequest) {
   // Redirect responses don't need a session refresh.
   if (response.headers.get("location")) return response;
   response.headers.set("Content-Security-Policy", csp);
+  // A prefetch only learns which layout a link leads to: every page here is
+  // dynamic, so none of its content is prefetched, and nothing user-specific is
+  // sent back. It skips the session check at Supabase (two calls to its Auth
+  // server each, dozens per page). Opening the page gets the full check below.
+  if (isPrefetch(request)) return response;
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;

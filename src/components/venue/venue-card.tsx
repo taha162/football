@@ -35,7 +35,7 @@ export async function VenueCard({ venue, role, href = `/venues/${venue.id}`, eag
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-3 sm:gap-2 sm:p-4">
         <h3 className="flex items-start gap-1 font-display text-base font-semibold leading-snug sm:items-center sm:gap-1.5 sm:text-lg">
-          <Link href={href} className="line-clamp-2 break-words focus-visible:outline-none">{venue.name}</Link>
+          <Link prefetch={false} href={href} className="line-clamp-2 break-words focus-visible:outline-none">{venue.name}</Link>
           {venue.verification_status === "verified" ? <BadgeCheck aria-label={t("verified")} className="mt-1 size-4 shrink-0 text-accent sm:mt-0" /> : null}
         </h3>
         <p className="truncate text-xs text-muted">{[localizedName(venue.area, locale), localizedName(venue.city, locale)].filter(Boolean).join("، ")}</p>

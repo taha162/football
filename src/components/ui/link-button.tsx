@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, type AnchorHTMLAttributes, type KeyboardEvent, type MouseEvent } from "react";
+import { useCallback, type AnchorHTMLAttributes, type KeyboardEvent, type MouseEvent } from "react";
 import { useRouter as useNextRouter } from "next/navigation";
 import { useLocale } from "next-intl";
 import { getPathname, useRouter } from "@/i18n/navigation";
@@ -9,26 +9,6 @@ import { cn } from "@/lib/cn";
 import { announceNavigation } from "@/components/motion/nav-progress";
 
 export type Href = Parameters<typeof getPathname>[0]["href"];
-
-let visibility: IntersectionObserver | null = null;
-const onVisible = new WeakMap<Element, () => void>();
-
-/** Runs `prefetch` once the element comes near the viewport, as next/link does. */
-function prefetchWhenVisible(el: Element, prefetch: () => void): () => void {
-  visibility ??= new IntersectionObserver(
-    (entries) => {
-      for (const e of entries) {
-        if (!e.isIntersecting) continue;
-        onVisible.get(e.target)?.();
-        visibility?.unobserve(e.target);
-      }
-    },
-    { rootMargin: "200px" },
-  );
-  onVisible.set(el, prefetch);
-  visibility.observe(el);
-  return () => visibility?.unobserve(el);
-}
 
 /** Navigation shared by LinkButton and CardCover: what a link does, without an href. */
 export function useLinkTarget(href: Href, options: { locale?: Locale; replace?: boolean; scroll?: boolean } = {}) {
@@ -54,32 +34,26 @@ export function useLinkTarget(href: Href, options: { locale?: Locale; replace?: 
  * A control that navigates like a link but has no href, so the browser shows
  * no address preview when the pointer is over it. It keeps the link role and
  * is focusable; Enter activates it, and Ctrl/⌘/Shift-click or a middle click
- * opens the page in a new tab. The page is prefetched as the control comes
- * into view, as next/link does. Use it for controls that look like buttons;
- * links in running text stay ordinary links.
+ * opens the page in a new tab. The page is prefetched when the pointer comes
+ * over it or it takes the focus, not merely because it is on screen: pages
+ * here are dynamic, so a prefetch fetches no content, only a request to the
+ * server (dozens per page when every visible control did it). Use it for
+ * controls that look like buttons; links in running text stay ordinary links.
  */
 export function LinkButton({
   href,
   locale,
   replace,
   scroll,
-  prefetch: prefetchMode,
   className,
   onClick,
   onKeyDown,
   ...rest
-}: Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "href"> & { href: Href; locale?: Locale; replace?: boolean; scroll?: boolean; prefetch?: boolean | null }) {
-  const ref = useRef<HTMLAnchorElement>(null);
+}: Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "href"> & { href: Href; locale?: Locale; replace?: boolean; scroll?: boolean }) {
   const { path, prefetch, open } = useLinkTarget(href, { locale, replace, scroll });
-
-  useEffect(() => {
-    if (!ref.current || prefetchMode === false) return;
-    return prefetchWhenVisible(ref.current, prefetch);
-  }, [prefetch, prefetchMode]);
 
   return (
     <a
-      ref={ref}
       role="link"
       tabIndex={0}
       data-href={path}
