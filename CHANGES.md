@@ -1996,3 +1996,21 @@
 **لا يحتاج** أي ملف SQL.
 
 التعديل: «Audit log pages as quick as the first, however far back»
+
+### 111. فحص تلقائي لكل PR، وحد لحجم JavaScript
+**ما تغيّر:**
+- **فحص GitHub Actions لكل PR:**
+  - lint، وtypecheck، وi18n:check.
+  - اختبارات الوحدة وقاعدة البيانات على Supabase محلية تُشغَّل هناك.
+  - البناء.
+  - لا يحتاج أي مفتاح سري.
+- **حد لحجم JavaScript:** حجمه الحالي مضغوطاً 659 KB. الفحص يفشل:
+  - إن تجاوز 760 KB؛
+  - أو إن تجاوز ملف واحد غير ملف الملعب ثلاثي الأبعاد 110 KB.
+- **ما لا يشمله:** اختبارات المتصفح، لأنها تحتاج الموقع يعمل بإعدادات الاختبار في `.env.local` (أسرار بوت واتساب والمهمة اليومية) ومتصفحاً يُنزَّل. تُشغَّل قبل كل PR كما كانت، وتأخذ نحو 4 دقائق.
+
+الملفات: `.github/workflows/ci.yml` (جديد)، `scripts/check-bundle-budget.mjs` (جديد).
+
+**لا يحتاج** أي ملف SQL.
+
+التعديل: «CI on every pull request, with a JavaScript size budget»
