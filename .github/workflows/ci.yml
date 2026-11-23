@@ -1,0 +1,57 @@
+# Checks every pull request (and main) the way a contributor does locally:
+# lint, types, the site's texts, unit and database tests against a local
+# Supabase started here (Docker on the runner), a production build, and the
+# JavaScript size budget (scripts/check-bundle-budget.mjs). The browser tests
+# (pnpm e2e) are run before each pull request is opened, not here: they need
+# the site running with the test settings in .env.local (the WhatsApp bot's and
+# the cron's secrets) and a browser download.
+#
+# No secrets: the local Supabase makes its own keys, and nothing here reaches
+# the real project.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Lint, types, tests, build, size
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm i18n:check
+      - name: Start a local Supabase (applies every migration)
+        run: pnpm db:start
+      - name: Use its local keys
+        run: |
+          pnpm exec supabase status -o json | jq -r '
+            "NEXT_PUBLIC_SUPABASE_URL=\(.API_URL)",
+            "NEXT_PUBLIC_SUPABASE_ANON_KEY=\(.ANON_KEY)",
+            "SUPABASE_SERVICE_ROLE_KEY=\(.SERVICE_ROLE_KEY)",
+            "TEST_DATABASE_URL=\(.DB_URL)"' >> "$GITHUB_ENV"
+      - name: Unit and database tests
+        run: pnpm test
+      - name: Production build
+        run: pnpm build
+        env:
+          NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      - name: JavaScript size budget
+        run: node scripts/check-bundle-budget.mjs

@@ -42,6 +42,11 @@ export function formatListTime(iso: string | Date, locale: string, timeZone: str
   return new Intl.DateTimeFormat(intlLocale(locale), { timeZone, day: "numeric", month: "numeric", year: "2-digit" }).format(at);
 }
 
+/** A count as shown on a badge or read out: «99+» past 99 (the database stops counting unread things at 100). */
+export function badgeCount(n: number): number | string {
+  return n > 99 ? "99+" : n;
+}
+
 export function formatNumber(n: number, locale: string) {
   return new Intl.NumberFormat(intlLocale(locale)).format(n);
 }

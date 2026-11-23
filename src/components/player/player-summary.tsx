@@ -4,7 +4,7 @@ import { formatDate } from "@/lib/format";
 import { publicStorageUrl } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 import type { Profile } from "@/lib/auth";
-import { localizedName } from "@/server/reference";
+import { areaById, cityById, localizedName } from "@/server/reference";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge, Card, CardBody, Section, Stat } from "@/components/ui/primitives";
 import { LinkButton } from "@/components/ui/link-button";
@@ -15,9 +15,10 @@ export async function PlayerSummary({ profile, viewerId }: { profile: Profile; v
   const e = await getTranslations("enums");
   const locale = await getLocale();
   const supabase = await createClient();
-  const [{ data: city }, { data: area }, { data: teams }, { data: stats }, { data: reputation }, history] = await Promise.all([
-    profile.city_id ? supabase.from("cities").select("name_en, name_ar, timezone").eq("id", profile.city_id).maybeSingle() : Promise.resolve({ data: null }),
-    profile.area_id ? supabase.from("areas").select("name_en, name_ar").eq("id", profile.area_id).maybeSingle() : Promise.resolve({ data: null }),
+  // City and area from the lists kept between requests (src/server/reference.ts).
+  const [city, area, { data: teams }, { data: stats }, { data: reputation }, history] = await Promise.all([
+    cityById(profile.city_id),
+    areaById(profile.area_id),
     supabase.from("team_members").select("role, team:teams(id, name, is_archived)").eq("user_id", profile.id),
     supabase.rpc("player_stats", { p_user_id: profile.id }),
     supabase.rpc("player_reputation", { p_user_id: profile.id }),
@@ -108,7 +109,7 @@ export async function PlayerSummary({ profile, viewerId }: { profile: Profile; v
                   {history.map((h) =>
                     h.match ? (
                       <li key={h.match.id} className="flex items-center justify-between gap-3 p-3 text-sm">
-                        <Link href={`/matches/${h.match.id}`} className="hover:underline">{h.match.title}</Link>
+                        <Link prefetch={false} href={`/matches/${h.match.id}`} className="hover:underline">{h.match.title}</Link>
                         <span className="text-xs text-muted">{formatDate(h.match.starts_at, locale, tz)}</span>
                       </li>
                     ) : null,

@@ -37,6 +37,11 @@ test.describe("Conversations", () => {
     await expect.poll(() => picture.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
     const src = (await picture.getAttribute("src"))!;
     expect(src).toContain("/storage/v1/object/sign/message-images/");
+    // The conversation shows the picture's small copy; tapping it opens the picture itself.
+    expect(src).toContain(".thumb.jpg");
+    const full = (await other.getByRole("link", { name: "فتح الصورة" }).getAttribute("href"))!;
+    expect(full).toContain("/storage/v1/object/sign/message-images/");
+    expect(full).not.toContain(".thumb.");
     // Without the signature, the file isn't served.
     expect((await other.request.get(src.replace("/object/sign/", "/object/public/").split("?")[0])).ok()).toBe(false);
     await other.context().close();

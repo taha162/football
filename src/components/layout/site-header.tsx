@@ -20,7 +20,7 @@ function accountContact(user: CurrentUser): string | null {
 
 export async function SiteHeader({ user }: { user: CurrentUser | null }) {
   const t = await getTranslations("nav");
-  const counts = user ? await getUnreadCounts() : { notifications: 0, messages: 0 };
+  const counts = user ? await getUnreadCounts(user.id) : { notifications: 0, messages: 0 };
   // The account menu lists management pages only for people who manage something.
   const roles = user ? await getManagedThings(user.id) : { venues: false, tournaments: false };
 

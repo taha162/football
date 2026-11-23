@@ -1,3 +1,59 @@
+# Performance at scale (tier L) — 23 November 2026
+
+A second audit, for the scale the owner expects: more than 50,000 members and more than 5 million rows a year in the largest tables (messages, notifications, bookings). Everything below was measured on a local copy (production build, local Supabase stack), not on the deployed site. The Arabic change log has the same changes for the owner, one commit each (`CHANGES.md`, items 100–111). The first audit (6 November) follows this section unchanged.
+
+## What a signed-in page view cost, before and after
+
+Measured with a fresh member, three page views each. Session checks are calls to Supabase Auth's `/user`, counted in its log. Database statements are counted with `pg_stat_statements` for the member's roles.
+
+| Page | Requests to the site | Session checks | Database statements |
+| --- | --- | --- | --- |
+| Dashboard | 27 → 2 | about 54 → 3 | 20 → 23 ¹ |
+| Messages | 15 → 1 | about 30 → 2 | 9 → 5 |
+| Matches | about 20 → 1 | about 40 → 2 | 18 → 8 |
+
+1. The 23 cover two renders of the dashboard. The second request was a refresh after the live connection's slow first start (`LiveRefresh` catching up). In each render, the header's four statements are now one (`header_state()`).
+
+- **Prefetches (item 100):**
+  - Before, every link, button and card on screen sent a prefetch: 26 on the dashboard. Each answer was about 320 bytes and ran no database statements, because no page here can be prefetched (all are dynamic, with no `loading.js`). But each cost two session checks in `src/proxy.ts`.
+  - Now prefetches skip the session check. Controls prefetch on pointer or focus only, not for being on screen.
+- **Session checks per page (item 106):** two remain locally: the proxy's `getUser()`, and the page's `getClaims()`. The local stack signs sessions with a shared secret, so `getClaims()` falls back to the Auth server. With asymmetric signing keys (DEPLOYMENT.md, section 18) it verifies on the server itself: one session check per page.
+
+## Database, per call (local, warm)
+
+| Query | Before | After |
+| --- | --- | --- |
+| Unread messages for a member with 32,800 unread (every page) | 16 ms (304 ms cold) | 3 ms (`header_state()`, counts stop at 100) |
+| Header: unread messages, bell, venue staff, tournaments | 4 requests | 1 request |
+| List of conversations, same member | 15 ms | 11 ms |
+| Conversation page title | `my_conversations(200)`: 12 ms | one row of its match/team/venue |
+| Invite search on 18,000 profiles (`ILIKE '%…%'`) | 15.3 ms (sequential scan) | 0.18 ms (trigram index) |
+| Same pattern on 1,000,000 names | 189 ms (first 8), 1,335 ms (count) | about 1 ms |
+| Slowest foreign-key check when deleting a member | 12 ms (messages, 135,000 rows) | 0.6 ms |
+
+Arabic works with the trigram indexes: the database is `en_US.UTF-8`, and an Arabic `ILIKE` pattern was served by the index (checked on 300,000 names). The local stack's tables are small, so the delete figures scale. At 5 million rows, the old checks would have been about 0.5 s for messages and about 1 s for each of six bookings columns.
+
+## Other changes
+
+| # | Change | Why |
+| --- | --- | --- |
+| 101 | Live refresh every 90 s (was 30), ±10% per page; the messages list listens only to its own conversations (`in` filter, up to 100) | Each refresh is a full page render; an unfiltered `postgres_changes` listener on `messages` made Realtime check every new message against every listener |
+| 104 | Chat pictures shown as a 640 px copy made in the browser (`<name>.thumb.jpg` next to the picture) | The 1600 px original was downloaded to fill at most 288 px |
+| 105 | Cities, areas and public settings cached across requests (`unstable_cache`, one hour, dropped when an admin saves; a change made with SQL shows within the hour) | They were read from the database on almost every page |
+| 108 | Daily cleanup: read notifications after 180 days, unread after 365, audit entries after 730 (settings) | Both tables grew without limit |
+| 109 | Admin overview counts kept 5 minutes | 14 `count(*)` over the largest tables per view |
+| 110 | Audit log paged by id (`?before=`) | Offset paging slows page by page |
+| 111 | CI on every pull request, with a JavaScript size budget (659 KB gzipped now; fails over 760 KB) | No checks ran on pull requests |
+
+## Not changed, and why
+
+- **Browser tests in CI:** they need the site running with the test settings in `.env.local` (the WhatsApp bot's and the cron's secrets) and a browser download. They run before each pull request is opened, as before: 95 tests in about 4 minutes.
+- **Realtime capacity:** each signed-in tab holds one connection (notifications and calls). Calls must ring in a background tab, so connections stay open. The plan's limit on concurrent connections must cover the peak (DEPLOYMENT.md, section 18).
+- **Vercel image optimization:** a quota and a cost to watch at this scale, not a code change. Chat pictures don't use it.
+- **Per-section streaming on the dashboard:** the first audit removed `loading.tsx` so that quick navigations never flash a skeleton. Suspense boundaries inside pages would bring that flash back.
+
+---
+
 # Performance audit — 6 November 2026
 
 What was measured, what changed, and what could not be measured. Every number below was measured as described in [How it was measured](#how-it-was-measured); nothing is estimated. Where a measurement was not possible, it says so. The Arabic change log (`CHANGES.md`, items 52–59) describes the same changes for the owner, one commit each.

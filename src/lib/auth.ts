@@ -15,41 +15,58 @@ export interface CurrentUser {
   email: string | null;
   /** The confirmed number (E.164 digits), for accounts verified with one. */
   phone: string | null;
-  emailConfirmed: boolean;
   profile: Profile;
   roles: ("admin" | "moderator")[];
   isAdmin: boolean;
   isModerator: boolean;
-  /** Has a confirmed authenticator app (two-step verification). */
-  secondFactor: boolean;
 }
 
 /**
- * The signed-in user for this request, validated with the Auth server
- * (getUser), plus their profile and roles. Memoized per request.
+ * The signed-in user for this request, plus their profile and roles.
+ * Memoized per request.
+ *
+ * The session is verified with getClaims(): its signature is checked against
+ * the project's published keys, on this server, when the project signs
+ * sessions with asymmetric keys (Supabase → Authentication → JWT Keys), and by
+ * the Auth server otherwise (the same call getUser() makes). Every page
+ * request has already been checked with the Auth server moments before, by
+ * the proxy (src/proxy.ts), which also ends sessions that are too old; this
+ * second check no longer costs a second call to it. The database checks the
+ * same signed token on every query (RLS).
  */
 export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   if (!isSupabaseConfigured()) return null;
   const supabase = await createClient();
-  const { data, error } = await supabase.auth.getUser();
-  if (error || !data.user) return null;
+  const { data, error } = await supabase.auth.getClaims();
+  const claims = data?.claims;
+  if (error || !claims?.sub) return null;
+  const id = claims.sub;
   const [{ data: profile }, { data: roles }] = await Promise.all([
-    supabase.from("profiles").select(PROFILE_COLUMNS).eq("id", data.user.id).maybeSingle(),
-    supabase.from("user_roles").select("role").eq("user_id", data.user.id),
+    supabase.from("profiles").select(PROFILE_COLUMNS).eq("id", id).maybeSingle(),
+    supabase.from("user_roles").select("role").eq("user_id", id),
   ]);
   if (!profile) return null;
   const roleList = (roles ?? []).map((r) => r.role);
   return {
-    id: data.user.id,
-    email: data.user.email ?? null,
-    phone: data.user.phone || null,
-    emailConfirmed: Boolean(data.user.email_confirmed_at),
+    id,
+    email: typeof claims.email === "string" && claims.email ? claims.email : null,
+    phone: typeof claims.phone === "string" && claims.phone ? claims.phone : null,
     profile,
     roles: roleList,
     isAdmin: roleList.includes("admin"),
     isModerator: roleList.includes("admin") || roleList.includes("moderator"),
-    secondFactor: hasSecondFactor(data.user),
   };
+});
+
+/**
+ * What only the Auth server knows about the account (not in the session's
+ * token): whether the e-mail is confirmed, and whether an authenticator app is
+ * set up. Asked only by the pages that show it (settings, administration).
+ */
+export const getAccountStatus = cache(async (): Promise<{ emailConfirmed: boolean; secondFactor: boolean }> => {
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getUser();
+  return { emailConfirmed: Boolean(data.user?.email_confirmed_at), secondFactor: hasSecondFactor(data.user) };
 });
 
 /** Redirects to sign-in (returning here afterwards) when signed out. */

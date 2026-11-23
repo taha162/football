@@ -78,6 +78,37 @@ export async function shrinkImage(file: File, { keepTransparency = false }: { ke
   }
 }
 
+/**
+ * A small JPEG copy of a picture, at most `maxSide` pixels on its long side
+ * (a conversation shows it in place of the picture). Null when the browser
+ * can't read the picture.
+ */
+export async function makeThumbnail(file: File, maxSide: number, quality = 0.72): Promise<File | null> {
+  if (!file.type.startsWith("image/") || file.type === "image/svg+xml") return null;
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await load(url);
+    const width = img.naturalWidth;
+    const height = img.naturalHeight;
+    if (!width || !height) return null;
+    const scale = Math.min(1, maxSide / Math.max(width, height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(width * scale));
+    canvas.height = Math.max(1, Math.round(height * scale));
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    const blob = await toBlob(canvas, "image/jpeg", quality);
+    return blob && blob.type === "image/jpeg" ? new File([blob], "thumb.jpg", { type: "image/jpeg" }) : null;
+  } catch {
+    return null;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
 /** The form's data with every picture made smaller where that helps; the same object when nothing changed. */
 export async function shrinkFormImages(data: FormData, options?: { keepTransparency?: boolean }): Promise<FormData> {
   const entries = [...data.entries()];

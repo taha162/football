@@ -56,11 +56,15 @@ export async function GET(request: NextRequest) {
   const { data: waCleanup, error: waCleanupError } = await admin.rpc("wa_outbox_cleanup");
   // Before the database update (…0028) the function is missing: not an error worth a page.
   if (waCleanupError && waCleanupError.code !== "PGRST202") logger.error("cron_whatsapp_cleanup_failed", { code: waCleanupError.code });
+  // Old notifications and audit entries, past their keeping periods (…0038); missing before that runs.
+  const { data: retention, error: retentionError } = await admin.rpc("run_retention_cleanup");
+  if (retentionError && retentionError.code !== "PGRST202") logger.error("cron_retention_failed", { code: retentionError.code });
   const result = {
     ...(data as Record<string, unknown>),
     ...((cleanup as Record<string, unknown>) ?? {}),
     ...((calls as Record<string, unknown>) ?? {}),
     ...((waCleanup as Record<string, unknown>) ?? {}),
+    ...(retention ? { retention } : {}),
     ...(whatsapp ? { whatsapp } : {}),
   };
   logger.info("cron_completed", { ms: Date.now() - started, ...result });

@@ -26,13 +26,19 @@ test.describe("Live updates", () => {
     const [organizer, viewer, joiner] = [await createAuthUser("Org"), await createAuthUser("Viewer"), await createAuthUser("Joiner")];
     const match = await createMatchFor(organizer, { p_total_players: 10 });
     await signIn(page, viewer);
+    // The page's clock is ours to move: open pages check every 90 s (live.check_seconds, ±10%).
+    await page.clock.install();
     await page.goto(`/ar/matches/${match}`);
     const roster = page.getByRole("heading", { name: /^اللاعبون/ });
     const before = (await roster.textContent())!;
 
-    // Someone else joins: the viewer isn't notified, and the page still shows it within half a minute.
+    // Someone else joins: the viewer isn't notified. Nothing changes before the next check…
     await rpc(joiner.id, "join_match", { p_match_id: match });
-    await expect(roster).not.toHaveText(before, { timeout: 45_000 });
+    await page.clock.fastForward("00:30");
+    await expect(roster).toHaveText(before);
+    // …and the page shows it once the check comes round, without a reload.
+    await page.clock.fastForward("01:15");
+    await expect(roster).not.toHaveText(before, { timeout: 15_000 });
     await expect(page.getByText(joiner.name)).toBeVisible();
   });
 });

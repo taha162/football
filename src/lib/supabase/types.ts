@@ -1631,6 +1631,9 @@ isOneToOne: true
               "start_local": string,"starts_at": string
             }[]
                            },
+"header_state":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
 "invite_to_match":
 { Args: { "p_match_id": string,"p_user_id": string }; Returns: string
                            },
@@ -1753,6 +1756,9 @@ isOneToOne: true
                            },
 "revoke_team_invitation":
 { Args: { "p_invitation_id": string }; Returns: undefined
+                           },
+"run_retention_cleanup":
+{ Args: { "p_batch"?: number }; Returns: Json
                            },
 "run_scheduled_jobs":
 { Args: Record<PropertyKey, never>; Returns: Json

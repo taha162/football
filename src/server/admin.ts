@@ -10,8 +10,15 @@ import { DELETE_WORD } from "@/lib/member-deletion";
 import { removeMessageFiles } from "@/lib/message-files";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { revalidateReference } from "@/server/reference";
 
 type Rpc = Parameters<Awaited<ReturnType<typeof createClient>>["rpc"]>[0];
+
+/** Cities, areas and public settings are kept between requests (src/server/reference.ts): a saved change drops them. */
+function revalidated(state: ActionState): ActionState {
+  if (state?.ok) revalidateReference();
+  return state;
+}
 
 /** All admin RPCs authorize the caller in the database (require_admin / require_moderator). */
 async function run(fn: Rpc, args: Record<string, unknown>, success: string): Promise<ActionState> {
@@ -180,7 +187,7 @@ export async function updateSettingAction(_: ActionState, fd: FormData): Promise
   } catch {
     return fail("validation", { value: "invalid_json" });
   }
-  return run("admin_update_setting", { p_key: key.data, p_value: value }, "setting_updated");
+  return revalidated(await run("admin_update_setting", { p_key: key.data, p_value: value }, "setting_updated"));
 }
 
 export async function upsertAreaAction(_: ActionState, fd: FormData): Promise<ActionState> {
@@ -195,11 +202,11 @@ export async function upsertAreaAction(_: ActionState, fd: FormData): Promise<Ac
     .safeParse({ id: str(fd, "id"), city_id: str(fd, "city_id"), slug: str(fd, "slug"), name_en: str(fd, "name_en"), name_ar: str(fd, "name_ar") });
   if (!parsed.success) return fail("validation", { slug: "invalid" });
   const v = parsed.data;
-  return run(
+  return revalidated(await run(
     "admin_upsert_area",
     { p_id: v.id ?? null, p_city_id: v.city_id, p_slug: v.slug, p_name_en: v.name_en, p_name_ar: v.name_ar, p_is_active: fd.get("is_active") !== "0" },
     "area_saved",
-  );
+  ));
 }
 
 export async function upsertCityAction(_: ActionState, fd: FormData): Promise<ActionState> {
@@ -224,7 +231,7 @@ export async function upsertCityAction(_: ActionState, fd: FormData): Promise<Ac
     });
   if (!parsed.success) return fail("validation", { slug: "invalid" });
   const v = parsed.data;
-  return run(
+  return revalidated(await run(
     "admin_upsert_city",
     {
       p_id: v.id ?? null,
@@ -237,6 +244,6 @@ export async function upsertCityAction(_: ActionState, fd: FormData): Promise<Ac
       p_is_active: fd.get("is_active") !== "0",
     },
     "city_saved",
-  );
+  ));
 }
 
