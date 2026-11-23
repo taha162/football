@@ -4,6 +4,7 @@ import { CalendarSearch, Home, MapPinned, MessageCircle, Plus } from "lucide-rea
 import { useTranslations } from "next-intl";
 import { usePathname } from "@/i18n/navigation";
 import { cn } from "@/lib/cn";
+import { badgeCount } from "@/lib/format";
 import { isConversationPath } from "@/lib/chat-path";
 import { LinkButton } from "@/components/ui/link-button";
 
@@ -39,7 +40,7 @@ export function MobileNav({ signedIn, unreadMessages = 0 }: { signedIn: boolean;
                 href={item.href}
                 aria-current={active ? "page" : undefined}
                 // New messages: a red dot on the tab; screen readers hear how many.
-                aria-label={"unread" in item && item.unread > 0 ? t("withUnread", { label: item.label, count: item.unread }) : undefined}
+                aria-label={"unread" in item && item.unread > 0 ? t("withUnread", { label: item.label, count: badgeCount(item.unread) }) : undefined}
                 className={cn("mnav-link ripple flex h-16 flex-col items-center justify-center gap-1 text-[11px] font-medium", active ? "text-accent" : "text-muted")}
               >
                 {"primary" in item ? (

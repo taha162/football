@@ -1862,3 +1862,17 @@
 الملفات: `src/components/layout/live-refresh.tsx`، `src/components/messages/list-live.tsx` (جديد)، `src/app/[locale]/messages/page.tsx`، `src/server/reference.ts`.
 
 التعديل: «Live updates that cost less: every 90 s, spread out, and the list listens to its own conversations»
+
+### 102. أرقام أعلى الصفحة في طلب واحد، والعدّ يتوقف عند 100
+**ما تغيّر:**
+- **طلب واحد بدل أربعة:** كل صفحة كانت تسأل قاعدة البيانات أربعة أسئلة لأعلى الصفحة: الرسائل غير المقروءة، والإشعارات، وهل يدير العضو ملعباً، وهل ينظّم بطولة. صارت سؤالاً واحداً: `header_state()`.
+- **العدّ يتوقف عند 100:** كان عدد الرسائل غير المقروءة يُعدّ رسالة رسالة. عضو في محادثات مجموعات لا يفتحها كان يجعل كل صفحة تعدّ عشرات الآلاف.
+  - القياس لعضو عنده 32,800 رسالة غير مقروءة: 16 ms كل صفحة، و304 ms أول مرة. صار نحو 3 ms.
+  - النقطة الحمراء تحتاج أن تعرف فقط أن هناك شيئاً. الشارات تُظهر «99+» بعد 99.
+- **قبل تطبيق الملف:** تُسأل الأسئلة الأربعة كما كانت.
+
+**ملف قاعدة البيانات `…0035_header_state.sql`:** لا يغيّر بيانات أحد، وتشغيله مرتين لا يضر.
+
+الملفات: `src/server/reference.ts`، `src/components/layout/site-header.tsx` و`count-link.tsx` و`mobile-nav.tsx`، `src/app/[locale]/layout.tsx` و`messages/page.tsx`، `src/lib/format.ts` (`badgeCount`). الاختبار: `tests/db/header-state.test.ts` (جديد).
+
+التعديل: «The header's numbers in one request, and unread counts that stop at 100»

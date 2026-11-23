@@ -4,7 +4,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import type { Locale } from "@/i18n/routing";
 import { requireOnboardedUser } from "@/lib/auth";
 import { cn } from "@/lib/cn";
-import { formatDateTime, formatListTime } from "@/lib/format";
+import { badgeCount, formatDateTime, formatListTime } from "@/lib/format";
 import { publicStorageUrl } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 import { ConversationListLive } from "@/components/messages/list-live";
@@ -96,9 +96,9 @@ export default async function MessagesPage({ params }: PageProps<"/[locale]/mess
                       {unread ? (
                         <span
                           className="num grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-accent px-1.5 text-[11px] font-bold text-accent-ink"
-                          aria-label={t("unread", { count: Number(c.unread_count) })}
+                          aria-label={t("unread", { count: badgeCount(Number(c.unread_count)) })}
                         >
-                          {c.unread_count}
+                          {badgeCount(Number(c.unread_count))}
                         </span>
                       ) : null}
                     </span>

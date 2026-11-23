@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { buttonClass } from "@/components/ui/button";
 import { LinkButton } from "@/components/ui/link-button";
 import { NOTIFICATIONS_SEEN } from "@/components/notifications/seen-list";
+import { badgeCount } from "@/lib/format";
 
 /**
  * The header's messages and notifications buttons with their unread count.
@@ -45,14 +46,14 @@ export function CountLink({
     <LinkButton
       href={href}
       className={buttonClass("ghost", "sm", `relative px-2.5 ${className ?? ""}`)}
-      aria-label={shown > 0 ? t("withUnread", { label, count: shown }) : label}
+      aria-label={shown > 0 ? t("withUnread", { label, count: badgeCount(shown) }) : label}
     >
       {children}
       {shown > 0 && dot ? (
         <span aria-hidden="true" data-testid="unread-dot" className="badge-pop absolute end-1.5 top-1.5 size-2.5 rounded-full bg-danger ring-2 ring-bg" />
       ) : shown > 0 ? (
         <span key={shown} aria-hidden="true" className="badge-pop num absolute -end-0.5 -top-0.5 min-w-5 rounded-full bg-accent px-1 text-center text-[11px] font-bold leading-5 text-accent-ink">
-          {shown > 99 ? "99+" : shown}
+          {badgeCount(shown)}
         </span>
       ) : null}
     </LinkButton>

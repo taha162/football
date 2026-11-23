@@ -119,7 +119,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
             <LandingOnly>
               <SiteFooter />
             </LandingOnly>
-            <MobileNav signedIn={Boolean(user)} unreadMessages={user ? (await getUnreadCounts()).messages : 0} />
+            <MobileNav signedIn={Boolean(user)} unreadMessages={user ? (await getUnreadCounts(user.id)).messages : 0} />
           </CallProvider>
           {/* Pages stay up to date without reloading: news arrives live, and open pages check every so often (live.check_seconds). */}
           {user ? <LiveRefresh userId={user.id} checkSeconds={await getLiveCheckSeconds()} /> : null}

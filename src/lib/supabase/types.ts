@@ -1631,6 +1631,9 @@ isOneToOne: true
               "start_local": string,"starts_at": string
             }[]
                            },
+"header_state":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
 "invite_to_match":
 { Args: { "p_match_id": string,"p_user_id": string }; Returns: string
                            },
