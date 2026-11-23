@@ -5,6 +5,9 @@ import { defineConfig, devices } from "@playwright/test";
  *   pnpm db:start && pnpm build && pnpm e2e
  * (or reuse a running `pnpm dev` server). Each test creates its own users and
  * data, so tests can run in parallel and against a non-empty database.
+ * The server keeps cities, areas and settings for an hour in
+ * .next/cache/fetch-cache: a rebuilt database has new ids, so reset it with
+ * `pnpm db:reset`, which empties that folder too.
  */
 export default defineConfig({
   testDir: "e2e",

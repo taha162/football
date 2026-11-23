@@ -1,6 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
+import { publicSettingNumber } from "@/server/reference";
 
 export const VENUE_CARD_SELECT =
   "id, name, cover_image_path, booking_mode, verification_status, deposit_instructions, facilities, city:cities(name_en, name_ar), area:areas(name_en, name_ar), fields:venue_fields(id, price_per_hour, formats, is_active)" as const;
@@ -20,14 +21,9 @@ export interface VenueCardData {
 
 /** Deposit rules for platform bookings (platform settings, which admins edit). */
 export const getDepositSettings = cache(async () => {
-  const supabase = await createClient();
-  const { data } = await supabase.from("platform_settings").select("key, value").in("key", ["booking.deposit_amount", "booking.deposit_hold_minutes"]);
-  const setting = (key: string, fallback: number) => {
-    const n = Number(data?.find((s) => s.key === key)?.value);
-    return Number.isFinite(n) ? n : fallback;
-  };
-  const amount = Math.max(0, setting("booking.deposit_amount", 5000));
-  return { amount, holdMinutes: setting("booking.deposit_hold_minutes", 60), on: amount > 0 };
+  // Public settings, kept on the server between requests (src/server/reference.ts).
+  const [amount, holdMinutes] = await Promise.all([publicSettingNumber("booking.deposit_amount", 5000), publicSettingNumber("booking.deposit_hold_minutes", 60)]);
+  return { amount: Math.max(0, amount), holdMinutes, on: amount > 0 };
 });
 
 /** Venues by name (the only search), verified ones first; `bookable` keeps those taking bookings now. */
@@ -83,17 +79,16 @@ export async function myVenueRole(venueId: string, userId: string) {
  */
 export async function pendingRequests(userId: string, now: number) {
   const supabase = await createClient();
-  const [{ count }, { data: setting }] = await Promise.all([
+  const [{ count }, max] = await Promise.all([
     supabase
       .from("bookings")
       .select("id", { count: "exact", head: true })
       .eq("requested_by", userId)
       .eq("status", "requested")
       .or(`expires_at.is.null,expires_at.gt.${new Date(now).toISOString()}`),
-    supabase.from("platform_settings").select("value").eq("key", "booking.max_pending_per_user").maybeSingle(),
+    publicSettingNumber("booking.max_pending_per_user", 5),
   ]);
-  const max = Number(setting?.value);
-  return { count: count ?? 0, max: Number.isFinite(max) && max > 0 ? max : 5 };
+  return { count: count ?? 0, max: max > 0 ? max : 5 };
 }
 
 /**
