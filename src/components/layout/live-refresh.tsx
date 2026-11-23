@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { getBrowserClient, getRealtimeClient } from "@/lib/supabase/client";
 
@@ -22,23 +22,26 @@ function typing() {
  * fetched again (router.refresh: server components re-render, what the
  * person typed and opened stays) when:
  * - something arrives for them: a notification (live, through Supabase
- *   Realtime, only their own rows), or, on the messages pages, a message in one
- *   of their conversations (RLS decides what reaches them; elsewhere the header's
- *   count catches up on the next check, so Realtime isn't asked to test every
- *   message against every visitor);
+ *   Realtime, only their own rows). Messages are watched where they show: the
+ *   list of conversations listens to its own conversations
+ *   (messages/list-live.tsx) and an open conversation to itself (thread.tsx),
+ *   never to every message on the platform, which Realtime would have to test
+ *   against every person listening;
  * - they come back to the tab or the connection returns;
- * - and every `checkSeconds` (30 by default; the platform setting
- *   live.check_seconds) while the tab is visible and in use, for changes that
- *   don't notify them (another player joining a match, a time being booked…).
- *   A page left untouched for 3 minutes stops checking until they're back.
+ * - and every `checkSeconds` (90 by default; the platform setting
+ *   live.check_seconds), give or take a tenth so that everyone's pages don't
+ *   check at the same moment, while the tab is visible and in use, for changes
+ *   that don't notify them (another player joining a match, a time being
+ *   booked…). A page left untouched for 3 minutes stops checking until they're
+ *   back.
  * A refresh waits while they're typing.
  */
-export function LiveRefresh({ userId, checkSeconds = 30 }: { userId: string; checkSeconds?: number }) {
+export function LiveRefresh({ userId, checkSeconds = 90 }: { userId: string; checkSeconds?: number }) {
   const router = useRouter();
-  const onMessages = /\/messages(\/|$)/.test(usePathname() ?? "");
 
   useEffect(() => {
-    const POLL_MS = checkSeconds * 1000;
+    // Spread over ±10%: pages opened together (after a deploy, at kick-off time) don't all check at once.
+    const POLL_MS = Math.round(checkSeconds * 1000 * (0.9 + Math.random() * 0.2));
     let settle: ReturnType<typeof setTimeout> | null = null;
     let last = Date.now();
     let active = Date.now();
@@ -87,7 +90,7 @@ export function LiveRefresh({ userId, checkSeconds = 30 }: { userId: string; che
       // to PostgreSQL", which after a cold start can take seconds. The page says so then
       // (html[data-live="on"]), and if it took a while, catches up on what came in meanwhile.
       let joinedAt = 0;
-      let live = supabase
+      const live = supabase
         .channel(`live:${userId}`)
         .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` }, () => schedule())
         .on("system", {}, (payload: { extension?: string; status?: string }) => {
@@ -95,7 +98,6 @@ export function LiveRefresh({ userId, checkSeconds = 30 }: { userId: string; che
           document.documentElement.dataset.live = "on";
           if (joinedAt && Date.now() - joinedAt > 1_000) schedule(300);
         });
-      if (onMessages) live = live.on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, () => schedule());
       channel = live.subscribe((status) => {
         if (status === "SUBSCRIBED") joinedAt = Date.now();
         else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") delete document.documentElement.dataset.live;
@@ -112,7 +114,7 @@ export function LiveRefresh({ userId, checkSeconds = 30 }: { userId: string; che
       if (channel) void getBrowserClient().removeChannel(channel);
       delete document.documentElement.dataset.live;
     };
-  }, [router, userId, onMessages, checkSeconds]);
+  }, [router, userId, checkSeconds]);
 
   return null;
 }

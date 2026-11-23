@@ -7,6 +7,7 @@ import { cn } from "@/lib/cn";
 import { formatDateTime, formatListTime } from "@/lib/format";
 import { publicStorageUrl } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
+import { ConversationListLive } from "@/components/messages/list-live";
 import { Avatar } from "@/components/ui/avatar";
 import { Container, EmptyState, PageHeader } from "@/components/ui/primitives";
 import { LinkButton } from "@/components/ui/link-button";
@@ -49,6 +50,7 @@ export default async function MessagesPage({ params }: PageProps<"/[locale]/mess
   return (
     <Container className="max-w-3xl py-10">
       <PageHeader title={t("title")} description={t("description")} />
+      <ConversationListLive userId={user.id} conversationIds={rows.map((c) => c.conversation_id)} />
       {rows.length === 0 ? (
         <EmptyState icon={<MessageCircle className="size-10" />} title={t("empty")}>{t("emptyBody")}</EmptyState>
       ) : (
