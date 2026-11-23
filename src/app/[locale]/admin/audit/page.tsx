@@ -3,22 +3,32 @@ import { redirect } from "@/i18n/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { formatDateTime } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
+import { buttonClass } from "@/components/ui/button";
+import { LinkButton } from "@/components/ui/link-button";
 import { PageHeader } from "@/components/ui/primitives";
-import { Pagination } from "@/components/ui/pagination";
+
+const SIZE = 50;
 
 export default async function AdminAuditPage({ searchParams }: PageProps<"/[locale]/admin/audit">) {
   const locale = await getLocale();
   if (!(await getCurrentUser())?.isAdmin) redirect({ href: "/admin", locale });
   const t = await getTranslations("admin");
-  const page = Math.max(1, Number((await searchParams).page) || 1);
+  const common = await getTranslations("common");
+  // Newest first, 50 at a time, continuing from the oldest entry shown (?before=<id>): every page is
+  // as quick as the first however far back it goes, where skipping rows (offset) got slower page by page.
+  // Ids grow with time, so this is the order of the entries' times.
+  const raw = Number((await searchParams).before);
+  const before = Number.isSafeInteger(raw) && raw > 0 ? raw : null;
   const supabase = await createClient();
-  const { data } = await supabase
+  let query = supabase
     .from("audit_logs")
     .select("*, actor:profiles!audit_logs_actor_id_fkey(display_name)")
-    .order("created_at", { ascending: false })
     .order("id", { ascending: false })
-    .range((page - 1) * 50, page * 50);
-  const rows = (data ?? []).slice(0, 50);
+    .limit(SIZE + 1);
+  if (before) query = query.lt("id", before);
+  const { data } = await query;
+  const rows = (data ?? []).slice(0, SIZE);
+  const older = (data ?? []).length > SIZE ? rows.at(-1)?.id : null;
   return (
     <>
       <PageHeader title={t("nav.audit")} description={t("auditDescription")} />
@@ -46,7 +56,20 @@ export default async function AdminAuditPage({ searchParams }: PageProps<"/[loca
           </tbody>
         </table>
       </div>
-      <Pagination pathname="/admin/audit" query={{}} page={page} hasMore={(data ?? []).length > 50} />
+      {before || older ? (
+        <nav aria-label={t("nav.audit")} className="flex items-center justify-center gap-3">
+          {before ? (
+            <LinkButton href="/admin/audit" className={buttonClass("outline", "sm")}>
+              {t("auditNewest")}
+            </LinkButton>
+          ) : null}
+          {older ? (
+            <LinkButton href={{ pathname: "/admin/audit", query: { before: String(older) } }} className={buttonClass("outline", "sm")} rel="next">
+              {common("next")}
+            </LinkButton>
+          ) : null}
+        </nav>
+      ) : null}
     </>
   );
 }

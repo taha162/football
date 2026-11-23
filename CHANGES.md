@@ -1984,3 +1984,15 @@
 الملفات: `src/app/[locale]/admin/page.tsx`، والنصوص في `messages/`. الاختبار: `tests/db/growth.test.ts`.
 
 التعديل: «The admin overview's numbers worked out at most every 5 minutes»
+
+### 110. سجل التدقيق: كل صفحة بسرعة الأولى
+**ما تغيّر:**
+- كانت صفحات سجل التدقيق تتخطى ما قبلها، فتبطؤ كلما ابتعدت.
+- صارت كل صفحة تبدأ من آخر سطر في الصفحة السابقة، فتبقى بسرعة الأولى مهما ابتعدت.
+- زر «الأحدث» يعيد إلى البداية.
+
+الملفات: `src/app/[locale]/admin/audit/page.tsx`، والنصوص في `messages/`.
+
+**لا يحتاج** أي ملف SQL.
+
+التعديل: «Audit log pages as quick as the first, however far back»
