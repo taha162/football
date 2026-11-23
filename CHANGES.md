@@ -2052,3 +2052,17 @@
 الملفات: `src/components/messages/conversation-row.tsx` (جديد)، `src/app/[locale]/messages/page.tsx`، `src/app/[locale]/messages/[id]/page.tsx`، `src/server/messages.ts`، `src/lib/actions.ts`، والنصوص في `messages/`. الاختبارات: `tests/db/conversation-prefs.test.ts`، `e2e/conversation-menu.spec.ts` (جديدان)، و`e2e/mobile.spec.ts`.
 
 التعديل: «Long press on a conversation: pin, mute, favourite, nickname, delete for me»
+
+### 114. الصور تُفتح داخل الموقع، مع زر «حفظ»
+**ما تغيّر:**
+- **صورة في المحادثة:** الضغط عليها يفتحها كبيرة فوق المحادثة، داخل الموقع، بدل نقلك إلى رابط الصورة خارجه.
+  - الضغط على الصورة يكبّرها إلى حجمها الكامل ويمكن تحريكها، والضغط مرة أخرى يعيدها.
+  - **زر «حفظ»:** ينزّل الصورة دون مغادرة المحادثة. وعلى الهاتف يفتح قائمة المشاركة، وفيها «حفظ الصورة» إلى معرض الصور.
+  - الإغلاق: زر ✕، أو الضغط بجانب الصورة، أو زر الرجوع في الهاتف.
+- **صورة الحساب:** في صفحة اللاعب وفي «ملفي الشخصي»، الضغط عليها يكبّرها بالطريقة نفسها، **بلا زر حفظ** ولا «حفظ الصورة» بالضغط المطوّل.
+
+الملفات: `src/components/ui/media-viewer.tsx`، `src/components/ui/avatar-viewer.tsx` (جديدان)، `src/components/messages/thread.tsx`، `src/components/player/player-summary.tsx`، `src/app/[locale]/profile/page.tsx`، والنصوص في `messages/`. الاختبارات: `e2e/messages.spec.ts`، `e2e/profile.spec.ts`.
+
+**لا يحتاج** أي ملف SQL.
+
+التعديل: «Pictures open inside the site, with Save; profile pictures enlarge without it»

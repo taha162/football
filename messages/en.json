@@ -2528,5 +2528,15 @@
       "headset": "The sound is in the headphones connected to the phone.",
       "failed": "The phone didn't switch the speaker. Try again."
     }
+  },
+  "media": {
+    "viewer": "Media viewer",
+    "close": "Close",
+    "zoom": "Zoom in",
+    "fit": "Fit to screen",
+    "save": "Save",
+    "saveFailed": "Couldn't save it. Try again.",
+    "profilePicture": "{name}'s picture",
+    "openProfilePicture": "Enlarge {name}'s picture"
   }
 }

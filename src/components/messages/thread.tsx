@@ -14,6 +14,7 @@ import { formatDuration } from "@/lib/duration";
 import { editMessage, markConversationReadAction } from "@/server/messages";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/field";
+import { MediaViewer, type ViewedMedia } from "@/components/ui/media-viewer";
 import { Composer } from "./composer";
 import { LocationCard } from "./location-card";
 import { MessageMenu } from "./message-menu";
@@ -79,6 +80,9 @@ interface PendingMessage {
 }
 
 /** When a message last changed: sent, edited or deleted. */
+/** «حفظ»'s file name: the site's name and the message, with the file's own type. */
+const savedName = (id: number, path: string | null | undefined) => `almalab-${id}.${path?.split(".").pop() ?? "jpg"}`;
+
 const changedAt = (m: ThreadMessage) => Math.max(Date.parse(m.created_at), Date.parse(m.edited_at ?? "") || 0, Date.parse(m.deleted_at ?? "") || 0);
 
 /** A deleted message keeps nothing of what it carried. */
@@ -153,6 +157,8 @@ export function Thread({
   const [draft, setDraft] = useState("");
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+  // A picture opened over the conversation (not in a new tab), with «حفظ».
+  const [viewing, setViewing] = useState<ViewedMedia | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const opened = useRef(false);
   // Whether the newest message is in view: then new ones (and a smaller screen, the keyboard) keep it so.
@@ -476,10 +482,15 @@ export function Thread({
                       )
                     ) : null}
                     {m.image_url && !m.deleted_at ? (
-                      <a href={m.image_url} target="_blank" rel="noopener noreferrer" aria-label={t("openImage")} className="block overflow-hidden rounded-2xl border border-line">
+                      <button
+                        type="button"
+                        onClick={() => setViewing({ kind: "image", src: m.image_url!, alt: t("imageAlt"), saveAs: savedName(m.id, m.image_path) })}
+                        aria-label={t("openImage")}
+                        className="block overflow-hidden rounded-2xl border border-line"
+                      >
                         {/* eslint-disable-next-line @next/next/no-img-element -- private, signed, short-lived link */}
                         <img src={m.image_thumb_url ?? m.image_url} alt={t("imageAlt")} loading="lazy" className="max-h-72 w-auto max-w-full object-contain" />
-                      </a>
+                      </button>
                     ) : null}
                     {hasLocation ? <LocationCard lat={m.location_lat!} lng={m.location_lng!} accuracy={m.location_accuracy ?? null} /> : null}
                     {m.voice_path && !m.deleted_at ? <VoiceNote src={m.voice_url ?? null} seconds={m.voice_seconds ?? 1} mine={mine} /> : null}
@@ -591,6 +602,7 @@ export function Thread({
           )}
         </div>
       </div>
+      <MediaViewer media={viewing} onClose={() => setViewing(null)} />
     </div>
   );
 }
