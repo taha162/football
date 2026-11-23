@@ -1,6 +1,6 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import type { Locale } from "@/i18n/routing";
-import { requireUser } from "@/lib/auth";
+import { getAccountStatus, requireUser } from "@/lib/auth";
 import { OPTIONAL_NOTIFICATION_TYPES } from "@/lib/notifications";
 import { isPhoneAccountEmail } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/server";
@@ -19,6 +19,7 @@ export default async function SettingsPage({ params }: PageProps<"/[locale]/sett
   const { locale } = await params;
   setRequestLocale(locale);
   const user = await requireUser(locale as Locale, "/settings");
+  const account = await getAccountStatus();
   const t = await getTranslations("settings");
   const nt = await getTranslations("notificationTypes");
   const supabase = await createClient();
@@ -46,7 +47,7 @@ export default async function SettingsPage({ params }: PageProps<"/[locale]/sett
                   ? []
                   : [
                       { label: t("email"), value: <span dir="ltr">{user.email}</span> },
-                      { label: t("emailStatus"), value: user.emailConfirmed ? t("confirmed") : t("unconfirmed") },
+                      { label: t("emailStatus"), value: account.emailConfirmed ? t("confirmed") : t("unconfirmed") },
                     ]),
                 ...(phone ? [{ label: t("phone"), value: <span dir="ltr">+{phone} · {t("phoneVerified")}</span> }] : []),
               ]}
@@ -66,7 +67,7 @@ export default async function SettingsPage({ params }: PageProps<"/[locale]/sett
       <Section title={t("secondFactor")} id="two-step">
         <Card>
           <CardBody>
-            <SecondFactorSettings enabled={user.secondFactor} />
+            <SecondFactorSettings enabled={account.secondFactor} />
           </CardBody>
         </Card>
       </Section>
