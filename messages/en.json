@@ -475,7 +475,10 @@
     "invalid_link": "The link must start with https://",
     "venue_without_location": "This venue has no place on the map.",
     "promo_media_unavailable": "Database file …0031 is not applied, so pictures, places and links can't be sent yet.",
-    "request_failed": "Couldn't send: the request didn't reach the site (the connection dropped, or the file was too large). What you wrote and chose is still here; please try again."
+    "request_failed": "Couldn't send: the request didn't reach the site (the connection dropped, or the file was too large). What you wrote and chose is still here; please try again.",
+    "pin_limit": "You can pin 3 conversations. Unpin one first.",
+    "invalid_nickname": "A nickname is 1 to 40 characters.",
+    "feature_not_ready": "This feature isn't on yet: it waits for a database update."
   },
   "validation": {
     "invalid": "Invalid value.",
@@ -1988,7 +1991,40 @@
     "callNoAnswer": "Call not answered",
     "back": "Back",
     "today": "Today",
-    "yesterday": "Yesterday"
+    "yesterday": "Yesterday",
+    "rowMenu": "Options for {name}",
+    "pin": "Pin conversation",
+    "unpin": "Unpin",
+    "pinned": "Pinned",
+    "mute": "Mute notifications",
+    "unmute": "Unmute",
+    "muted": "Muted",
+    "muteTitle": "Mute for",
+    "muteBody": "Its messages won't light the messages dot or notify you. Unread ones still show in the list.",
+    "mute8h": "8 hours",
+    "muteWeek": "A week",
+    "muteAlways": "Always",
+    "favorite": "Add to favourites",
+    "unfavorite": "Remove from favourites",
+    "addNickname": "Add a nickname",
+    "editNickname": "Edit nickname",
+    "nicknameTitle": "Nickname",
+    "nicknameLabel": "Nickname",
+    "nicknameHint": "Only you see it, in place of the conversation's name.",
+    "removeNickname": "Remove nickname",
+    "deleteChat": "Delete conversation",
+    "deleteChatTitle": "Delete this conversation?",
+    "deleteChatBody": "It leaves your list and its earlier messages are hidden from you only. Nothing changes for anyone else, and it comes back with the next message.",
+    "filters": "Filter conversations",
+    "filter": {
+      "all": "All",
+      "unread": "Unread",
+      "favorites": "Favourites",
+      "groups": "Groups"
+    },
+    "emptyUnread": "No unread messages.",
+    "emptyFavorites": "No favourites yet. Press and hold a conversation to add it.",
+    "emptyGroups": "No group conversations yet."
   },
   "notificationsPage": {
     "title": "Notifications",

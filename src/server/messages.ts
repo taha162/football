@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getLocale } from "next-intl/server";
+import { z } from "zod";
 import { redirect } from "@/i18n/navigation";
 import { isLocale } from "@/i18n/routing";
 import { dbErrorCode, fail, ok, str, uuid, type ActionState } from "@/lib/actions";
@@ -117,6 +118,43 @@ export async function editMessage(messageId: number, body: string): Promise<{ ok
   const supabase = await createClient();
   const { error } = await supabase.rpc("edit_message", { p_message_id: messageId, p_body: text });
   if (error) return { ok: false, error: dbErrorCode(error, "edit_message") };
+  return { ok: true };
+}
+
+const prefChange = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("pin"), value: z.boolean() }),
+  // 8 hours, a week, always (-1), or unmute (0).
+  z.object({ kind: z.literal("mute"), hours: z.union([z.literal(0), z.literal(8), z.literal(168), z.literal(-1)]) }),
+  z.object({ kind: z.literal("favorite"), value: z.boolean() }),
+  z.object({ kind: z.literal("nickname"), value: z.string().max(40) }),
+  z.object({ kind: z.literal("clear") }),
+]);
+export type ConversationPrefChange = z.infer<typeof prefChange>;
+
+/**
+ * The member's own settings for a conversation, from a long press on it in the
+ * list (migration 0040): pin, mute, favourite, a nickname, or delete it for
+ * themselves. The database checks they belong to the conversation.
+ */
+export async function updateConversationPref(conversationId: string, change: ConversationPrefChange): Promise<{ ok: true } | { ok: false; error: string }> {
+  const id = uuid.safeParse(conversationId);
+  const parsed = prefChange.safeParse(change);
+  if (!id.success || !parsed.success) return { ok: false, error: "invalid" };
+  const v = parsed.data;
+  const p_conversation_id = id.data;
+  const supabase = await createClient();
+  const { error } =
+    v.kind === "pin"
+      ? await supabase.rpc("pin_conversation", { p_conversation_id, p_pinned: v.value })
+      : v.kind === "mute"
+        ? await supabase.rpc("mute_conversation", { p_conversation_id, p_hours: v.hours })
+        : v.kind === "favorite"
+          ? await supabase.rpc("favorite_conversation", { p_conversation_id, p_favorite: v.value })
+          : v.kind === "nickname"
+            ? await supabase.rpc("set_conversation_nickname", { p_conversation_id, p_nickname: v.value.trim() })
+            : await supabase.rpc("clear_conversation", { p_conversation_id });
+  if (error) return { ok: false, error: dbErrorCode(error, `conversation_${v.kind}`) };
+  revalidatePath("/[locale]/messages", "layout");
   return { ok: true };
 }
 

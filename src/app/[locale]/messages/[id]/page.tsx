@@ -54,13 +54,20 @@ export default async function ConversationPage({ params, searchParams }: PagePro
   const t = await getTranslations("messages");
   const supabase = await createClient();
   // RLS: returns nothing unless the caller currently belongs to the conversation.
-  const { data: conv } = await supabase.from("conversations").select("*").eq("id", id).maybeSingle();
+  // With it, the member's own settings: a nickname, and when they deleted it for themselves (migration 0040;
+  // before that update the second request fails and changes nothing).
+  const [{ data: conv }, { data: pref }] = await Promise.all([
+    supabase.from("conversations").select("*").eq("id", id).maybeSingle(),
+    supabase.from("conversation_prefs").select("nickname, cleared_at").eq("conversation_id", id).eq("user_id", user.id).maybeSingle(),
+  ]);
   if (!conv) notFound();
   const before = Number((await searchParams).before);
   // Every column: members see the whole message, and a database without the
   // newest columns still loads (they are simply absent).
   let q = supabase.from("messages").select("*").eq("conversation_id", id).order("id", { ascending: false }).limit(PAGE + 1);
   if (Number.isSafeInteger(before) && before > 0) q = q.lt("id", before);
+  // Deleted for themselves: what came before stays hidden from them.
+  if (pref?.cleared_at) q = q.gt("created_at", pref.cleared_at);
   const { data: rows } = await q;
   const hasOlder = (rows ?? []).length > PAGE;
   const page = (rows ?? []).slice(0, PAGE).reverse();
@@ -108,6 +115,8 @@ export default async function ConversationPage({ params, searchParams }: PagePro
     title = other?.profile?.display_name ?? title;
     if (other) peer = { id: other.user_id, name: other.profile?.display_name ?? title, avatarUrl: publicStorageUrl("avatars", other.profile?.avatar_path) };
   }
+  // The member's own name for it, shown to them only.
+  if (pref?.nickname) title = pref.nickname;
 
   // Round, quiet buttons for the bar: back, call, open.
   const barButton = "ripple flex size-11 shrink-0 items-center justify-center rounded-full text-ink transition-colors hover:bg-surface-2";

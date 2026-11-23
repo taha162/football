@@ -223,6 +223,32 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"conversation_prefs": {
+                  Row: {
+                    "cleared_at": string | null,"conversation_id": string,"favorite": boolean,"muted_until": string | null,"nickname": string | null,"pinned_at": string | null,"updated_at": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "cleared_at"?: string | null,"conversation_id": string,"favorite"?: boolean,"muted_until"?: string | null,"nickname"?: string | null,"pinned_at"?: string | null,"updated_at"?: string,"user_id": string
+                  }
+                  Update: {
+                    "cleared_at"?: string | null,"conversation_id"?: string,"favorite"?: boolean,"muted_until"?: string | null,"nickname"?: string | null,"pinned_at"?: string | null,"updated_at"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "conversation_prefs_conversation_id_fkey"
+      columns: ["conversation_id"]
+isOneToOne: false
+      referencedRelation: "conversations"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "conversation_prefs_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"conversation_reads": {
                   Row: {
                     "conversation_id": string,"last_read_at": string,"user_id": string
@@ -1558,6 +1584,9 @@ isOneToOne: true
 "cancel_match":
 { Args: { "p_match_id": string,"p_reason"?: string }; Returns: undefined
                            },
+"clear_conversation":
+{ Args: { "p_conversation_id": string }; Returns: undefined
+                           },
 "close_opponent_request":
 { Args: { "p_request_id": string }; Returns: undefined
                            },
@@ -1621,6 +1650,9 @@ isOneToOne: true
 "entity_conversation_id":
 { Args: { "p_entity_id": string,"p_kind": Database["public"]['Enums']["conversation_kind"] }; Returns: string
                            },
+"favorite_conversation":
+{ Args: { "p_conversation_id": string,"p_favorite": boolean }; Returns: undefined
+                           },
 "field_busy_intervals":
 { Args: { "p_field_id": string,"p_local_date": string }; Returns: {
               "ends_at": string,"starts_at": string
@@ -1667,9 +1699,12 @@ isOneToOne: true
 "match_transition_allowed":
 { Args: { "p_from": Database["public"]['Enums']["match_status"],"p_to": Database["public"]['Enums']["match_status"] }; Returns: boolean
                            },
+"mute_conversation":
+{ Args: { "p_conversation_id": string,"p_hours": number }; Returns: undefined
+                           },
 "my_conversations":
 { Args: { "p_limit"?: number }; Returns: {
-              "conversation_id": string,"is_locked": boolean,"kind": Database["public"]['Enums']["conversation_kind"],"last_kind": string,"last_message": string,"last_message_at": string,"ref_id": string,"title": string,"unread_count": number
+              "conversation_id": string,"favorite": boolean,"is_locked": boolean,"kind": Database["public"]['Enums']["conversation_kind"],"last_kind": string,"last_message": string,"last_message_at": string,"muted": boolean,"nickname": string,"pinned": boolean,"ref_id": string,"title": string,"unread_count": number
             }[]
                            },
 "my_phone":
@@ -1690,6 +1725,9 @@ isOneToOne: true
                            },
 "phone_verify_start":
 { Args: { "p_client_key": string,"p_code": string,"p_phone"?: string,"p_purpose": Database["public"]['Enums']["phone_verify_purpose"],"p_ticket_hash": string,"p_user_id": string }; Returns: string
+                           },
+"pin_conversation":
+{ Args: { "p_conversation_id": string,"p_pinned": boolean }; Returns: undefined
                            },
 "player_reputation":
 { Args: { "p_user_id": string }; Returns: Json
@@ -1832,6 +1870,9 @@ isOneToOne: true
                            },
 "send_message":
 { Args: { "p_body": string,"p_conversation_id": string,"p_image_path"?: string,"p_location_accuracy"?: number,"p_location_lat"?: number,"p_location_lng"?: number,"p_voice_path"?: string,"p_voice_seconds"?: number }; Returns: number
+                           },
+"set_conversation_nickname":
+{ Args: { "p_conversation_id": string,"p_nickname": string }; Returns: undefined
                            },
 "set_field_pricing_rules":
 { Args: { "p_field_id": string,"p_rules": Json }; Returns: undefined
