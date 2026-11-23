@@ -9,6 +9,7 @@ import { prefersReducedMotion } from "@/components/motion/scroll";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { getBrowserClient, getRealtimeClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/cn";
+import { thumbPathOf } from "@/lib/message-thumb";
 import { formatDuration } from "@/lib/duration";
 import { editMessage, markConversationReadAction } from "@/server/messages";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,8 @@ export interface ThreadMessage {
   image_path?: string | null;
   /** Short-lived signed link to the picture, when there is one. */
   image_url?: string | null;
+  /** The picture's small copy, shown in the conversation (none for pictures sent before small copies existed). */
+  image_thumb_url?: string | null;
   location_lat?: number | null;
   location_lng?: number | null;
   location_accuracy?: number | null;
@@ -85,6 +88,7 @@ const erased = (m: ThreadMessage, at: string): ThreadMessage => ({
   body: "",
   image_path: null,
   image_url: null,
+  image_thumb_url: null,
   location_lat: null,
   location_lng: null,
   voice_path: null,
@@ -250,8 +254,10 @@ export function Thread({
             const msg = payload.new as ThreadMessage;
             // Live messages carry the files' paths only; sign them with the member's session.
             if (msg.image_path && !msg.image_url) {
-              const { data } = await supabase.storage.from("message-images").createSignedUrl(msg.image_path, 3600);
-              msg.image_url = data?.signedUrl ?? null;
+              const thumb = thumbPathOf(msg.image_path);
+              const { data } = await supabase.storage.from("message-images").createSignedUrls([msg.image_path, thumb], 3600);
+              msg.image_url = data?.find((s) => s.path === msg.image_path)?.signedUrl ?? null;
+              msg.image_thumb_url = data?.find((s) => s.path === thumb)?.signedUrl ?? null;
             }
             if (msg.voice_path && !msg.voice_url) {
               const { data } = await supabase.storage.from("message-voice").createSignedUrl(msg.voice_path, 3600);
@@ -472,7 +478,7 @@ export function Thread({
                     {m.image_url && !m.deleted_at ? (
                       <a href={m.image_url} target="_blank" rel="noopener noreferrer" aria-label={t("openImage")} className="block overflow-hidden rounded-2xl border border-line">
                         {/* eslint-disable-next-line @next/next/no-img-element -- private, signed, short-lived link */}
-                        <img src={m.image_url} alt={t("imageAlt")} loading="lazy" className="max-h-72 w-auto max-w-full object-contain" />
+                        <img src={m.image_thumb_url ?? m.image_url} alt={t("imageAlt")} loading="lazy" className="max-h-72 w-auto max-w-full object-contain" />
                       </a>
                     ) : null}
                     {hasLocation ? <LocationCard lat={m.location_lat!} lng={m.location_lng!} accuracy={m.location_accuracy ?? null} /> : null}

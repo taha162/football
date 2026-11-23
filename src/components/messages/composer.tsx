@@ -10,7 +10,8 @@ import { Alert } from "@/components/ui/primitives";
 import { cn } from "@/lib/cn";
 import { formatDistance, formatDuration } from "@/lib/duration";
 import type { SharedPoint } from "@/lib/geo";
-import { shrinkImage } from "@/lib/shrink-image";
+import { THUMB_MAX_SIDE } from "@/lib/message-thumb";
+import { makeThumbnail, shrinkImage } from "@/lib/shrink-image";
 import { sendMessageAction } from "@/server/messages";
 import { LocationMap } from "./location-map";
 
@@ -76,6 +77,8 @@ function TextComposer({
 }) {
   const t = useTranslations("messages");
   const fileInput = useRef<HTMLInputElement>(null);
+  // The picture's small copy, sent alongside it (lib/message-thumb.ts).
+  const thumbInput = useRef<HTMLInputElement>(null);
   const box = useRef<HTMLTextAreaElement>(null);
   // Written since a text message left the box. React empties the form once
   // sending ends, whatever the answer, and the form clears itself again just
@@ -127,6 +130,7 @@ function TextComposer({
 
   const clear = () => {
     if (fileInput.current) fileInput.current.value = "";
+    if (thumbInput.current) thumbInput.current.value = "";
     setPreview((old) => {
       if (old) URL.revokeObjectURL(old);
       return null;
@@ -213,6 +217,13 @@ function TextComposer({
                   list.items.add(small);
                   input.files = list.files;
                 }
+                // And a small copy for the conversation to show (it opens the picture itself).
+                const thumb = await makeThumbnail(small, THUMB_MAX_SIDE);
+                if (thumbInput.current) {
+                  const list = new DataTransfer();
+                  if (thumb) list.items.add(thumb);
+                  thumbInput.current.files = list.files;
+                }
                 setPreview((old) => {
                   if (old) URL.revokeObjectURL(old);
                   return URL.createObjectURL(small);
@@ -220,6 +231,7 @@ function TextComposer({
               }}
             />
           </label>
+          <input ref={thumbInput} type="file" name="image_thumb" accept="image/jpeg" className="hidden" tabIndex={-1} aria-hidden="true" />
         </div>
         <div className={hasText ? "hidden" : "flex shrink-0 items-end gap-1 min-[360px]:gap-1.5"}>
           <button type="button" className={tool} title={t("shareLocation")} aria-label={t("shareLocation")} onClick={() => onMode("location")}>

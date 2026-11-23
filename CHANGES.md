@@ -1891,3 +1891,18 @@
 الاختبار: `tests/db/name-search.test.ts` (جديد).
 
 التعديل: «Name search that uses an index»
+
+### 104. صفحة المحادثة أخف: عنوانها وحده، وصور مصغّرة
+**ما تغيّر:**
+- **العنوان:** كانت صفحة المحادثة تحمّل قائمة كل محادثات العضو (حتى 200) لتعرف عنوان محادثة واحدة. صارت تسأل عن عنوانها وحدها.
+- **الصور:**
+  - كانت تُعرض بحجمها الكامل (حتى 1600 بكسل) في مكان ارتفاعه 288 بكسل.
+  - صار المتصفح يصنع مع كل صورة نسخة صغيرة (640 بكسل) تُرفع بجانبها. المحادثة تعرض الصغيرة، والضغط عليها يفتح الأصلية.
+  - الصور القديمة بلا نسخة صغيرة تُعرض كما كانت.
+  - النسخة الصغيرة تُحذف مع صورتها.
+
+الملفات: `src/app/[locale]/messages/[id]/page.tsx`، `src/components/messages/thread.tsx` و`composer.tsx`، `src/server/messages.ts`، `src/lib/message-thumb.ts` (جديد) و`message-files.ts` و`shrink-image.ts`. الاختبار: `e2e/messages.spec.ts`.
+
+**لا يحتاج** أي ملف SQL.
+
+التعديل: «The conversation page: its own title only, and small copies of pictures»

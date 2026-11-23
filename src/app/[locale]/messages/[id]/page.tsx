@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import type { Locale } from "@/i18n/routing";
 import { requireOnboardedUser } from "@/lib/auth";
+import { thumbPathOf } from "@/lib/message-thumb";
 import { publicStorageUrl } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 import { CallButton } from "@/components/calls/call-button";
@@ -15,6 +16,36 @@ import { buttonClass } from "@/components/ui/button";
 import { LinkButton } from "@/components/ui/link-button";
 
 const PAGE = 100;
+
+type Supabase = Awaited<ReturnType<typeof createClient>>;
+type Conversation = { kind: string; match_id: string | null; team_id: string | null; booking_id: string | null; tournament_id: string | null; challenge_id: string | null };
+
+/**
+ * A group conversation's name: the match, team, tournament, venue of the booking,
+ * or the two teams of a challenge. One small request for this conversation only
+ * (the page used to load the member's whole list of conversations for it).
+ * One-to-one conversations are named after the other person (below).
+ */
+async function conversationTitle(supabase: Supabase, c: Conversation): Promise<string | null> {
+  if (c.match_id) return (await supabase.from("matches").select("title").eq("id", c.match_id).maybeSingle()).data?.title ?? null;
+  if (c.team_id) return (await supabase.from("teams").select("name").eq("id", c.team_id).maybeSingle()).data?.name ?? null;
+  if (c.tournament_id) return (await supabase.from("tournaments").select("name").eq("id", c.tournament_id).maybeSingle()).data?.name ?? null;
+  if (c.booking_id) {
+    const { data } = await supabase.from("bookings").select("venue:venues!bookings_venue_id_fkey(name)").eq("id", c.booking_id).maybeSingle();
+    return (data?.venue as { name: string } | null)?.name ?? null;
+  }
+  if (c.challenge_id) {
+    const { data } = await supabase
+      .from("opponent_challenges")
+      .select("challenger:teams!opponent_challenges_challenger_team_id_fkey(name), target:teams!opponent_challenges_target_team_id_fkey(name)")
+      .eq("id", c.challenge_id)
+      .maybeSingle();
+    const a = (data?.challenger as { name: string } | null)?.name;
+    const b = (data?.target as { name: string } | null)?.name;
+    return a && b ? `${a} – ${b}` : null;
+  }
+  return null;
+}
 
 export default async function ConversationPage({ params, searchParams }: PageProps<"/[locale]/messages/[id]">) {
   const { locale, id } = await params;
@@ -40,22 +71,23 @@ export default async function ConversationPage({ params, searchParams }: PagePro
     return new Map((data ?? []).flatMap((s) => (s.path && s.signedUrl ? [[s.path, s.signedUrl] as const] : [])));
   };
   const live = page.filter((m) => !m.deleted_at);
+  // Pictures with their small copies (shown in the conversation; older pictures have none) in one request.
+  const pictures = live.flatMap((m) => (m.image_path ? [m.image_path, thumbPathOf(m.image_path)] : []));
   const [imageUrls, voiceUrls] = await Promise.all([
-    sign("message-images", live.flatMap((m) => (m.image_path ? [m.image_path] : []))),
+    sign("message-images", pictures),
     sign("message-voice", live.flatMap((m) => (m.voice_path ? [m.voice_path] : []))),
   ]);
   const messages: ThreadMessage[] = page.map((m) => ({
     ...m,
     image_url: m.image_path ? (imageUrls.get(m.image_path) ?? null) : null,
+    image_thumb_url: m.image_path ? (imageUrls.get(thumbPathOf(m.image_path)) ?? null) : null,
     voice_url: m.voice_path ? (voiceUrls.get(m.voice_path) ?? null) : null,
   }));
   const senderIds = [...new Set(messages.map((m) => m.sender_id).filter(Boolean))] as string[];
   const { data: profiles } = senderIds.length ? await supabase.from("profiles").select("id, display_name").in("id", senderIds) : { data: [] };
   const names = Object.fromEntries((profiles ?? []).map((p) => [p.id, p.display_name]));
 
-  const { data: list } = await supabase.rpc("my_conversations", { p_limit: 200 });
-  const meta = (list ?? []).find((c) => c.conversation_id === conv.id);
-  let title = meta?.title ?? t(`kind.${conv.kind}`);
+  let title = (conv.kind === "direct" ? null : await conversationTitle(supabase, conv)) ?? t(`kind.${conv.kind}`);
   let link: string | null = null;
   if (conv.match_id) link = `/matches/${conv.match_id}`;
   else if (conv.team_id) link = `/teams/${conv.team_id}`;
@@ -73,7 +105,7 @@ export default async function ConversationPage({ params, searchParams }: PagePro
     ]);
     seenAt = read?.last_read_at ?? null;
     const other = members?.[0];
-    if (!meta?.title) title = other?.profile?.display_name ?? title;
+    title = other?.profile?.display_name ?? title;
     if (other) peer = { id: other.user_id, name: other.profile?.display_name ?? title, avatarUrl: publicStorageUrl("avatars", other.profile?.avatar_path) };
   }
 

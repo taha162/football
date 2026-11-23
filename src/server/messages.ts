@@ -8,11 +8,14 @@ import { dbErrorCode, fail, ok, str, uuid, type ActionState } from "@/lib/action
 import { readPoint } from "@/lib/geo";
 import { logger } from "@/lib/log";
 import { MESSAGE_IMAGES, MESSAGE_VOICE, removeMessageFiles } from "@/lib/message-files";
+import { thumbPathOf } from "@/lib/message-thumb";
 import { inspectAudio, inspectImage, randomFileName, UPLOAD_CACHE_SECONDS } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 const MAX_VOICE_SECONDS = 300;
+/** A picture's small copy is a few dozen kilobytes; anything much bigger isn't one. */
+const MAX_THUMB_BYTES = 400 * 1024;
 
 const fileOf = (fd: FormData, key: string): File | null => {
   const v = fd.get(key);
@@ -58,6 +61,17 @@ export async function sendMessageAction(_: ActionState, fd: FormData): Promise<A
       return fail("upload_failed");
     }
     stored = { bucket, path };
+    // The picture's small copy (made in the browser): optional, and never a reason for the message to fail.
+    const thumb = image ? fileOf(fd, "image_thumb") : null;
+    if (thumb && thumb.size <= MAX_THUMB_BYTES) {
+      const small = await inspectImage(thumb);
+      if (small.ok && small.mime === "image/jpeg") {
+        const { error: thumbError } = await admin.storage
+          .from(bucket)
+          .upload(thumbPathOf(path), small.bytes, { cacheControl: UPLOAD_CACHE_SECONDS, contentType: "image/jpeg", upsert: false });
+        if (thumbError) logger.warn("message_thumb_upload_failed", { message: thumbError.message.slice(0, 120) });
+      }
+    }
   }
 
   // Only what this message carries is sent, so plain text keeps working on a
@@ -70,7 +84,7 @@ export async function sendMessageAction(_: ActionState, fd: FormData): Promise<A
     ...(point ? { p_location_lat: point.lat, p_location_lng: point.lng, ...(point.accuracy !== null ? { p_location_accuracy: point.accuracy } : {}) } : {}),
   });
   if (error) {
-    if (stored) await createAdminClient()?.storage.from(stored.bucket).remove([stored.path]);
+    if (stored) await createAdminClient()?.storage.from(stored.bucket).remove(image ? [stored.path, thumbPathOf(stored.path)] : [stored.path]);
     return fail(dbErrorCode(error, "send_message"));
   }
   revalidatePath("/[locale]/messages", "layout");
