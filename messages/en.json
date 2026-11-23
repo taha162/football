@@ -61,7 +61,8 @@
     "tournamentDashboard": "My tournaments",
     "settings": "Settings",
     "admin": "Administration",
-    "accountMenu": "Account menu for {name}"
+    "accountMenu": "Account menu for {name}",
+    "friends": "My friends"
   },
   "footer": {
     "tagline": "A community for recreational football, in every governorate of Iraq.",
@@ -486,7 +487,8 @@
     "invalid_nickname": "A nickname is 1 to 40 characters.",
     "feature_not_ready": "This feature isn't on yet: it waits for a database update.",
     "invalid_username": "A username is 3 to 20 lower-case English letters, digits, _ and ., starting with a letter.",
-    "username_taken": "That username is taken; try another."
+    "username_taken": "That username is taken; try another.",
+    "cannot_friend_self": "You can't add yourself."
   },
   "validation": {
     "invalid": "Invalid value.",
@@ -615,7 +617,12 @@
     "campaign_started": "Sending has started. Messages go out slowly, in batches.",
     "campaign_stopped": "The campaign was stopped.",
     "whatsapp_resumed": "Sending resumed.",
-    "username_saved": "Username saved."
+    "username_saved": "Username saved.",
+    "friend_requested": "Friend request sent.",
+    "friend_added": "You're friends now.",
+    "friend_declined": "Request declined.",
+    "friend_request_cancelled": "Request cancelled.",
+    "friend_removed": "Removed from friends."
   },
   "notifications": {
     "generic": "You have a new update.",
@@ -672,7 +679,9 @@
     "booking_cancelled_refund": "{venue_name} cancelled your booking on {starts_at}. The venue will return your deposit.",
     "booking_deposit_refunded": "{venue_name} has returned your deposit for the booking on {starts_at}.",
     "missed_call": "Missed call from {caller_name}.",
-    "security_alert": "{kind, select, code_blocked {Security alert: repeated wrong codes} other {Security alert: repeated wrong passwords}}{has_account, select, yes { on the account {account}} other {}}, so signing in is paused for up to 15 minutes. Details in the audit log."
+    "security_alert": "{kind, select, code_blocked {Security alert: repeated wrong codes} other {Security alert: repeated wrong passwords}}{has_account, select, yes { on the account {account}} other {}}, so signing in is paused for up to 15 minutes. Details in the audit log.",
+    "friend_request": "{from_name} wants to be your friend.",
+    "friend_accepted": "{from_name} accepted your friend request."
   },
   "notificationTypes": {
     "match_participant_joined": "Someone joins my match",
@@ -688,7 +697,9 @@
     "team_match_scheduled": "New team fixtures",
     "new_message": "Direct and booking messages",
     "tournament_update": "Tournament updates",
-    "review_received": "Reviews received"
+    "review_received": "Reviews received",
+    "friend_request": "Friend requests",
+    "friend_accepted": "Your friend requests accepted"
   },
   "report": {
     "open": "Report",
@@ -2549,5 +2560,34 @@
     "saveFailed": "Couldn't save it. Try again.",
     "profilePicture": "{name}'s picture",
     "openProfilePicture": "Enlarge {name}'s picture"
+  },
+  "friends": {
+    "title": "Friends",
+    "description": "Add friends by username, and message them easily.",
+    "notReady": "Friends wait for a database update.",
+    "addTitle": "Add a friend",
+    "usernameLabel": "Your friend's username",
+    "usernamePlaceholder": "username",
+    "search": "Search",
+    "result": "Search result",
+    "noOne": "No member has the username @{username}.",
+    "addHint": "Type the username as it shows on your friend's page, like ahmed_10.",
+    "incoming": "Friend requests ({count})",
+    "friendsTitle": "My friends ({count})",
+    "sent": "Requests you sent ({count})",
+    "empty": "No friends yet.",
+    "emptyBody": "Find a friend by username above and send a request.",
+    "add": "Add friend",
+    "requestSent": "Request sent",
+    "cancelRequest": "Cancel request",
+    "accept": "Accept",
+    "decline": "Decline",
+    "isFriend": "Friend",
+    "message": "Message",
+    "isYou": "That's you",
+    "cantAdd": "Can't be added",
+    "remove": "Remove",
+    "removeTitle": "Remove {name} from your friends?",
+    "removeBody": "Your conversations stay as they are, and either of you can send a new request later."
   }
 }

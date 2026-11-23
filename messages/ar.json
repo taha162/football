@@ -61,7 +61,8 @@
     "tournamentDashboard": "بطولاتي",
     "settings": "الإعدادات",
     "admin": "الإدارة",
-    "accountMenu": "قائمة حساب {name}"
+    "accountMenu": "قائمة حساب {name}",
+    "friends": "أصدقائي"
   },
   "footer": {
     "tagline": "مجتمع لكرة القدم الترفيهية في كل محافظات العراق.",
@@ -486,7 +487,8 @@
     "invalid_nickname": "الكنية من حرف إلى 40 حرفاً.",
     "feature_not_ready": "هذه الميزة لم تُفعَّل بعد: تنتظر تحديث قاعدة البيانات.",
     "invalid_username": "اسم المستخدم من 3 إلى 20: حروف إنجليزية صغيرة وأرقام و _ و . ويبدأ بحرف.",
-    "username_taken": "اسم المستخدم مأخوذ، جرّب غيره."
+    "username_taken": "اسم المستخدم مأخوذ، جرّب غيره.",
+    "cannot_friend_self": "لا يمكنك إضافة نفسك."
   },
   "validation": {
     "invalid": "قيمة غير صالحة.",
@@ -615,7 +617,12 @@
     "campaign_started": "بدأ الإرسال. تُرسل الرسائل ببطء على دفعات.",
     "campaign_stopped": "أُوقفت الحملة.",
     "whatsapp_resumed": "استُؤنف الإرسال.",
-    "username_saved": "تم حفظ اسم المستخدم."
+    "username_saved": "تم حفظ اسم المستخدم.",
+    "friend_requested": "تم إرسال طلب الصداقة.",
+    "friend_added": "أصبحتما صديقين.",
+    "friend_declined": "تم رفض الطلب.",
+    "friend_request_cancelled": "تم إلغاء الطلب.",
+    "friend_removed": "تمت الإزالة من الأصدقاء."
   },
   "notifications": {
     "generic": "لديك تحديث جديد.",
@@ -672,7 +679,9 @@
     "booking_cancelled_refund": "ألغى {venue_name} حجزك يوم {starts_at}، وسيُرجع لك العربون.",
     "booking_deposit_refunded": "أرجع {venue_name} عربون حجزك يوم {starts_at}.",
     "missed_call": "مكالمة فائتة من {caller_name}.",
-    "security_alert": "{kind, select, code_blocked {تنبيه أمني: رموز تحقق خاطئة متكررة} other {تنبيه أمني: كلمات مرور خاطئة متكررة}}{has_account, select, yes { على الحساب {account}} other {}}، فأُوقف تسجيل الدخول حتى 15 دقيقة. التفاصيل في سجل التدقيق."
+    "security_alert": "{kind, select, code_blocked {تنبيه أمني: رموز تحقق خاطئة متكررة} other {تنبيه أمني: كلمات مرور خاطئة متكررة}}{has_account, select, yes { على الحساب {account}} other {}}، فأُوقف تسجيل الدخول حتى 15 دقيقة. التفاصيل في سجل التدقيق.",
+    "friend_request": "{from_name} يريد أن يكون صديقك.",
+    "friend_accepted": "{from_name} قبل طلب صداقتك."
   },
   "notificationTypes": {
     "match_participant_joined": "انضمام لاعب لمباراتي",
@@ -688,7 +697,9 @@
     "team_match_scheduled": "مباريات الفريق الجديدة",
     "new_message": "الرسائل المباشرة ورسائل الحجوزات",
     "tournament_update": "تحديثات البطولات",
-    "review_received": "التقييمات الواردة"
+    "review_received": "التقييمات الواردة",
+    "friend_request": "طلبات الصداقة",
+    "friend_accepted": "قبول طلبات صداقتك"
   },
   "report": {
     "open": "إبلاغ",
@@ -2549,5 +2560,34 @@
     "saveFailed": "تعذّر الحفظ. حاول مرة أخرى.",
     "profilePicture": "صورة {name}",
     "openProfilePicture": "تكبير صورة {name}"
+  },
+  "friends": {
+    "title": "الأصدقاء",
+    "description": "أضف أصدقاءك باسم المستخدم، وراسلهم بسهولة.",
+    "notReady": "الأصدقاء ينتظرون تحديث قاعدة البيانات.",
+    "addTitle": "إضافة صديق",
+    "usernameLabel": "اسم مستخدم صديقك",
+    "usernamePlaceholder": "اسم المستخدم",
+    "search": "بحث",
+    "result": "نتيجة البحث",
+    "noOne": "لا يوجد عضو باسم المستخدم @{username}.",
+    "addHint": "اكتب اسم المستخدم كما يظهر في صفحة صديقك، مثل ahmed_10.",
+    "incoming": "طلبات الصداقة ({count})",
+    "friendsTitle": "أصدقائي ({count})",
+    "sent": "طلبات أرسلتها ({count})",
+    "empty": "لا أصدقاء بعد.",
+    "emptyBody": "ابحث عن صديقك باسم المستخدم في الأعلى، وأرسل له طلباً.",
+    "add": "إضافة صديق",
+    "requestSent": "تم إرسال الطلب",
+    "cancelRequest": "إلغاء الطلب",
+    "accept": "قبول",
+    "decline": "رفض",
+    "isFriend": "صديقك",
+    "message": "مراسلة",
+    "isYou": "هذا أنت",
+    "cantAdd": "لا يمكن إضافته",
+    "remove": "إزالة",
+    "removeTitle": "إزالة {name} من الأصدقاء؟",
+    "removeBody": "تبقى محادثاتكما كما هي، ويمكن لأي منكما إرسال طلب جديد لاحقاً."
   }
 }

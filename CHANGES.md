@@ -2084,3 +2084,25 @@
 الملفات: `src/components/forms/username-field.tsx`، `src/lib/username.ts`، `src/lib/username-server.ts`، `src/server/username.ts` (جديدة)، `src/server/auth.ts`، `src/server/whatsapp.ts`، `src/components/auth/auth-forms.tsx`، `src/lib/profile-columns.ts`، `src/lib/auth.ts`، `src/app/[locale]/settings/page.tsx`، `src/components/layout/user-menu.tsx`، `src/components/player/player-summary.tsx`، `src/app/[locale]/profile/page.tsx`، والنصوص في `messages/`. الاختبارات: `tests/db/usernames.test.ts` (جديد)، `tests/db/security.test.ts`، `e2e/players.spec.ts`، واختبارات التسجيل في `e2e/verification.spec.ts` و`e2e/whatsapp.spec.ts`.
 
 التعديل: «Usernames: one per member, unlike any other»
+
+### 116. الأصدقاء باسم المستخدم، وصفحة «الأصدقاء»
+**ما تغيّر:**
+- **صفحة جديدة «الأصدقاء»** (`/friends`)، من قائمة الحساب ← «أصدقائي».
+  - **إضافة صديق:** تكتب اسم المستخدم (مع @ أو بدونها، بحروف كبيرة أو صغيرة) فيظهر العضو، وبجانبه «إضافة صديق».
+  - **طلبات الصداقة:** ما وصلك، مع «قبول» و«رفض».
+  - **أصدقائي:** كل صديق مع «مراسلة» و«إزالة» (تسأل قبل الإزالة).
+  - **طلبات أرسلتها:** مع «إلغاء الطلب».
+- **صفحة اللاعب:** زر «إضافة صديق»، أو حالتكما الآن: «تم إرسال الطلب»، «قبول»، «صديقك».
+- **الإشعارات:** «فلان يريد أن يكون صديقك» و«فلان قبل طلب صداقتك»، وتفتحان صفحة الأصدقاء. ويمكن إيقاف كل منهما من «الإعدادات».
+- **القواعد** (تحفظها قاعدة البيانات، لا الصفحة):
+  - إذا كان الآخر قد أرسل لك طلباً ثم أرسلت له، تصبحان صديقين مباشرة.
+  - لا طلب صداقة بين عضوين حظر أحدهما الآخر، والحظر ينهي الصداقة القائمة.
+  - 30 طلباً في اليوم لكل عضو (الإعداد `friends.max_requests_per_day`).
+  - لا يرى أحد قائمة أصدقاء غيره.
+
+**ملف قاعدة البيانات `…0042_friends.sql`:** جدول جديد للصداقات ودوالّه، ولا يغيّر جداول موجودة. تشغيله مرتين لا يضر.
+- قبل تشغيله: الصفحة تقول إن الميزة تنتظر التحديث، ولا يظهر زر الصداقة في صفحة اللاعب. باقي الموقع كما هو.
+
+الملفات: `src/app/[locale]/friends/page.tsx`، `src/components/friends/friend-actions.tsx`، `src/server/friends.ts` (جديدة)، `src/app/[locale]/players/[id]/page.tsx`، `src/components/layout/user-menu.tsx`، `src/lib/notifications.ts`، `src/lib/supabase/types.ts`، والنصوص في `messages/`. الاختبارات: `tests/db/friends.test.ts` و`e2e/friends.spec.ts` (جديدان)، `e2e/account-menu.spec.ts`، `e2e/mobile.spec.ts`.
+
+التعديل: «Friends by username, and a friends page»

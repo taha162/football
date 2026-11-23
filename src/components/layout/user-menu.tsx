@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { Building2, CalendarCheck, LayoutDashboard, LogOut, Settings, ShieldCheck, Trophy, UserRound, Users, type LucideIcon } from "lucide-react";
+import { Building2, CalendarCheck, LayoutDashboard, LogOut, Settings, ShieldCheck, Trophy, UserRound, Users, UsersRound, type LucideIcon } from "lucide-react";
 import { usePathname } from "@/i18n/navigation";
 import { signOutAction } from "@/server/auth";
 import { Avatar } from "@/components/ui/avatar";
@@ -161,6 +161,7 @@ export function UserMenu({
           </div>
           <Item href="/dashboard" icon={LayoutDashboard}>{t("dashboard")}</Item>
           <Item href="/profile" icon={UserRound}>{t("profile")}</Item>
+          <Item href="/friends" icon={UsersRound}>{t("friends")}</Item>
           <Item href="/my/teams" icon={Users}>{t("myTeams")}</Item>
           <Item href="/my/bookings" icon={CalendarCheck}>{t("myBookings")}</Item>
           <Item href="/settings" icon={Settings}>{t("settings")}</Item>

@@ -333,6 +333,38 @@ isOneToOne: true
                   Relationships: [
                     
                   ]
+                },"friendships": {
+                  Row: {
+                    "accepted_at": string | null,"created_at": string,"requested_by": string,"status": string,"user_a": string,"user_b": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "accepted_at"?: string | null,"created_at"?: string,"requested_by": string,"status"?: string,"user_a": string,"user_b": string
+                  }
+                  Update: {
+                    "accepted_at"?: string | null,"created_at"?: string,"requested_by"?: string,"status"?: string,"user_a"?: string,"user_b"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "friendships_requested_by_fkey"
+      columns: ["requested_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "friendships_user_a_fkey"
+      columns: ["user_a"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "friendships_user_b_fkey"
+      columns: ["user_b"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"match_events": {
                   Row: {
                     "created_at": string,"event_type": Database["public"]['Enums']["match_event_type"],"id": string,"match_id": string,"minute": number | null,"recorded_by": string | null,"team_side": Database["public"]['Enums']["team_side"] | null,"user_id": string
@@ -1581,6 +1613,9 @@ isOneToOne: true
 "cancel_booking":
 { Args: { "p_booking_id": string,"p_reason"?: string }; Returns: undefined
                            },
+"cancel_friend_request":
+{ Args: { "p_user_id": string }; Returns: undefined
+                           },
 "cancel_match":
 { Args: { "p_match_id": string,"p_reason"?: string }; Returns: undefined
                            },
@@ -1658,6 +1693,11 @@ isOneToOne: true
               "ends_at": string,"starts_at": string
             }[]
                            },
+"find_member":
+{ Args: { "p_username": string }; Returns: {
+              "avatar_path": string,"display_name": string,"id": string,"relation": string,"username": string
+            }[]
+                           },
 "free_start_times":
 { Args: { "p_duration_minutes": number,"p_field_id": string,"p_local_date": string }; Returns: {
               "start_local": string,"starts_at": string
@@ -1707,6 +1747,11 @@ isOneToOne: true
               "conversation_id": string,"favorite": boolean,"is_locked": boolean,"kind": Database["public"]['Enums']["conversation_kind"],"last_kind": string,"last_message": string,"last_message_at": string,"muted": boolean,"nickname": string,"pinned": boolean,"ref_id": string,"title": string,"unread_count": number
             }[]
                            },
+"my_friends":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "avatar_path": string,"display_name": string,"relation": string,"since": string,"user_id": string,"username": string
+            }[]
+                           },
 "my_phone":
 { Args: Record<PropertyKey, never>; Returns: string
                            },
@@ -1750,6 +1795,9 @@ isOneToOne: true
 "register_tournament_team":
 { Args: { "p_team_id": string,"p_tournament_id": string }; Returns: string
                            },
+"remove_friend":
+{ Args: { "p_user_id": string }; Returns: undefined
+                           },
 "remove_match_participant":
 { Args: { "p_participant_id": string,"p_reason"?: string }; Returns: undefined
                            },
@@ -1779,6 +1827,9 @@ isOneToOne: true
                            },
 "respond_challenge":
 { Args: { "p_accept": boolean,"p_challenge_id": string }; Returns: string
+                           },
+"respond_friend_request":
+{ Args: { "p_accept": boolean,"p_user_id": string }; Returns: undefined
                            },
 "respond_match_invitation":
 { Args: { "p_accept": boolean,"p_invitation_id": string,"p_position"?: Database["public"]['Enums']["player_position"] }; Returns: Json
@@ -1867,6 +1918,9 @@ isOneToOne: true
                            },
 "send_challenge":
 { Args: { "p_challenger_team_id": string,"p_cost_per_team"?: number,"p_duration_minutes": number,"p_format"?: Database["public"]['Enums']["match_format"],"p_location_note"?: string,"p_message"?: string,"p_request_id"?: string,"p_start_local": string,"p_target_team_id"?: string,"p_venue_id"?: string }; Returns: string
+                           },
+"send_friend_request":
+{ Args: { "p_username": string }; Returns: string
                            },
 "send_message":
 { Args: { "p_body": string,"p_conversation_id": string,"p_image_path"?: string,"p_location_accuracy"?: number,"p_location_lat"?: number,"p_location_lng"?: number,"p_voice_path"?: string,"p_voice_seconds"?: number }; Returns: number

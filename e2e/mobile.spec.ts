@@ -24,7 +24,7 @@ test.describe("Mobile (Arabic, RTL)", () => {
     const account = page.getByRole("button", { name: `قائمة حساب ${player.name}` });
     await account.click();
     const menu = page.getByRole("menu");
-    await expect(menu.getByRole("menuitem")).toHaveText(["لوحتي", "ملفي الشخصي", "فرقي", "حجوزاتي", "الإعدادات", "تسجيل الخروج"]);
+    await expect(menu.getByRole("menuitem")).toHaveText(["لوحتي", "ملفي الشخصي", "أصدقائي", "فرقي", "حجوزاتي", "الإعدادات", "تسجيل الخروج"]);
     // On a phone the menu stays on the screen.
     const box = (await menu.boundingBox())!;
     expect(box.x).toBeGreaterThanOrEqual(0);
