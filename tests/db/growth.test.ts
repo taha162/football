@@ -46,4 +46,16 @@ describe("ready for growth", () => {
     expect(await errorOf(asUser(someone, "select public.run_retention_cleanup()"))).toMatch(/permission denied/);
   });
 
+  it("keeps the admin overview's numbers for 5 minutes, then works them out again", async () => {
+    const moderator = await createUser("Stats admin", { admin: true });
+    const first = await rpc<{ users: number; computed_at: string }>(moderator, "admin_stats");
+    expect(first.users).toBeGreaterThan(0);
+    const again = await rpc<{ computed_at: string }>(moderator, "admin_stats");
+    expect(again.computed_at).toBe(first.computed_at);
+    await admin("update private.admin_stats_cache set computed_at = now() - interval '6 minutes'");
+    const fresh = await rpc<{ users: number; computed_at: string }>(moderator, "admin_stats");
+    expect(Date.parse(fresh.computed_at)).toBeGreaterThan(Date.parse(first.computed_at));
+    const player = await createUser("Stats player");
+    expect(await errorOf(rpc(player, "admin_stats"))).toBe("forbidden");
+  });
 });

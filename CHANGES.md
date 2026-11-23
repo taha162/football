@@ -1972,3 +1972,15 @@
 الملفات: `src/app/api/cron/route.ts`. الاختبار: `tests/db/growth.test.ts`.
 
 التعديل: «Old notifications and old audit entries cleared away daily»
+
+### 109. أرقام لوحة الإدارة تُحسب كل 5 دقائق
+**ما تغيّر:**
+- كانت لوحة الإدارة تعدّ 14 شيئاً عبر أكبر الجداول في كل فتح، وهذا يأخذ ثواني عند ملايين الأسطر.
+- صارت النتيجة محفوظة 5 دقائق، وتُعدّ كما كانت بالضبط.
+- تحت الأرقام سطر يقول متى حُسبت آخر مرة.
+
+**ملف قاعدة البيانات `…0039_admin_stats_cache.sql`:** لا يغيّر بيانات أحد، وتشغيله مرتين لا يضر.
+
+الملفات: `src/app/[locale]/admin/page.tsx`، والنصوص في `messages/`. الاختبار: `tests/db/growth.test.ts`.
+
+التعديل: «The admin overview's numbers worked out at most every 5 minutes»

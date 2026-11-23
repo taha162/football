@@ -1314,6 +1314,7 @@
     "roleModerator": "Moderator",
     "overview": "Overview",
     "loadError": "Couldn't load statistics.",
+    "statsAsOf": "These numbers are worked out every 5 minutes, last at {time}.",
     "nav": {
       "label": "Administration sections",
       "overview": "Overview",
