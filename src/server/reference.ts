@@ -1,6 +1,5 @@
 import "server-only";
 import { cache } from "react";
-import { revalidateTag, unstable_cache } from "next/cache";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { publicEnv } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
@@ -10,43 +9,26 @@ export type City = Tables<"cities">;
 export type Area = Tables<"areas">;
 
 /**
- * Cities, areas and the public platform settings change only when an
- * administrator edits them, yet every page read them from the database. They
- * are kept on the server for an hour (unstable_cache, read as a visitor: only
- * what anyone may see), and dropped at once when an administrator saves a
- * change (revalidateReference, from src/server/admin.ts).
+ * Cities, areas and the public platform settings: read once per request
+ * (React cache), as a visitor (only what anyone may see), and never kept
+ * between requests, so a change shows on the next page however it is made:
+ * in the admin panel, with SQL, or by a migration. Each table holds a few
+ * dozen rows. (They were kept for an hour at first; the owner wanted changes
+ * made with SQL to show at once, CHANGES.md item 112.)
  */
-const REFERENCE_TAG = "reference";
+const makeGuestClient = () =>
+  createSupabaseClient<Database>(publicEnv.supabaseUrl, publicEnv.supabaseAnonKey, { auth: { persistSession: false, autoRefreshToken: false } });
+let guest: ReturnType<typeof makeGuestClient> | undefined;
 
+/** One client for these public reads, shared by every request: it carries no session. */
 function guestClient() {
-  return createSupabaseClient<Database>(publicEnv.supabaseUrl, publicEnv.supabaseAnonKey, { auth: { persistSession: false, autoRefreshToken: false } });
+  return (guest ??= makeGuestClient());
 }
 
-const cachedCities = unstable_cache(
-  async (): Promise<City[]> => (await guestClient().from("cities").select("*").eq("is_active", true).order("sort_order")).data ?? [],
-  ["reference-cities"],
-  { revalidate: 3600, tags: [REFERENCE_TAG] },
-);
-
-const cachedAreas = unstable_cache(
-  async (): Promise<Area[]> => (await guestClient().from("areas").select("*").eq("is_active", true).order("name_en")).data ?? [],
-  ["reference-areas"],
-  { revalidate: 3600, tags: [REFERENCE_TAG] },
-);
-
-const cachedPublicSettings = unstable_cache(
-  async (): Promise<Record<string, Json>> => {
-    const { data } = await guestClient().from("platform_settings").select("key, value").eq("is_public", true);
-    return Object.fromEntries((data ?? []).map((s) => [s.key, s.value]));
-  },
-  ["reference-public-settings"],
-  { revalidate: 3600, tags: [REFERENCE_TAG] },
-);
-
-/** After an administrator changes a city, an area or a setting: the next request reads them afresh. */
-export function revalidateReference() {
-  revalidateTag(REFERENCE_TAG, { expire: 0 });
-}
+const getPublicSettings = cache(async (): Promise<Record<string, Json>> => {
+  const { data } = await guestClient().from("platform_settings").select("key, value").eq("is_public", true);
+  return Object.fromEntries((data ?? []).map((s) => [s.key, s.value]));
+});
 
 /** A public platform setting as a number (the fallback when unset or not a number). */
 export async function publicSettingNumber(key: string, fallback: number): Promise<number> {
@@ -54,17 +36,19 @@ export async function publicSettingNumber(key: string, fallback: number): Promis
   return Number.isFinite(n) ? n : fallback;
 }
 
-const getPublicSettings = cache(() => cachedPublicSettings());
-
 /** How often open pages check for news, in seconds (platform setting live.check_seconds, 15 to 300; 90 if unset). */
 export const getLiveCheckSeconds = cache(async (): Promise<number> => {
   const n = await publicSettingNumber("live.check_seconds", 90);
   return Math.min(300, Math.max(15, Math.round(n)));
 });
 
-export const getCities = cache(() => cachedCities());
+export const getCities = cache(
+  async (): Promise<City[]> => (await guestClient().from("cities").select("*").eq("is_active", true).order("sort_order")).data ?? [],
+);
 
-export const getAreas = cache(() => cachedAreas());
+export const getAreas = cache(
+  async (): Promise<Area[]> => (await guestClient().from("areas").select("*").eq("is_active", true).order("name_en")).data ?? [],
+);
 
 export async function areaById(id: string | null | undefined): Promise<Area | undefined> {
   if (!id) return undefined;

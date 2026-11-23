@@ -578,10 +578,7 @@ select grantee, table_name, privilege_type from information_schema.role_table_gr
   - `retention.read_notifications_days` (180)
   - `retention.unread_notifications_days` (365)
   - `retention.audit_log_days` (730)
-- **الإعدادات والمدن والمناطق محفوظة على الخادم ساعة:**
-  - ما يُعدَّل من الإدارة يظهر فوراً.
-  - ما يُعدَّل بـSQL مباشرة يظهر خلال ساعة، ومنه …0034 (التحديث كل 90 ثانية).
-  - لإظهاره فوراً احفظ أي إعداد من الإدارة ← الإعدادات.
+- **أي تعديل على الإعدادات أو المدن أو المناطق يظهر فوراً،** من الإدارة أو بـSQL، ومنه …0034 (التحديث كل 90 ثانية).
 
 ### إعدادات Supabase (اختيارية، تزيد التوفير)
 

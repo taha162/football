@@ -1,6 +1,6 @@
 # Performance at scale (tier L) — 23 November 2026
 
-A second audit, for the scale the owner expects: more than 50,000 members and more than 5 million rows a year in the largest tables (messages, notifications, bookings). Everything below was measured on a local copy (production build, local Supabase stack), not on the deployed site. The Arabic change log has the same changes for the owner, one commit each (`CHANGES.md`, items 100–111). The first audit (6 November) follows this section unchanged.
+A second audit, for the scale the owner expects: more than 50,000 members and more than 5 million rows a year in the largest tables (messages, notifications, bookings). Everything below was measured on a local copy (production build, local Supabase stack), not on the deployed site. The Arabic change log has the same changes for the owner, one commit each (`CHANGES.md`, items 100–112). The first audit (6 November) follows this section unchanged.
 
 ## What a signed-in page view cost, before and after
 
@@ -39,7 +39,7 @@ Arabic works with the trigram indexes: the database is `en_US.UTF-8`, and an Ara
 | --- | --- | --- |
 | 101 | Live refresh every 90 s (was 30), ±10% per page; the messages list listens only to its own conversations (`in` filter, up to 100) | Each refresh is a full page render; an unfiltered `postgres_changes` listener on `messages` made Realtime check every new message against every listener |
 | 104 | Chat pictures shown as a 640 px copy made in the browser (`<name>.thumb.jpg` next to the picture) | The 1600 px original was downloaded to fill at most 288 px |
-| 105 | Cities, areas and public settings cached across requests (`unstable_cache`, one hour, dropped when an admin saves; a change made with SQL shows within the hour) | They were read from the database on almost every page |
+| 105, 112 | Cities, areas and public settings read once per request, as a visitor. Kept for an hour at first (105); changes made with SQL must show at once, so they are read on every request again (112): one small request on most pages, three where city and area lists show, each under 1 ms in the database | Several parts of a page read them, each on its own |
 | 108 | Daily cleanup: read notifications after 180 days, unread after 365, audit entries after 730 (settings) | Both tables grew without limit |
 | 109 | Admin overview counts kept 5 minutes | 14 `count(*)` over the largest tables per view |
 | 110 | Audit log paged by id (`?before=`) | Offset paging slows page by page |
