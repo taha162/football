@@ -807,14 +807,14 @@ isOneToOne: false
                   ]
                 },"profiles": {
                   Row: {
-                    "area_id": string | null,"avatar_path": string | null,"bio": string | null,"city_id": string | null,"created_at": string,"display_name": string,"id": string,"onboarded_at": string | null,"positions": (Database["public"]['Enums']["player_position"])[],"preferred_formats": (Database["public"]['Enums']["match_format"])[],"show_match_history": boolean,"skill_level": Database["public"]['Enums']["skill_level"] | null,"status": Database["public"]['Enums']["account_status"],"suspended_at": string | null,"suspension_reason": string | null,"updated_at": string
+                    "area_id": string | null,"avatar_path": string | null,"bio": string | null,"city_id": string | null,"created_at": string,"display_name": string,"id": string,"onboarded_at": string | null,"positions": (Database["public"]['Enums']["player_position"])[],"preferred_formats": (Database["public"]['Enums']["match_format"])[],"show_match_history": boolean,"skill_level": Database["public"]['Enums']["skill_level"] | null,"status": Database["public"]['Enums']["account_status"],"suspended_at": string | null,"suspension_reason": string | null,"updated_at": string,"username": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "area_id"?: string | null,"avatar_path"?: string | null,"bio"?: string | null,"city_id"?: string | null,"created_at"?: string,"display_name": string,"id": string,"onboarded_at"?: string | null,"positions"?: (Database["public"]['Enums']["player_position"])[],"preferred_formats"?: (Database["public"]['Enums']["match_format"])[],"show_match_history"?: boolean,"skill_level"?: Database["public"]['Enums']["skill_level"] | null,"status"?: Database["public"]['Enums']["account_status"],"suspended_at"?: string | null,"suspension_reason"?: string | null,"updated_at"?: string
+                    "area_id"?: string | null,"avatar_path"?: string | null,"bio"?: string | null,"city_id"?: string | null,"created_at"?: string,"display_name": string,"id": string,"onboarded_at"?: string | null,"positions"?: (Database["public"]['Enums']["player_position"])[],"preferred_formats"?: (Database["public"]['Enums']["match_format"])[],"show_match_history"?: boolean,"skill_level"?: Database["public"]['Enums']["skill_level"] | null,"status"?: Database["public"]['Enums']["account_status"],"suspended_at"?: string | null,"suspension_reason"?: string | null,"updated_at"?: string,"username": string
                   }
                   Update: {
-                    "area_id"?: string | null,"avatar_path"?: string | null,"bio"?: string | null,"city_id"?: string | null,"created_at"?: string,"display_name"?: string,"id"?: string,"onboarded_at"?: string | null,"positions"?: (Database["public"]['Enums']["player_position"])[],"preferred_formats"?: (Database["public"]['Enums']["match_format"])[],"show_match_history"?: boolean,"skill_level"?: Database["public"]['Enums']["skill_level"] | null,"status"?: Database["public"]['Enums']["account_status"],"suspended_at"?: string | null,"suspension_reason"?: string | null,"updated_at"?: string
+                    "area_id"?: string | null,"avatar_path"?: string | null,"bio"?: string | null,"city_id"?: string | null,"created_at"?: string,"display_name"?: string,"id"?: string,"onboarded_at"?: string | null,"positions"?: (Database["public"]['Enums']["player_position"])[],"preferred_formats"?: (Database["public"]['Enums']["match_format"])[],"show_match_history"?: boolean,"skill_level"?: Database["public"]['Enums']["skill_level"] | null,"status"?: Database["public"]['Enums']["account_status"],"suspended_at"?: string | null,"suspension_reason"?: string | null,"updated_at"?: string,"username"?: string
                   }
                   Relationships: [
                     {
@@ -1904,6 +1904,9 @@ isOneToOne: true
 "set_tournament_status":
 { Args: { "p_status": Database["public"]['Enums']["tournament_status"],"p_tournament_id": string }; Returns: undefined
                            },
+"set_username":
+{ Args: { "p_username": string }; Returns: string
+                           },
 "set_venue_cover":
 { Args: { "p_path": string,"p_venue_id": string }; Returns: undefined
                            },
@@ -1966,6 +1969,9 @@ isOneToOne: true
                            },
 "upsert_venue_field":
 { Args: { "p_field_id": string,"p_formats": (Database["public"]['Enums']["match_format"])[],"p_has_lights": boolean,"p_is_active"?: boolean,"p_is_covered": boolean,"p_name": string,"p_price_per_hour": number,"p_surface": Database["public"]['Enums']["field_surface"],"p_venue_id": string }; Returns: string
+                           },
+"username_available":
+{ Args: { "p_username": string }; Returns: string
                            },
 "venue_rating":
 { Args: { "p_venue_id": string }; Returns: Json

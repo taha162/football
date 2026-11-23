@@ -14,6 +14,7 @@ import { normalizePhone, PHONE_ACCOUNT_DOMAIN } from "@/lib/phone";
 import { clearVerifyTicket, createVerification, getVerifyTicket, hashTicket } from "@/lib/phone-verification";
 import { inspectImage, randomFileName, UPLOAD_CACHE_SECONDS } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { usernameField, usernameFree } from "@/lib/username-server";
 import { createClient } from "@/lib/supabase/server";
 import type { Json } from "@/lib/supabase/types";
 import { buckets, count } from "@/lib/throttle";
@@ -42,12 +43,14 @@ export async function startWhatsappSignupAction(_: ActionState, fd: FormData): P
   const parsed = z
     .object({
       display_name: z.string().trim().min(2, "too_short").max(40, "too_long"),
+      username: usernameField,
       phone: typedPhone,
       password: z.string().min(8, "password_too_short").max(72, "password_too_long"),
       accept_terms: z.literal("on", { message: "must_accept_terms" }),
     })
     .safeParse({
       display_name: fd.get("display_name"),
+      username: fd.get("username") ?? "",
       phone: fd.get("phone") ?? "",
       password: fd.get("password"),
       accept_terms: fd.get("accept_terms") ?? undefined,
@@ -57,11 +60,13 @@ export async function startWhatsappSignupAction(_: ActionState, fd: FormData): P
   if (!(await count(await buckets(["signupDevice"])))) return fail("too_many_attempts");
   const locale = await currentLocale();
   const admin = createAdminClient()!;
+  if ((await usernameFree(admin, parsed.data.username)) === "taken") return fail("validation", { username: "username_taken" });
   const { data, error } = await admin.auth.admin.createUser({
     email: `wa_${randomUUID().replace(/-/g, "")}@${PHONE_ACCOUNT_DOMAIN}`,
     password: parsed.data.password,
     email_confirm: false,
-    user_metadata: { display_name: parsed.data.display_name, locale, signup_method: "whatsapp" },
+    // The profile takes the username if still free (migration 0041).
+    user_metadata: { display_name: parsed.data.display_name, username: parsed.data.username, locale, signup_method: "whatsapp" },
   });
   if (error || !data.user) {
     logger.warn("whatsapp_signup_create_failed", { status: error?.status });

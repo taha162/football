@@ -163,6 +163,8 @@ describe("launch audit: the database's own guards", () => {
       "quote_booking",
       "search_matches",
       "tournament_transition_allowed",
+      // The sign-up form asks whether a username is free as it is typed (0041).
+      "username_available",
       "venue_rating",
     ]);
   });

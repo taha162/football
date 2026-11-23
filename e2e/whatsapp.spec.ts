@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage, type Server } from "node:http";
-import { admin, choosePhonePhoto, createAuthUser, expect, localTime, mosul, PASSWORD, quietWhatsapp, rpc, signIn, test, whatsappMessage, type TestUser } from "./fixtures";
+import { admin, choosePhonePhoto, createAuthUser, expect, localTime, mosul, newUsername, PASSWORD, quietWhatsapp, rpc, signIn, test, type TestUser, whatsappMessage } from "./fixtures";
 
 /**
  * WhatsApp through the platform's own number (whatsapp-bot/), without
@@ -122,6 +122,7 @@ test.describe("WhatsApp verification", () => {
     await expect(page.getByRole("link", { name: "إنشاء حساب بالبريد الإلكتروني" })).toBeVisible();
     await expect(page.getByText("تيليغرام")).toHaveCount(0);
     await page.getByRole("textbox", { name: "الاسم الظاهر" }).fill("WhatsApp Player");
+    await page.getByRole("textbox", { name: "اسم المستخدم" }).fill(newUsername());
     // The number is typed too: a wrong one is refused on the form.
     const number = page.getByRole("textbox", { name: "رقم واتساب" });
     await number.fill("123");
@@ -233,6 +234,7 @@ test.describe("WhatsApp verification", () => {
     const signUp = async (p: typeof page) => {
       await p.goto("/ar/sign-up?method=whatsapp");
       await p.getByRole("textbox", { name: "الاسم الظاهر" }).fill("مرتين");
+      await p.getByRole("textbox", { name: "اسم المستخدم" }).fill(newUsername());
       await p.getByRole("textbox", { name: "رقم واتساب" }).fill(localFormat(from));
       await p.getByRole("textbox", { name: "كلمة المرور" }).fill(PASSWORD);
       await p.getByRole("checkbox", { name: /شروط الاستخدام/ }).check();
@@ -257,6 +259,7 @@ test.describe("WhatsApp verification", () => {
     const from = phone();
     await page.goto("/ar/sign-up?method=whatsapp");
     await page.getByRole("textbox", { name: "الاسم الظاهر" }).fill("رجوع سريع");
+    await page.getByRole("textbox", { name: "اسم المستخدم" }).fill(newUsername());
     await page.getByRole("textbox", { name: "رقم واتساب" }).fill(localFormat(from));
     await page.getByRole("textbox", { name: "كلمة المرور" }).fill(PASSWORD);
     await page.getByRole("checkbox", { name: /شروط الاستخدام/ }).check();

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { admin, createAuthUser, createMatchFor, emailedCode, expect, signIn, test } from "./fixtures";
+import { admin, createAuthUser, createMatchFor, emailedCode, expect, newUsername, signIn, test } from "./fixtures";
 
 test.describe("Journey A — register, onboard, discover and join", () => {
   test("a new user registers, completes onboarding, finds a match and joins it", async ({ page }) => {
@@ -15,6 +15,15 @@ test.describe("Journey A — register, onboard, discover and join", () => {
     await expect(steps.getByRole("listitem")).toHaveText(["1الحساب", "2التأكيد", "3ملفك"]);
     await expect(currentStep).toHaveText("1الحساب");
     await page.getByLabel("الاسم الظاهر").fill("Journey Player");
+    // A username unlike any other: the field says whether it's free as it is typed.
+    const handle = page.getByRole("textbox", { name: "اسم المستخدم" });
+    const [{ username: taken }] = await admin<{ username: string }>("select username from public.profiles where id = $1", [organizer.id]);
+    await handle.fill(taken);
+    await expect(page.getByText("مأخوذ، جرّب غيره.")).toBeVisible();
+    const username = newUsername();
+    await handle.fill(username.toUpperCase());
+    await expect(handle).toHaveValue(username);
+    await expect(page.getByText("متاح", { exact: true })).toBeVisible();
     await page.getByRole("textbox", { name: "البريد الإلكتروني" }).fill(email);
     await page.getByRole("textbox", { name: "كلمة المرور" }).fill("Str0ng-pass-123");
     await page.getByRole("checkbox").check();
@@ -81,6 +90,10 @@ test.describe("Journey A — register, onboard, discover and join", () => {
     await page.reload();
     await expect(page.getByText(new RegExp(`تم تسجيلك في ${title}`))).toBeVisible();
     await expect(page.getByRole("link", { name: "الإشعارات", exact: true })).toBeVisible();
+
+    // The username chosen at sign-up is theirs, on their profile.
+    await page.goto("/ar/profile");
+    await expect(page.getByTestId("username")).toHaveText(`@${username}`);
   });
 });
 
@@ -219,5 +232,26 @@ test.describe("Journey L — every governorate", () => {
     await expect(page.locator("article", { hasText: `مباراة بغداد ${tag}` })).toBeVisible();
     // The filter says so.
     expect(await page.locator('select[name="city"]').evaluate((el: HTMLSelectElement) => el.selectedOptions[0]?.textContent)).toBe("أي مدينة");
+  });
+});
+
+test.describe("Usernames", () => {
+  test("a member changes their username in settings; the menu and their page show it", async ({ page }) => {
+    const me = await createAuthUser("Handle");
+    await signIn(page, me);
+    await page.goto("/ar/settings");
+    const section = page.getByRole("region", { name: "اسم المستخدم" });
+    const handle = section.getByRole("textbox", { name: "اسم المستخدم" });
+    // Members who joined before usernames got one made up for them.
+    await expect(handle).toHaveValue(/^player[0-9a-f]{6,14}$/);
+    const name = newUsername();
+    await handle.fill(name);
+    await expect(section.getByText("متاح", { exact: true })).toBeVisible();
+    await section.getByRole("button", { name: "حفظ اسم المستخدم" }).click();
+    await expect(page.getByText("تم حفظ اسم المستخدم.")).toBeVisible();
+    await page.getByRole("button", { name: `قائمة حساب ${me.name}` }).click();
+    await expect(page.getByTestId("account-username")).toHaveText(`@${name}`);
+    await page.goto(`/ar/players/${me.id}`);
+    await expect(page.getByTestId("username")).toHaveText(`@${name}`);
   });
 });

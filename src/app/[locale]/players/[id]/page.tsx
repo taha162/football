@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { getCurrentUser } from "@/lib/auth";
-import { PROFILE_COLUMNS } from "@/lib/profile-columns";
+import { selectProfile } from "@/lib/profile-columns";
 import { publicStorageUrl } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 import { CallButton } from "@/components/calls/call-button";
@@ -26,7 +26,7 @@ export default async function PlayerPage({ params }: PageProps<"/[locale]/player
   setRequestLocale(locale);
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
   const supabase = await createClient();
-  const { data: profile } = await supabase.from("profiles").select(PROFILE_COLUMNS).eq("id", id).maybeSingle();
+  const profile = await selectProfile(supabase, id);
   if (!profile) notFound();
   const viewer = await getCurrentUser();
   const t = await getTranslations("player");

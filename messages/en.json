@@ -152,7 +152,13 @@
     "continueWhatsappNumber": "Continue with a WhatsApp number",
     "signUpEmail": "Sign up with e-mail",
     "signUpWhatsapp": "Sign up with a WhatsApp number",
-    "showPassword": "Show password"
+    "showPassword": "Show password",
+    "username": "Username",
+    "usernameHint": "Lower-case English letters, digits, _ and ., like ahmed_10. Friends find you by it.",
+    "usernameFree": "Available",
+    "usernameTaken": "Taken, try another.",
+    "usernameInvalid": "3 to 20: lower-case English letters, digits, _ and ., starting with a letter.",
+    "usernameChecking": "Checking…"
   },
   "onboarding": {
     "title": "Set up your player profile",
@@ -478,7 +484,9 @@
     "request_failed": "Couldn't send: the request didn't reach the site (the connection dropped, or the file was too large). What you wrote and chose is still here; please try again.",
     "pin_limit": "You can pin 3 conversations. Unpin one first.",
     "invalid_nickname": "A nickname is 1 to 40 characters.",
-    "feature_not_ready": "This feature isn't on yet: it waits for a database update."
+    "feature_not_ready": "This feature isn't on yet: it waits for a database update.",
+    "invalid_username": "A username is 3 to 20 lower-case English letters, digits, _ and ., starting with a letter.",
+    "username_taken": "That username is taken; try another."
   },
   "validation": {
     "invalid": "Invalid value.",
@@ -606,7 +614,8 @@
     "whatsapp_settings_saved": "WhatsApp settings saved.",
     "campaign_started": "Sending has started. Messages go out slowly, in batches.",
     "campaign_stopped": "The campaign was stopped.",
-    "whatsapp_resumed": "Sending resumed."
+    "whatsapp_resumed": "Sending resumed.",
+    "username_saved": "Username saved."
   },
   "notifications": {
     "generic": "You have a new update.",
@@ -1911,7 +1920,9 @@
     "whatsappHint": "Messages from Al-Malab's number to your verified number.",
     "whatsappBookings": "My booking messages: confirmed, changed and cancelled",
     "whatsappPromos": "Offers and news",
-    "whatsappStopHint": "You can also stop all messages by sending 0 to Al-Malab's number on WhatsApp."
+    "whatsappStopHint": "You can also stop all messages by sending 0 to Al-Malab's number on WhatsApp.",
+    "username": "Username",
+    "saveUsername": "Save username"
   },
   "messages": {
     "title": "Messages",

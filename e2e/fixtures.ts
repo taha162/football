@@ -23,6 +23,9 @@ const ANON_KEY =
 
 export const PASSWORD = "Str0ng-pass-123";
 
+/** A username nobody has: the sign-up forms ask for one (migration 0041). */
+export const newUsername = () => `fan_${randomUUID().replace(/-/g, "").slice(0, 12)}`;
+
 export interface TestUser {
   id: string;
   email: string;

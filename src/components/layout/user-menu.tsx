@@ -35,6 +35,7 @@ const Divider = () => <div role="separator" className="my-1 h-px bg-line" />;
  */
 export function UserMenu({
   name,
+  username = null,
   avatarSrc,
   contact,
   isModerator,
@@ -42,6 +43,8 @@ export function UserMenu({
   organizesTournaments,
 }: {
   name: string;
+  /** Their @username, under their name (null before migration 0041). */
+  username?: string | null;
   avatarSrc: string | null;
   /** The member's number or e-mail, under their name. */
   contact: string | null;
@@ -144,6 +147,11 @@ export function UserMenu({
             <Avatar src={avatarSrc} name={name} size={40} />
             <div className="flex min-w-0 flex-col">
               <span className="truncate text-sm font-semibold text-ink">{name}</span>
+              {username ? (
+                <span className="truncate text-xs font-medium text-accent" data-testid="account-username">
+                  <bdi dir="ltr">@{username}</bdi>
+                </span>
+              ) : null}
               {contact ? (
                 <span className="truncate text-xs text-muted" data-testid="account-contact">
                   <bdi dir="ltr">{contact}</bdi>

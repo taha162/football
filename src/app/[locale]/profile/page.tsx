@@ -29,7 +29,8 @@ export default async function ProfilePage({ params }: PageProps<"/[locale]/profi
       <Card className="mb-8">
         <CardBody className="flex flex-col gap-4 sm:flex-row sm:items-start">
           <AvatarViewer src={publicStorageUrl("avatars", p.avatar_path)} name={p.display_name} size={80} />
-          <div className="flex-1">
+          <div className="flex flex-1 flex-col gap-3">
+            {p.username ? <p className="text-sm font-medium text-accent" data-testid="username"><bdi dir="ltr">@{p.username}</bdi></p> : null}
             <AvatarForm hasAvatar={Boolean(p.avatar_path)} />
           </div>
         </CardBody>

@@ -15,6 +15,7 @@ import { hasSecondFactor } from "@/lib/second-factor";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { accountTag, allowed, buckets, count, countFailure } from "@/lib/throttle";
+import { usernameField, usernameFree } from "@/lib/username-server";
 
 const email = z.string().trim().toLowerCase().email("invalid_email").max(254);
 const password = z.string().min(8, "password_too_short").max(72, "password_too_long");
@@ -101,12 +102,14 @@ export async function signUpAction(_: ActionState, fd: FormData): Promise<Action
   const parsed = z
     .object({
       display_name: z.string().trim().min(2, "too_short").max(40, "too_long"),
+      username: usernameField,
       email,
       password,
       accept_terms: z.literal("on", { message: "must_accept_terms" }),
     })
     .safeParse({
       display_name: fd.get("display_name"),
+      username: fd.get("username") ?? "",
       email: fd.get("email"),
       password: fd.get("password"),
       accept_terms: fd.get("accept_terms") ?? undefined,
@@ -115,11 +118,13 @@ export async function signUpAction(_: ActionState, fd: FormData): Promise<Action
   if (!(await count(await buckets(["signupDevice"])))) return fail("too_many_attempts");
   const locale = await currentLocale();
   const supabase = await createClient();
+  if ((await usernameFree(supabase, parsed.data.username)) === "taken") return fail("validation", { username: "username_taken" });
   const { data, error } = await supabase.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
     options: {
-      data: { display_name: parsed.data.display_name, locale },
+      // The profile takes the username if still free (migration 0041).
+      data: { display_name: parsed.data.display_name, username: parsed.data.username, locale },
       emailRedirectTo: `${publicEnv.siteUrl}/auth/callback?next=/${locale}/onboarding`,
     },
   });

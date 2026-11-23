@@ -2066,3 +2066,21 @@
 **لا يحتاج** أي ملف SQL.
 
 التعديل: «Pictures open inside the site, with Save; profile pictures enlarge without it»
+
+### 115. اسم المستخدم: لكل عضو اسم لا يتكرر
+**ما تغيّر:**
+- **عند إنشاء الحساب** (بالبريد أو بواتساب): خانة جديدة «اسم المستخدم» بعد علامة @.
+  - من 3 إلى 20: حروف إنجليزية صغيرة وأرقام و `_` و `.`، ويبدأ بحرف. مثل `ahmed_10`.
+  - الخانة تقول وأنت تكتب إن كان **متاحاً** أو **مأخوذاً**.
+  - لا يأخذ عضوان الاسم نفسه. وبعض الكلمات محجوزة: admin، support، almalab…
+- **الأعضاء الحاليون:** أُعطي كل منهم اسماً من «player» وجزء من رقم حسابه، مثل `player3f9a1c`.
+  - يغيّره من «الإعدادات» ← «اسم المستخدم»، حتى 5 مرات في اليوم.
+- **أين يظهر:** تحت الاسم في صفحة اللاعب، وفي «ملفي الشخصي»، وفي قائمة الحساب. وبه يُضاف الأصدقاء (البند التالي).
+
+**ملف قاعدة البيانات `…0041_usernames.sql`:** يضيف الخانة ويملؤها لكل عضو، ولا يغيّر شيئاً آخر. تشغيله مرتين لا يضر.
+- قبل تشغيله يعمل الموقع كما كان. من سجّل في هذه الفترة يحفظ الموقع اسمه المكتوب، فيأخذه عند تشغيل الملف إن بقي متاحاً.
+- مع عشرات آلاف الأعضاء يأخذ ملؤه ثوانيَ قليلة.
+
+الملفات: `src/components/forms/username-field.tsx`، `src/lib/username.ts`، `src/lib/username-server.ts`، `src/server/username.ts` (جديدة)، `src/server/auth.ts`، `src/server/whatsapp.ts`، `src/components/auth/auth-forms.tsx`، `src/lib/profile-columns.ts`، `src/lib/auth.ts`، `src/app/[locale]/settings/page.tsx`، `src/components/layout/user-menu.tsx`، `src/components/player/player-summary.tsx`، `src/app/[locale]/profile/page.tsx`، والنصوص في `messages/`. الاختبارات: `tests/db/usernames.test.ts` (جديد)، `tests/db/security.test.ts`، `e2e/players.spec.ts`، واختبارات التسجيل في `e2e/verification.spec.ts` و`e2e/whatsapp.spec.ts`.
+
+التعديل: «Usernames: one per member, unlike any other»
