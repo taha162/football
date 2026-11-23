@@ -1876,3 +1876,18 @@
 الملفات: `src/server/reference.ts`، `src/components/layout/site-header.tsx` و`count-link.tsx` و`mobile-nav.tsx`، `src/app/[locale]/layout.tsx` و`messages/page.tsx`، `src/lib/format.ts` (`badgeCount`). الاختبار: `tests/db/header-state.test.ts` (جديد).
 
 التعديل: «The header's numbers in one request, and unread counts that stop at 100»
+
+### 103. البحث بالاسم عبر فهارس
+**ما تغيّر:**
+- **المشكلة:** البحث بالاسم (لاعبون للدعوة، فرق، ملاعب، مباريات) كان يقرأ الجدول كله في كل بحث. على مليون اسم: 189 ms للنتائج الأولى، و1.3 ثانية للعدّ الكامل.
+- **الإصلاح:** فهارس trigram (`pg_trgm`) تخدم هذا النوع من البحث مباشرة، والعربي معه (تحققت منه).
+  - البحث عن لاعب للدعوة: من 15 ms إلى 0.18 ms على 18 ألف لاعب.
+  - على مليون اسم: نحو 1 ms.
+- **بحث المباريات:** النتائج نفسها، لكن شرط «العنوان أو اسم الملعب» صار يستطيع استعمال الفهرس.
+- **ثلاثة فهارس قديمة حُذفت:** على الأسماء، لم يستعملها أي استعلام، وكانت تكلّف كل كتابة.
+
+**ملف قاعدة البيانات `…0036_name_search.sql`:** لا يغيّر بيانات أحد، وتشغيله مرتين لا يضر.
+
+الاختبار: `tests/db/name-search.test.ts` (جديد).
+
+التعديل: «Name search that uses an index»
