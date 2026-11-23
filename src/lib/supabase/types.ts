@@ -1757,6 +1757,9 @@ isOneToOne: true
 "revoke_team_invitation":
 { Args: { "p_invitation_id": string }; Returns: undefined
                            },
+"run_retention_cleanup":
+{ Args: { "p_batch"?: number }; Returns: Json
+                           },
 "run_scheduled_jobs":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },

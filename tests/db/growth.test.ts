@@ -17,4 +17,33 @@ describe("ready for growth", () => {
     expect(missing).toEqual([]);
   });
 
+  it("clears notifications and audit entries past their keeping periods, and nothing newer", async () => {
+    const who = await createUser("Retention");
+    const rows = await admin<{ id: string; tag: string }>(
+      `insert into public.notifications (user_id, type, payload, created_at, read_at) values
+         ($1, 'match_joined', '{"t":"read-old"}', now() - interval '200 days', now() - interval '199 days'),
+         ($1, 'match_joined', '{"t":"unread-old"}', now() - interval '400 days', null),
+         ($1, 'match_joined', '{"t":"unread-200"}', now() - interval '200 days', null),
+         ($1, 'match_joined', '{"t":"read-new"}', now() - interval '10 days', now() - interval '9 days')
+       returning id, payload->>'t' as tag`,
+      [who],
+    );
+    await admin(
+      `insert into public.audit_logs (actor_id, action, entity_type, created_at) values
+         ($1, 'retention.old', 'test', now() - interval '800 days'), ($1, 'retention.new', 'test', now() - interval '10 days')`,
+      [who],
+    );
+    const result = await admin<{ r: { notifications: number; audit_logs: number } }>("select public.run_retention_cleanup() as r");
+    expect(result[0].r.notifications).toBeGreaterThanOrEqual(2);
+    const left = await admin<{ tag: string }>("select payload->>'t' as tag from public.notifications where id = any($1::uuid[]) order by 1", [rows.map((r) => r.id)]);
+    expect(left.map((r) => r.tag)).toEqual(["read-new", "unread-200"]);
+    const audit = await admin<{ action: string }>("select action from public.audit_logs where actor_id = $1 order by 1", [who]);
+    expect(audit.map((a) => a.action)).toEqual(["retention.new"]);
+  });
+
+  it("lets only the scheduled job run the cleanup", async () => {
+    const someone = await createUser("Retention caller");
+    expect(await errorOf(asUser(someone, "select public.run_retention_cleanup()"))).toMatch(/permission denied/);
+  });
+
 });
