@@ -3,6 +3,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import type { Locale } from "@/i18n/routing";
 import { requireOnboardedUser } from "@/lib/auth";
 import { thumbPathOf } from "@/lib/message-thumb";
+import { MESSAGE_VIDEOS, posterPathOf } from "@/lib/message-video";
 import { publicStorageUrl } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 import { CallButton } from "@/components/calls/call-button";
@@ -89,15 +90,20 @@ export default async function ConversationPage({ params, searchParams }: PagePro
   const live = page.filter((m) => !m.deleted_at);
   // Pictures with their small copies (shown in the conversation; older pictures have none) in one request.
   const pictures = live.flatMap((m) => (m.image_path ? [m.image_path, thumbPathOf(m.image_path)] : []));
-  const [imageUrls, voiceUrls] = await Promise.all([
+  // Videos with their stills (a video sent from a browser that couldn't make one has none).
+  const videos = live.flatMap((m) => (m.video_path ? [m.video_path, posterPathOf(m.video_path)] : []));
+  const [imageUrls, voiceUrls, videoUrls] = await Promise.all([
     sign("message-images", pictures),
     sign("message-voice", live.flatMap((m) => (m.voice_path ? [m.voice_path] : []))),
+    sign(MESSAGE_VIDEOS, videos),
   ]);
   const messages: ThreadMessage[] = page.map((m) => ({
     ...m,
     image_url: m.image_path ? (imageUrls.get(m.image_path) ?? null) : null,
     image_thumb_url: m.image_path ? (imageUrls.get(thumbPathOf(m.image_path)) ?? null) : null,
     voice_url: m.voice_path ? (voiceUrls.get(m.voice_path) ?? null) : null,
+    video_url: m.video_path ? (videoUrls.get(m.video_path) ?? null) : null,
+    video_poster_url: m.video_path ? (videoUrls.get(posterPathOf(m.video_path)) ?? null) : null,
   }));
   // Names beside messages: a group's members are known already; others (and those who left) are looked up.
   const memberNames = Object.fromEntries(groupMembers.flatMap((x) => (x.profile ? [[x.user_id, x.profile.display_name] as const] : [])));

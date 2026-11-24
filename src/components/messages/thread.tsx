@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useOptimistic, useRef, useState, type ReactNode } from "react";
-import { Check, CheckCheck, Clock3, Phone, PhoneIncoming, PhoneMissed } from "lucide-react";
+import { Check, CheckCheck, Clock3, Film, Phone, PhoneIncoming, PhoneMissed, Play } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { ReportButton } from "@/components/report-button";
@@ -10,6 +10,7 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
 import { getBrowserClient, getRealtimeClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/cn";
 import { thumbPathOf } from "@/lib/message-thumb";
+import { MESSAGE_VIDEOS, posterPathOf } from "@/lib/message-video";
 import { formatDuration } from "@/lib/duration";
 import { editMessage, markConversationReadAction } from "@/server/messages";
 import { Button } from "@/components/ui/button";
@@ -39,6 +40,11 @@ export interface ThreadMessage {
   voice_seconds?: number | null;
   /** Short-lived signed link to the voice note, when there is one. */
   voice_url?: string | null;
+  video_path?: string | null;
+  video_seconds?: number | null;
+  /** Short-lived signed links to the video and its still (none when the browser couldn't make one). */
+  video_url?: string | null;
+  video_poster_url?: string | null;
   call_outcome?: string | null;
   call_seconds?: number | null;
   /** Client only: how it entered while the conversation was open (an animation), absent for history. */
@@ -53,7 +59,7 @@ export interface ThreadMessage {
 const entering = (m: ThreadMessage, me: string): ThreadMessage["anim"] => {
   if (m.call_outcome) return undefined;
   if (m.sender_id !== me) return "in";
-  const plainText = Boolean(m.body) && !m.image_path && !m.voice_path && m.location_lat == null;
+  const plainText = Boolean(m.body) && !m.image_path && !m.voice_path && !m.video_path && m.location_lat == null;
   return plainText ? undefined : "out";
 };
 
@@ -97,6 +103,9 @@ const erased = (m: ThreadMessage, at: string): ThreadMessage => ({
   location_lng: null,
   voice_path: null,
   voice_url: null,
+  video_path: null,
+  video_url: null,
+  video_poster_url: null,
 });
 
 /** How long «يكتب…» stays after the last keystroke heard, and how often typing is told. */
@@ -268,6 +277,12 @@ export function Thread({
             if (msg.voice_path && !msg.voice_url) {
               const { data } = await supabase.storage.from("message-voice").createSignedUrl(msg.voice_path, 3600);
               msg.voice_url = data?.signedUrl ?? null;
+            }
+            if (msg.video_path && !msg.video_url) {
+              const still = posterPathOf(msg.video_path);
+              const { data } = await supabase.storage.from(MESSAGE_VIDEOS).createSignedUrls([msg.video_path, still], 3600);
+              msg.video_url = data?.find((s) => s.path === msg.video_path)?.signedUrl ?? null;
+              msg.video_poster_url = data?.find((s) => s.path === still && !s.error)?.signedUrl ?? null;
             }
             setMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, { ...msg, anim: entering(msg, me) }]));
             // Their message is here: they're no longer typing it.
@@ -490,6 +505,33 @@ export function Thread({
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element -- private, signed, short-lived link */}
                         <img src={m.image_thumb_url ?? m.image_url} alt={t("imageAlt")} loading="lazy" className="max-h-72 w-auto max-w-full object-contain" />
+                      </button>
+                    ) : null}
+                    {m.video_path && m.video_url && !m.deleted_at ? (
+                      // The still, with play and the length; it opens the video inside the site, with «حفظ».
+                      <button
+                        type="button"
+                        onClick={() => setViewing({ kind: "video", src: m.video_url!, alt: t("videoAlt"), saveAs: savedName(m.id, m.video_path) })}
+                        aria-label={m.video_seconds ? `${t("playVideo")} (${formatDuration(m.video_seconds, locale)})` : t("playVideo")}
+                        className="relative grid min-h-40 min-w-40 place-items-center overflow-hidden rounded-2xl border border-line bg-surface-3"
+                        data-testid="video-message"
+                      >
+                        {m.video_poster_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element -- private, signed, short-lived link
+                          <img src={m.video_poster_url} alt="" loading="lazy" className="max-h-72 w-auto max-w-full object-contain" />
+                        ) : (
+                          <Film aria-hidden="true" className="size-9 text-muted" />
+                        )}
+                        <span aria-hidden="true" className="absolute inset-0 grid place-items-center">
+                          <span className="grid size-12 place-items-center rounded-full bg-black/55 text-white">
+                            <Play className="size-6 translate-x-px" />
+                          </span>
+                        </span>
+                        {m.video_seconds ? (
+                          <span aria-hidden="true" className="num absolute bottom-2 start-2 rounded bg-black/60 px-1.5 text-[11px] font-medium text-white">
+                            {formatDuration(m.video_seconds, locale)}
+                          </span>
+                        ) : null}
                       </button>
                     ) : null}
                     {hasLocation ? <LocationCard lat={m.location_lat!} lng={m.location_lng!} accuracy={m.location_accuracy ?? null} /> : null}

@@ -495,7 +495,11 @@
     "group_full": "The group has no room for that many.",
     "not_group_admin": "Only the group's admins can do that.",
     "group_creator": "The group's creator stays in it, as an admin.",
-    "member_not_found": "That member is not in the group."
+    "member_not_found": "That member is not in the group.",
+    "video_too_large": "The video is over 50 MB. Choose a shorter clip.",
+    "video_type_not_allowed": "This kind of video isn't supported. Send MP4, MOV or WebM.",
+    "invalid_video": "The video couldn't be sent. Try again.",
+    "upload_cancelled": "Sending the video was cancelled."
   },
   "validation": {
     "invalid": "Invalid value.",
@@ -1657,7 +1661,8 @@
     "promoReportValue": "{sent} sent · {failed} failed · {skipped} skipped · {waiting} waiting",
     "promoStop": "Stop campaign",
     "promoStopTitle": "Stop this campaign?",
-    "promoStopBody": "The remaining messages ({waiting}) won't be sent. What was sent can't be recalled."
+    "promoStopBody": "The remaining messages ({waiting}) won't be sent. What was sent can't be recalled.",
+    "reportedVideo": "The video in the reported message"
   },
   "teams": {
     "title": "Teams",
@@ -1986,7 +1991,7 @@
     "placeholder": "Write a message…",
     "send": "Send",
     "safetyNote": "Never share passwords or payment details in chat. Use the report button on any message that breaks the rules.",
-    "attach": "Attach a picture",
+    "attach": "Attach a photo or video",
     "removeImage": "Remove the picture",
     "photo": "Photo",
     "openImage": "Open the picture",
@@ -2064,7 +2069,13 @@
     "emptyGroups": "No group conversations yet.",
     "newGroup": "New group",
     "groupInfo": "Group info",
-    "membersCount": "{count, plural, one {# member} other {# members}}"
+    "membersCount": "{count, plural, one {# member} other {# members}}",
+    "video": "Video",
+    "videoAlt": "Video sent",
+    "playVideo": "Play video",
+    "removeVideo": "Remove video",
+    "uploadingVideo": "Uploading the video",
+    "uploadPercent": "{percent}%"
   },
   "notificationsPage": {
     "title": "Notifications",

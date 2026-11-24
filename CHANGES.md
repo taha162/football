@@ -2131,3 +2131,28 @@
 الملفات: `src/server/groups.ts`، `src/components/messages/friend-picker.tsx`، `src/app/[locale]/messages/groups/new/page.tsx`، `src/app/[locale]/messages/[id]/group/page.tsx` (جديدة)، `src/app/[locale]/messages/[id]/page.tsx`، `src/app/[locale]/messages/page.tsx`، `src/lib/notifications.ts`، `src/lib/supabase/types.ts`، والنصوص في `messages/`. الاختبارات: `tests/db/groups.test.ts` و`e2e/groups.spec.ts` (جديدان).
 
 التعديل: «Group chats of friends, with admins»
+
+### 118. الفيديو في المحادثات
+**ما تغيّر:**
+- **زر الإرفاق** صار «إرفاق صورة أو فيديو». تختار فيديو من الهاتف (MP4 أو MOV أو WebM، حتى 50 ميغابايت).
+  - قبل الإرسال يظهر **لقطة منه ومدته**، ويمكن إزالته. ويمكن كتابة تعليق معه.
+  - أثناء الرفع **شريط تقدّم** بالنسبة المئوية. إزالة الفيديو أثناء الرفع تلغيه.
+- **في المحادثة:** اللقطة مع زر تشغيل ومدة الفيديو. الضغط عليها **يشغّله داخل الموقع** بملء الشاشة، مع زر «حفظ»، كما الصور (البند 114).
+- **يصل مباشرة** للطرف الآخر وهو في المحادثة، ويظهر في قائمة الرسائل «🎥 فيديو» أو «🎥» مع التعليق.
+- **حذف الرسالة** يحذف الفيديو ولقطته من التخزين. وكذلك إزالة المشرف لها، وحذف حساب العضو نهائياً.
+- **المشرفون** يشاهدون الفيديو في صفحة البلاغات، كما الصور والرسائل الصوتية.
+
+**كيف يعمل** (لأن الفيديو كبير):
+- لا يمر الفيديو بخادم الموقع: خادم الاستضافة يرفض أي طلب فوق 4.5 ميغابايت. يأخذ المتصفح رابطاً يصلح لمرة واحدة، ويرفع الفيديو مباشرة إلى مخزن خاص في Supabase.
+- قبل أن يصير رسالة، يقرأ الموقع **أول بايتات الملف**. إن لم يكن فيديو حقيقياً (ولو سُمّي `.mp4`) يُحذف ويُرفض.
+- الفيديو **خاص بأعضاء المحادثة**: روابط مشاهدة مؤقتة، كالصور والرسائل الصوتية.
+- **الحدود:** 30 فيديو في الساعة لكل عضو (`messaging.max_videos_per_hour`)، و50 ميغابايت للفيديو.
+- **التنظيف:** فيديو رُفع ولم يُرسل (أُغلقت الصفحة أو فشل الإرسال) يُحذف بعد يوم. تحذفه المهمة الدورية.
+
+**ملف قاعدة البيانات `…0045_message_videos.sql`:** يُشغَّل بعد …0044. يضيف المخزن الخاص `message-videos` وخانتين للرسائل، ويحدّث الإرسال والحذف وقائمة المحادثات. لا يغيّر بيانات موجودة، وتشغيله مرتين لا يضر.
+- قبل تشغيله: اختيار فيديو ثم إرساله يقول إن الميزة تنتظر تحديث قاعدة البيانات. الصور والنصوص تعمل كما هي.
+- التكلفة: المساحة والمشاهدة تُحتسب من خطة Supabase (التفاصيل في `DEPLOYMENT.md` القسم 19).
+
+الملفات: `src/lib/message-video.ts`، `src/components/messages/video-attachment.ts` (جديدان)، `src/components/messages/composer.tsx`، `src/components/messages/thread.tsx`، `src/server/messages.ts`، `src/lib/message-files.ts`، `src/server/admin.ts`، `src/app/api/cron/route.ts`، `src/app/[locale]/messages/[id]/page.tsx`، `src/app/[locale]/messages/page.tsx`، `src/app/[locale]/admin/reports/page.tsx`، `src/lib/supabase/types.ts`، `DEPLOYMENT.md`، والنصوص في `messages/`. الاختبارات: `tests/db/videos.test.ts` و`e2e/videos.spec.ts` (جديدان) مع مقطع اختبار صغير `e2e/assets/clip.webm` (3 ثوانٍ، 22 كيلوبايت).
+
+التعديل: «Videos in conversations»

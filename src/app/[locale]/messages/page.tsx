@@ -57,6 +57,7 @@ export default async function MessagesPage({ params, searchParams }: PageProps<"
     const kind = (c as { last_kind?: string | null }).last_kind;
     if (kind === "location") return `📍 ${t("location")}`;
     if (kind === "voice") return `🎤 ${t("voice")}`;
+    if (kind === "video") return `🎥 ${c.last_message || t("video")}`;
     if (kind === "call") return `📞 ${t("call")}`;
     // A deleted (or moderated) message keeps only this placeholder text.
     if (c.last_message === "[deleted]" || c.last_message === "[removed]") return t("deleted");

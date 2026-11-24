@@ -1,5 +1,6 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { formatDateTime } from "@/lib/format";
+import { MESSAGE_VIDEOS } from "@/lib/message-video";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { removeMessageAction, setHiddenAction, setUserStatusAction, updateReportAction } from "@/server/admin";
@@ -48,12 +49,18 @@ export default async function AdminReportsPage({ searchParams }: PageProps<"/[lo
     : { data: [] };
   const pictured = (reported ?? []).filter((m) => m.image_path);
   const voiced = (reported ?? []).filter((m) => m.voice_path);
-  const [signed, signedVoice] = await Promise.all([
+  // Videos too (migration 0045; a database without them has no such column, and none here).
+  const filmed = (reported ?? []).filter((m) => (m as { video_path?: string | null }).video_path);
+  const [signed, signedVoice, signedVideo] = await Promise.all([
     pictured.length ? supabase.storage.from("message-images").createSignedUrls(pictured.map((m) => m.image_path!), 3600).then((r) => r.data ?? []) : [],
     voiced.length ? supabase.storage.from("message-voice").createSignedUrls(voiced.map((m) => m.voice_path!), 3600).then((r) => r.data ?? []) : [],
+    filmed.length
+      ? supabase.storage.from(MESSAGE_VIDEOS).createSignedUrls(filmed.map((m) => (m as { video_path: string }).video_path), 3600).then((r) => r.data ?? [])
+      : [],
   ]);
   const pictureOf = new Map(pictured.map((m, i) => [String(m.id), signed[i]?.signedUrl ?? null]));
   const voiceOf = new Map(voiced.map((m, i) => [String(m.id), signedVoice[i]?.signedUrl ?? null]));
+  const videoOf = new Map(filmed.map((m, i) => [String(m.id), signedVideo[i]?.signedUrl ?? null]));
   return (
     <>
       <PageHeader title={t("nav.reports")} description={t("reportsDescription")} />
@@ -89,6 +96,9 @@ export default async function AdminReportsPage({ searchParams }: PageProps<"/[lo
                   ) : null}
                   {rep.target_type === "message" && voiceOf.get(rep.target_id) ? (
                     <audio controls preload="none" src={voiceOf.get(rep.target_id)!} aria-label={t("reportedVoice")} className="w-full max-w-sm" />
+                  ) : null}
+                  {rep.target_type === "message" && videoOf.get(rep.target_id) ? (
+                    <video controls preload="metadata" playsInline src={videoOf.get(rep.target_id)!} aria-label={t("reportedVideo")} className="max-h-72 w-fit max-w-full rounded-lg border border-line" />
                   ) : null}
                   <div className="flex flex-wrap gap-2">
                     {href ? <LinkButton href={href} className={buttonClass("outline", "sm")}>{t("viewTarget")}</LinkButton> : null}

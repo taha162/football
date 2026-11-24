@@ -495,7 +495,11 @@
     "group_full": "المجموعة لا تتسع لهذا العدد.",
     "not_group_admin": "هذا لمشرفي المجموعة فقط.",
     "group_creator": "منشئ المجموعة يبقى فيها ويبقى مشرفاً.",
-    "member_not_found": "هذا العضو ليس في المجموعة."
+    "member_not_found": "هذا العضو ليس في المجموعة.",
+    "video_too_large": "الفيديو أكبر من 50 ميغابايت. اختر مقطعاً أقصر.",
+    "video_type_not_allowed": "هذا النوع من الفيديو غير مدعوم. أرسل MP4 أو MOV أو WebM.",
+    "invalid_video": "تعذّر إرسال الفيديو. جرّب مرة أخرى.",
+    "upload_cancelled": "أُلغي إرسال الفيديو."
   },
   "validation": {
     "invalid": "قيمة غير صالحة.",
@@ -1657,7 +1661,8 @@
     "promoReportValue": "أُرسل {sent} · فشل {failed} · تُخطّي {skipped} · بالانتظار {waiting}",
     "promoStop": "إيقاف الحملة",
     "promoStopTitle": "إيقاف الحملة؟",
-    "promoStopBody": "لن تُرسل الرسائل الباقية ({waiting}). ما أُرسل لا يمكن استرجاعه."
+    "promoStopBody": "لن تُرسل الرسائل الباقية ({waiting}). ما أُرسل لا يمكن استرجاعه.",
+    "reportedVideo": "الفيديو في الرسالة المبلّغ عنها"
   },
   "teams": {
     "title": "الفرق",
@@ -1986,7 +1991,7 @@
     "placeholder": "اكتب رسالة…",
     "send": "إرسال",
     "safetyNote": "لا تشارك كلمات المرور أو بيانات الدفع في الدردشة. استخدم زر الإبلاغ على أي رسالة مخالفة.",
-    "attach": "إرفاق صورة",
+    "attach": "إرفاق صورة أو فيديو",
     "removeImage": "إزالة الصورة",
     "photo": "صورة",
     "openImage": "فتح الصورة",
@@ -2064,7 +2069,13 @@
     "emptyGroups": "لا محادثات جماعية بعد.",
     "newGroup": "مجموعة جديدة",
     "groupInfo": "معلومات المجموعة",
-    "membersCount": "{count, plural, one {عضو واحد} two {عضوان} few {# أعضاء} many {# عضواً} other {# عضو}}"
+    "membersCount": "{count, plural, one {عضو واحد} two {عضوان} few {# أعضاء} many {# عضواً} other {# عضو}}",
+    "video": "فيديو",
+    "videoAlt": "فيديو مرسل",
+    "playVideo": "تشغيل الفيديو",
+    "removeVideo": "إزالة الفيديو",
+    "uploadingVideo": "جارٍ رفع الفيديو",
+    "uploadPercent": "{percent}٪"
   },
   "notificationsPage": {
     "title": "الإشعارات",

@@ -633,14 +633,14 @@ isOneToOne: false
                   ]
                 },"messages": {
                   Row: {
-                    "body": string,"call_outcome": string | null,"call_seconds": number | null,"conversation_id": string,"created_at": string,"deleted_at": string | null,"edited_at": string | null,"id": number,"image_path": string | null,"location_accuracy": number | null,"location_lat": number | null,"location_lng": number | null,"sender_id": string | null,"voice_path": string | null,"voice_seconds": number | null
+                    "body": string,"call_outcome": string | null,"call_seconds": number | null,"conversation_id": string,"created_at": string,"deleted_at": string | null,"edited_at": string | null,"id": number,"image_path": string | null,"location_accuracy": number | null,"location_lat": number | null,"location_lng": number | null,"sender_id": string | null,"video_path": string | null,"video_seconds": number | null,"voice_path": string | null,"voice_seconds": number | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "body": string,"call_outcome"?: string | null,"call_seconds"?: number | null,"conversation_id": string,"created_at"?: string,"deleted_at"?: string | null,"edited_at"?: string | null,"id"?: never,"image_path"?: string | null,"location_accuracy"?: number | null,"location_lat"?: number | null,"location_lng"?: number | null,"sender_id"?: string | null,"voice_path"?: string | null,"voice_seconds"?: number | null
+                    "body": string,"call_outcome"?: string | null,"call_seconds"?: number | null,"conversation_id": string,"created_at"?: string,"deleted_at"?: string | null,"edited_at"?: string | null,"id"?: never,"image_path"?: string | null,"location_accuracy"?: number | null,"location_lat"?: number | null,"location_lng"?: number | null,"sender_id"?: string | null,"video_path"?: string | null,"video_seconds"?: number | null,"voice_path"?: string | null,"voice_seconds"?: number | null
                   }
                   Update: {
-                    "body"?: string,"call_outcome"?: string | null,"call_seconds"?: number | null,"conversation_id"?: string,"created_at"?: string,"deleted_at"?: string | null,"edited_at"?: string | null,"id"?: never,"image_path"?: string | null,"location_accuracy"?: number | null,"location_lat"?: number | null,"location_lng"?: number | null,"sender_id"?: string | null,"voice_path"?: string | null,"voice_seconds"?: number | null
+                    "body"?: string,"call_outcome"?: string | null,"call_seconds"?: number | null,"conversation_id"?: string,"created_at"?: string,"deleted_at"?: string | null,"edited_at"?: string | null,"id"?: never,"image_path"?: string | null,"location_accuracy"?: number | null,"location_lat"?: number | null,"location_lng"?: number | null,"sender_id"?: string | null,"video_path"?: string | null,"video_seconds"?: number | null,"voice_path"?: string | null,"voice_seconds"?: number | null
                   }
                   Relationships: [
                     {
@@ -1610,6 +1610,9 @@ isOneToOne: true
 "auth_throttle":
 { Args: { "p_buckets": Json,"p_record": boolean }; Returns: boolean
                            },
+"begin_video_upload":
+{ Args: { "p_conversation_id": string }; Returns: undefined
+                           },
 "block_user":
 { Args: { "p_user_id": string }; Returns: undefined
                            },
@@ -1769,6 +1772,9 @@ isOneToOne: true
                            },
 "my_phone":
 { Args: Record<PropertyKey, never>; Returns: string
+                           },
+"orphan_message_videos":
+{ Args: { "p_limit"?: number }; Returns: string[]
                            },
 "phone_verify_cleanup":
 { Args: Record<PropertyKey, never>; Returns: Json
@@ -1944,7 +1950,7 @@ isOneToOne: true
 { Args: { "p_username": string }; Returns: string
                            },
 "send_message":
-{ Args: { "p_body": string,"p_conversation_id": string,"p_image_path"?: string,"p_location_accuracy"?: number,"p_location_lat"?: number,"p_location_lng"?: number,"p_voice_path"?: string,"p_voice_seconds"?: number }; Returns: number
+{ Args: { "p_body": string,"p_conversation_id": string,"p_image_path"?: string,"p_location_accuracy"?: number,"p_location_lat"?: number,"p_location_lng"?: number,"p_video_path"?: string,"p_video_seconds"?: number,"p_voice_path"?: string,"p_voice_seconds"?: number }; Returns: number
                            },
 "set_conversation_nickname":
 { Args: { "p_conversation_id": string,"p_nickname": string }; Returns: undefined
