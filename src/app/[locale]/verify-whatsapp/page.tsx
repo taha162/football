@@ -27,11 +27,18 @@ export default async function VerifyWhatsappPage({ params }: PageProps<"/[locale
       // Signing up: the second of three steps. Recovering a password is no such path.
       steps={row!.purpose === "signup" ? <SignUpSteps current={1} /> : undefined}
       title={t("waTitle")}
-      subtitle={row!.purpose === "signup" ? t("waSubtitleSignup") : t("waSubtitleReset")}
+      subtitle={row!.purpose === "signup" ? t("waSubtitleSignup") : row!.purpose === "phone_change" ? t("waSubtitleChange") : t("waSubtitleReset")}
       footer={
-        <Link href="/sign-in" className="font-semibold text-accent hover:underline">
-          {t("backToSignIn")}
-        </Link>
+        // A new number is added from settings, by a member who is signed in.
+        row!.purpose === "phone_change" ? (
+          <Link href="/settings#phone" className="font-semibold text-accent hover:underline">
+            {t("backToSettings")}
+          </Link>
+        ) : (
+          <Link href="/sign-in" className="font-semibold text-accent hover:underline">
+            {t("backToSignIn")}
+          </Link>
+        )
       }
     >
       <WhatsappWaiter

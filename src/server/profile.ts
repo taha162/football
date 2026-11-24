@@ -128,3 +128,13 @@ export async function blockUserAction(_: ActionState, fd: FormData): Promise<Act
   revalidatePath("/", "layout");
   return ok(bool(fd, "unblock") ? "user_unblocked" : "user_blocked");
 }
+
+/** Settings: whether friends and the people they talk with see when they were active (migration 0049). */
+export async function setActivityVisibilityAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  const show = fd.get("show_activity") === "on";
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_presence_hidden", { p_hidden: !show });
+  if (error) return fail(dbErrorCode(error, "set_presence_hidden"));
+  revalidatePath("/[locale]/settings", "page");
+  return ok("privacy_saved");
+}

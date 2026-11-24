@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import type { Locale } from "@/i18n/routing";
 import { getAccountStatus, requireUser } from "@/lib/auth";
@@ -5,19 +6,20 @@ import { OPTIONAL_NOTIFICATION_TYPES } from "@/lib/notifications";
 import { isPhoneAccountEmail } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/server";
 import { whatsappConfig } from "@/lib/whatsapp";
-import { blockUserAction, savePreferencesAction } from "@/server/profile";
+import { blockUserAction, savePreferencesAction, setActivityVisibilityAction } from "@/server/profile";
 import { saveWhatsappSettingsAction } from "@/server/whatsapp";
 import { setUsernameAction } from "@/server/username";
 import { UsernameField } from "@/components/forms/username-field";
+import { EmailChangeForms, PhoneChangeForm } from "@/components/forms/contact-change-forms";
 import { signOutAction } from "@/server/auth";
 import { SecondFactorSettings } from "@/components/auth/second-factor-settings";
 import { ActionForm, InlineAction, SubmitButton } from "@/components/ui/action-form";
 import { Checkbox } from "@/components/ui/field";
 import { buttonClass } from "@/components/ui/button";
-import { Card, CardBody, Container, DefinitionList, PageHeader, Section } from "@/components/ui/primitives";
+import { Alert, Card, CardBody, Container, DefinitionList, PageHeader, Section } from "@/components/ui/primitives";
 import { LinkButton } from "@/components/ui/link-button";
 
-export default async function SettingsPage({ params }: PageProps<"/[locale]/settings">) {
+export default async function SettingsPage({ params, searchParams }: PageProps<"/[locale]/settings">) {
   const { locale } = await params;
   setRequestLocale(locale);
   const user = await requireUser(locale as Locale, "/settings");
@@ -25,12 +27,21 @@ export default async function SettingsPage({ params }: PageProps<"/[locale]/sett
   const t = await getTranslations("settings");
   const nt = await getTranslations("notificationTypes");
   const supabase = await createClient();
-  const [{ data: prefs }, { data: blocks }, { data: phone }, consent] = await Promise.all([
+  const [{ data: prefs }, { data: blocks }, { data: phone }, consent, { data: authUser }, activityHidden] = await Promise.all([
     supabase.from("user_preferences").select("*").eq("user_id", user.id).maybeSingle(),
     supabase.from("user_blocks").select("blocked_id, profile:profiles!user_blocks_blocked_id_fkey(display_name)").eq("blocker_id", user.id),
     supabase.rpc("my_phone"),
     supabase.from("whatsapp_consent").select("opted_in_at, opted_out_at, bookings_off_at").eq("user_id", user.id).maybeSingle(),
+    // An e-mail change waiting for its code (Supabase keeps the new address until it is confirmed).
+    supabase.auth.getUser(),
+    // Whether they hide when they were active (migration 0049; the section waits for it).
+    supabase.rpc("my_presence_hidden"),
   ]);
+  const pendingEmail = authUser.user?.new_email ?? null;
+  const waitingForCurrent = (await cookies()).get("malaab_email_change_left")?.value === "current";
+  const query = await searchParams;
+  const phoneChanged = query.phone === "changed";
+  const emailChanged = query.email === "changed";
   // WhatsApp messages need a verified number, the bot set up, and the database update (…0028).
   const whatsapp = phone && whatsappConfig().canSend && !consent.error ? (consent.data ?? { opted_in_at: null, opted_out_at: null, bookings_off_at: null }) : null;
   // Phone accounts have only an internal auth address; show their verified number instead.
@@ -66,6 +77,26 @@ export default async function SettingsPage({ params }: PageProps<"/[locale]/sett
         </Card>
       </Section>
 
+      {/* The account's e-mail: added (an account made with WhatsApp has none) or changed, with a code. */}
+      <Section title={phoneAccount ? t("addEmail") : t("changeEmail")} id="email">
+        <Card>
+          <CardBody className="flex flex-col gap-4">
+            {emailChanged ? <Alert tone="success">{t("emailChanged")}</Alert> : null}
+            <EmailChangeForms pending={pendingEmail} current={phoneAccount ? null : (user.email ?? null)} waitingForCurrent={waitingForCurrent} />
+          </CardBody>
+        </Card>
+      </Section>
+
+      {/* The phone number: added or changed by sending a code from its WhatsApp (migrations 0046–0047). */}
+      <Section title={phone ? t("changePhone") : t("addPhone")} id="phone">
+        <Card>
+          <CardBody className="flex flex-col gap-4">
+            {phoneChanged ? <Alert tone="success">{t("phoneChanged")}</Alert> : null}
+            <PhoneChangeForm available={whatsappConfig().enabled} />
+          </CardBody>
+        </Card>
+      </Section>
+
       {/* Their username, for friends to find them (migration 0041; absent before it runs). */}
       {user.profile.username ? (
         <Section title={t("username")} id="username">
@@ -79,6 +110,20 @@ export default async function SettingsPage({ params }: PageProps<"/[locale]/sett
           </Card>
         </Section>
       ) : null}
+
+      {activityHidden.error ? null : (
+        <Section title={t("privacy")} id="privacy">
+          <Card>
+            <CardBody>
+              <ActionForm action={setActivityVisibilityAction}>
+                <Checkbox name="show_activity" defaultChecked={!activityHidden.data} label={t("showActivity")} />
+                <p className="text-xs text-muted">{t("showActivityHint")}</p>
+                <SubmitButton className="self-start">{t("savePrivacy")}</SubmitButton>
+              </ActionForm>
+            </CardBody>
+          </Card>
+        </Section>
+      )}
 
       <Section title={t("secondFactor")} id="two-step">
         <Card>

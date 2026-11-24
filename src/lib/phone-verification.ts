@@ -61,7 +61,7 @@ export async function clientKey(): Promise<string> {
  * `phone` is the number the user typed: the code is then accepted only from
  * that number's WhatsApp.
  */
-export async function createVerification(purpose: "signup" | "reset", userId: string | null, phone: string | null = null): Promise<string | null> {
+export async function createVerification(purpose: "signup" | "reset" | "phone_change", userId: string | null, phone: string | null = null): Promise<string | null> {
   const admin = createAdminClient();
   if (!admin) return "generic";
   const key = await clientKey();
@@ -87,6 +87,8 @@ export async function createVerification(purpose: "signup" | "reset", userId: st
       phone = null;
       continue;
     }
+    // A kind of verification the database doesn't know yet (a new number: migrations 0046–0047).
+    if (error.code === "22P02" && purpose === "phone_change") return "feature_not_ready";
     if (error.code !== "23505") return dbErrorCode(error, "phone_verify_start");
   }
   return "generic";

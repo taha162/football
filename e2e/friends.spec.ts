@@ -25,7 +25,8 @@ test.describe("Friends", () => {
     await page.getByRole("button", { name: "بحث" }).click();
     const result = page.getByRole("list", { name: "نتيجة البحث" });
     await expect(result.getByText(b.name)).toBeVisible();
-    await expect(result.getByText(`@${bName}`)).toBeVisible();
+    // Lists show the name only; the username is on their page.
+    await expect(result.getByText(`@${bName}`)).toHaveCount(0);
     // The button gives way to where they stand now.
     await result.getByRole("button", { name: "إضافة صديق" }).click();
     await expect(result.getByText("تم إرسال الطلب")).toBeVisible();

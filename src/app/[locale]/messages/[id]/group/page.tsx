@@ -9,6 +9,8 @@ import { publicStorageUrl } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 import { addGroupMembersAction, leaveGroupAction, removeGroupMemberAction, renameGroupAction, setGroupAdminAction } from "@/server/groups";
 import { FriendPicker, type PickableFriend } from "@/components/messages/friend-picker";
+import { GroupPhotoForm } from "@/components/messages/group-photo-form";
+import { AvatarViewer } from "@/components/ui/avatar-viewer";
 import { ActionForm, FormField, Hidden, InlineAction, SubmitButton } from "@/components/ui/action-form";
 import { Avatar } from "@/components/ui/avatar";
 import { ConfirmAction } from "@/components/ui/confirm-action";
@@ -25,7 +27,7 @@ export async function generateMetadata({ params }: PageProps<"/[locale]/messages
 type Member = {
   user_id: string;
   role: string;
-  profile: { display_name: string; username: string | null; avatar_path: string | null } | null;
+  profile: { display_name: string; avatar_path: string | null } | null;
 };
 type Friend = { user_id: string; display_name: string; username: string; avatar_path: string | null; relation: string };
 
@@ -43,10 +45,11 @@ export default async function GroupPage({ params }: PageProps<"/[locale]/message
   const m = await getTranslations("messages");
   const supabase = await createClient();
   const [{ data: conv }, { data: rows }] = await Promise.all([
-    supabase.from("conversations").select("kind, title, created_by").eq("id", id).maybeSingle(),
+    // Every column: the photo (migration 0048) is simply absent before it runs.
+    supabase.from("conversations").select("*").eq("id", id).maybeSingle(),
     supabase
       .from("conversation_members")
-      .select("user_id, role, created_at, profile:profiles(display_name, username, avatar_path)")
+      .select("user_id, role, created_at, profile:profiles(display_name, avatar_path)")
       .eq("conversation_id", id)
       .order("created_at")
       .order("user_id"),
@@ -58,6 +61,7 @@ export default async function GroupPage({ params }: PageProps<"/[locale]/message
   if (!me) notFound();
   const isAdmin = me.role === "admin";
   const title = conv.title ?? m("kind.group");
+  const photo = publicStorageUrl("group-photos", (conv as { photo_path?: string | null }).photo_path);
   // Admins add friends of theirs who aren't in it yet.
   let addable: PickableFriend[] = [];
   if (isAdmin) {
@@ -78,9 +82,13 @@ export default async function GroupPage({ params }: PageProps<"/[locale]/message
       </Link>
 
       <header className="flex flex-col items-center gap-3 text-center">
-        <span aria-hidden="true" className="grid size-20 place-items-center rounded-full bg-surface-3 text-muted">
-          <UsersRound className="size-9" />
-        </span>
+        {photo ? (
+          <AvatarViewer src={photo} name={title} size={80} />
+        ) : (
+          <span aria-hidden="true" className="grid size-20 place-items-center rounded-full bg-surface-3 text-muted">
+            <UsersRound className="size-9" />
+          </span>
+        )}
         <h1 className="page-title font-display text-2xl font-bold sm:text-3xl">{title}</h1>
         <p className="text-sm text-muted">{m("membersCount", { count: members.length })}</p>
       </header>
@@ -88,6 +96,8 @@ export default async function GroupPage({ params }: PageProps<"/[locale]/message
       {isAdmin ? (
         <Card>
           <CardBody>
+            <GroupPhotoForm conversationId={id} hasPhoto={Boolean(photo)} />
+            <hr className="my-5 border-line" />
             <ActionForm action={renameGroupAction} className="gap-3">
               <Hidden values={{ conversation_id: id }} />
               <FormField name="title" label={t("renameTitle")} required>
@@ -114,12 +124,7 @@ export default async function GroupPage({ params }: PageProps<"/[locale]/message
                 <div className="flex min-w-0 flex-1 items-center gap-3">
                   <Link href={`/players/${x.user_id}`} className="flex min-w-0 flex-1 items-center gap-3">
                     <Avatar src={publicStorageUrl("avatars", x.profile?.avatar_path)} name={name} size={44} />
-                    <span className="flex min-w-0 flex-col">
-                      <span className="truncate font-semibold">{self ? `${name} (${t("you")})` : name}</span>
-                      {x.profile?.username ? (
-                        <span className="max-w-full self-start truncate text-sm text-muted" dir="ltr">@{x.profile.username}</span>
-                      ) : null}
-                    </span>
+                    <span className="min-w-0 truncate font-semibold">{self ? `${name} (${t("you")})` : name}</span>
                   </Link>
                   <span className="flex shrink-0 flex-col items-end gap-1">
                     {x.role === "admin" ? <Badge tone="accent">{t("admin")}</Badge> : null}

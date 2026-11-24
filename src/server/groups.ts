@@ -5,6 +5,9 @@ import { getLocale } from "next-intl/server";
 import { redirect } from "@/i18n/navigation";
 import { isLocale } from "@/i18n/routing";
 import { dbErrorCode, fail, ok, uuid, type ActionState } from "@/lib/actions";
+import { logger } from "@/lib/log";
+import { inspectImage, isPubliclyServed, randomFileName, UPLOAD_CACHE_SECONDS } from "@/lib/storage";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -105,4 +108,67 @@ export async function leaveGroupAction(_: ActionState, fd: FormData): Promise<Ac
   refresh();
   await goTo("/messages");
   return ok();
+}
+
+const GROUP_PHOTOS = "group-photos";
+
+/** Whether the signed-in member is an admin of the group (RLS: only its members see its members). */
+async function isGroupAdmin(supabase: Awaited<ReturnType<typeof createClient>>, group: string): Promise<boolean> {
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) return false;
+  const { data } = await supabase.from("conversation_members").select("role").eq("conversation_id", group).eq("user_id", auth.user.id).maybeSingle();
+  return (data as { role?: string } | null)?.role === "admin";
+}
+
+/**
+ * Admins: the group's photo (migration 0048). Checked by its first bytes, stored
+ * by the server in the group's folder, then set by the database, which checks
+ * the admin again; the photo it replaced is removed.
+ */
+export async function setGroupPhotoAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  const group = uuid.safeParse(fd.get("conversation_id"));
+  if (!group.success) return fail("invalid");
+  const file = fd.get("photo");
+  if (!(file instanceof File) || file.size === 0) return fail("file_missing");
+  const img = await inspectImage(file);
+  if (!img.ok) return fail(img.error);
+  const supabase = await createClient();
+  if (!(await isGroupAdmin(supabase, group.data))) return fail("not_group_admin");
+  const admin = createAdminClient();
+  if (!admin) return fail("generic");
+  const storage = admin.storage.from(GROUP_PHOTOS);
+  const path = `${group.data}/${randomFileName(img.ext)}`;
+  const { error: upError } = await storage.upload(path, img.bytes, { cacheControl: UPLOAD_CACHE_SECONDS, contentType: img.mime, upsert: false });
+  if (upError) {
+    // Before migration 0048 there is no such bucket.
+    if (/bucket not found/i.test(upError.message)) return fail("feature_not_ready");
+    logger.error("group_photo_upload_failed", { message: upError.message.slice(0, 120) });
+    return fail("upload_failed");
+  }
+  if (!(await isPubliclyServed(GROUP_PHOTOS, path))) {
+    await storage.remove([path]);
+    logger.error("storage_not_public", { bucket: GROUP_PHOTOS });
+    return fail("storage_not_public");
+  }
+  const { data: previous, error } = await supabase.rpc("set_group_photo", { p_conversation_id: group.data, p_path: path });
+  if (error) {
+    await storage.remove([path]);
+    return fail(dbErrorCode(error, "set_group_photo"));
+  }
+  if (typeof previous === "string" && previous) await storage.remove([previous]);
+  refresh();
+  return ok("group_photo_updated");
+}
+
+/** Admins: no photo any more. */
+export async function removeGroupPhotoAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  const group = uuid.safeParse(fd.get("conversation_id"));
+  if (!group.success) return fail("invalid");
+  const supabase = await createClient();
+  // The generated types don't model nullable arguments; null removes the photo.
+  const { data: previous, error } = await supabase.rpc("set_group_photo", { p_conversation_id: group.data, p_path: null as unknown as string });
+  if (error) return fail(dbErrorCode(error, "set_group_photo"));
+  if (typeof previous === "string" && previous) await createAdminClient()?.storage.from(GROUP_PHOTOS).remove([previous]);
+  refresh();
+  return ok("group_photo_removed");
 }

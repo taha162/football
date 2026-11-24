@@ -10,7 +10,7 @@ import { Badge, Card, CardBody, Section, Stat } from "@/components/ui/primitives
 import { LinkButton } from "@/components/ui/link-button";
 
 /** Public view of a player: identity, preferences, teams, statistics, reputation, history. */
-export async function PlayerSummary({ profile, viewerId }: { profile: Profile; viewerId: string | null }) {
+export async function PlayerSummary({ profile, viewerId, status = null }: { profile: Profile; viewerId: string | null; status?: React.ReactNode }) {
   const t = await getTranslations("player");
   const e = await getTranslations("enums");
   const locale = await getLocale();
@@ -45,6 +45,7 @@ export async function PlayerSummary({ profile, viewerId }: { profile: Profile; v
         <div className="flex flex-col gap-1.5">
           <h1 className="page-title font-display text-3xl font-bold">{profile.display_name}</h1>
           {profile.username ? <p className="text-sm font-medium text-accent" data-testid="username"><bdi dir="ltr">@{profile.username}</bdi></p> : null}
+          {status ? <p className="text-sm text-muted">{status}</p> : null}
           <p className="text-muted">{[localizedName(area, locale), localizedName(city, locale)].filter(Boolean).join("، ")}</p>
           <div className="flex flex-wrap gap-1.5">
             {profile.positions.map((p) => <Badge key={p} tone="accent">{e(`position.${p}`)}</Badge>)}

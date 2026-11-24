@@ -1,5 +1,11 @@
 import { admin, createAuthUser, expect, rpc, signIn, test, type TestUser } from "./fixtures";
 
+// A 2×2 PNG: the page makes it a JPEG before sending, as it does phone photos.
+const PNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFklEQVR4nGPc9V+agYGBiYGBgYGBAQAWuQHYMNpr4AAAAABJRU5ErkJggg==",
+  "base64",
+);
+
 const usernameOf = async (id: string) => (await admin<{ username: string }>("select username from public.profiles where id = $1", [id]))[0].username;
 async function befriend(a: TestUser, b: TestUser) {
   await rpc(a.id, "send_friend_request", { p_username: await usernameOf(b.id) });
@@ -110,5 +116,43 @@ test.describe("Groups", () => {
     await expect(page.getByText("أضف أصدقاء أولاً")).toBeVisible();
     await page.getByRole("link", { name: "إلى الأصدقاء" }).click();
     await page.waitForURL(/\/ar\/friends/);
+  });
+
+  test("an admin gives the group a photo; members see it in the bar and the list, and can't change it", async ({ page, browser }) => {
+    const [a, b] = [await createAuthUser("Photo admin"), await createAuthUser("Photo member")];
+    await befriend(a, b);
+    const group = await rpc<string>(a.id, "create_group", { p_title: "صورة الفريق", p_member_ids: [b.id] });
+    const photoOf = async () => (await admin<{ photo_path: string | null }>("select photo_path from public.conversations where id = $1", [group]))[0].photo_path;
+
+    await signIn(page, a);
+    await page.goto(`/ar/messages/${group}/group`);
+    await page.waitForLoadState("networkidle");
+    await page.getByLabel("صورة المجموعة").setInputFiles({ name: "team.png", mimeType: "image/png", buffer: PNG });
+    await page.getByRole("button", { name: "حفظ الصورة" }).click();
+    await expect(page.getByText("تم حفظ صورة المجموعة.")).toBeVisible();
+    const first = await photoOf();
+    expect(first).toMatch(new RegExp(`^${group}/[0-9a-f-]{36}\\.(jpg|png|webp)$`));
+    // Changing it removes the old file.
+    await page.getByLabel("تغيير صورة المجموعة").setInputFiles({ name: "team2.png", mimeType: "image/png", buffer: PNG });
+    await page.getByRole("button", { name: "حفظ الصورة" }).click();
+    await expect.poll(photoOf).not.toBe(first);
+    await expect.poll(async () => (await admin("select 1 from storage.objects where bucket_id = 'group-photos' and name = $1", [first])).length).toBe(0);
+
+    // A member: the photo in the conversation's bar and the list, no way to change it.
+    const other = await (await browser.newContext()).newPage();
+    await signIn(other, b);
+    await other.goto(`/ar/messages/${group}/group`);
+    await expect(other.getByRole("button", { name: "حفظ الصورة" })).toHaveCount(0);
+    await other.goto(`/ar/messages/${group}`);
+    await expect(other.locator(`header img[src*="group-photos"]`)).toBeVisible();
+    await other.goto("/ar/messages");
+    await expect(other.locator(`img[src*="group-photos"]`)).toBeVisible();
+    await other.context().close();
+
+    // Removed: gone from the group and from storage.
+    const second = await photoOf();
+    await page.getByRole("button", { name: "إزالة الصورة" }).click();
+    await expect.poll(photoOf).toBeNull();
+    await expect.poll(async () => (await admin("select 1 from storage.objects where bucket_id = 'group-photos' and name = $1", [second])).length).toBe(0);
   });
 });

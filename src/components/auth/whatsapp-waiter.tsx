@@ -47,7 +47,7 @@ export function WhatsappWaiter({
   number: string;
   link: string;
   expiresAt: string;
-  purpose: "signup" | "reset";
+  purpose: "signup" | "reset" | "phone_change";
 }) {
   const t = useTranslations("auth");
   const [state, setState] = useState<VerificationPoll["state"]>("pending");
@@ -141,7 +141,7 @@ export function WhatsappWaiter({
   const copy = (what: "code" | "number") => {
     void navigator.clipboard?.writeText(what === "code" ? code : number.replace(/\s/g, "")).then(() => setCopied(what));
   };
-  const restart = purpose === "signup" ? "/sign-up?method=whatsapp" : "/forgot-password";
+  const restart = purpose === "signup" ? "/sign-up?method=whatsapp" : purpose === "phone_change" ? "/settings#phone" : "/forgot-password";
 
   if (state === "done") {
     return (
@@ -160,9 +160,14 @@ export function WhatsappWaiter({
   if (state === "phone_taken" || state === "no_account") {
     return (
       <Alert tone="warning" title={state === "phone_taken" ? t("waPhoneTaken") : t("waNoAccount")}>
-        <Link href={state === "phone_taken" ? "/sign-in" : "/sign-up?method=whatsapp"} className="text-accent underline">
-          {state === "phone_taken" ? t("signIn") : t("createAccount")}
-        </Link>
+        {purpose === "phone_change" ? (
+          // Changing one's number: back to settings, to type another.
+          <Link href="/settings#phone" className="text-accent underline">{t("backToSettings")}</Link>
+        ) : (
+          <Link href={state === "phone_taken" ? "/sign-in" : "/sign-up?method=whatsapp"} className="text-accent underline">
+            {state === "phone_taken" ? t("signIn") : t("createAccount")}
+          </Link>
+        )}
       </Alert>
     );
   }

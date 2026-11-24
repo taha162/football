@@ -222,7 +222,10 @@ web3 = 30
 enable_signup = true
 # If enabled, a user will be required to confirm any email change on both the old, and new email
 # addresses. If disabled, only the new email is required to confirm.
-double_confirm_changes = true
+# Off, to match production (DEPLOYMENT.md section 20): an account made with WhatsApp has an
+# internal address that receives nothing, so only the new address gets a code; the site asks for
+# the password first and notifies the member (src/server/account.ts). With it on, it still works.
+double_confirm_changes = false
 # If enabled, users need to confirm their email address before signing in.
 # On, to match production: sign-up asks for the e-mailed code.
 enable_confirmations = true

@@ -34,6 +34,9 @@ const REPLIES: Record<string, string> = {
   "signup:phone_taken": "⚠️ هذا الرقم مرتبط بحساب آخر في «الملعب». سجّل الدخول به بدل إنشاء حساب جديد.",
   "reset:verified": "✅ تم التحقق. ارجع إلى «الملعب» لاختيار كلمة مرور جديدة.",
   "reset:no_account": "⚠️ لا يوجد حساب في «الملعب» مرتبط بهذا الرقم.",
+  // A new number for an existing account (settings; migration 0047).
+  "phone_change:verified": "✅ تم ربط هذا الرقم بحسابك في «الملعب». يمكنك تسجيل الدخول به من الآن.",
+  "phone_change:phone_taken": "⚠️ هذا الرقم مرتبط بحساب آخر في «الملعب»، فلم يتغيّر رقم حسابك.",
   no_pending_code: "⚠️ هذا الرمز غير صالح أو انتهت صلاحيته. ارجع إلى الموقع وابدأ من جديد.",
   // A code opened in Telegram before Telegram sign-up was removed: it can't be finished there any more.
   claimed: "⚠️ هذا الرمز لم يعد صالحاً. ارجع إلى الموقع وابدأ من جديد.",

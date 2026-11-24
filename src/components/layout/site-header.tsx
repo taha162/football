@@ -60,7 +60,6 @@ export async function SiteHeader({ user }: { user: CurrentUser | null }) {
               </CountLink>
               <UserMenu
                 name={user.profile.display_name}
-                username={user.profile.username}
                 avatarSrc={publicStorageUrl("avatars", user.profile.avatar_path)}
                 contact={accountContact(user)}
                 isModerator={user.isModerator}

@@ -2156,3 +2156,72 @@
 الملفات: `src/lib/message-video.ts`، `src/components/messages/video-attachment.ts` (جديدان)، `src/components/messages/composer.tsx`، `src/components/messages/thread.tsx`، `src/server/messages.ts`، `src/lib/message-files.ts`، `src/server/admin.ts`، `src/app/api/cron/route.ts`، `src/app/[locale]/messages/[id]/page.tsx`، `src/app/[locale]/messages/page.tsx`، `src/app/[locale]/admin/reports/page.tsx`، `src/lib/supabase/types.ts`، `DEPLOYMENT.md`، والنصوص في `messages/`. الاختبارات: `tests/db/videos.test.ts` و`e2e/videos.spec.ts` (جديدان) مع مقطع اختبار صغير `e2e/assets/clip.webm` (3 ثوانٍ، 22 كيلوبايت).
 
 التعديل: «Videos in conversations»
+
+### 119. اسم المستخدم في صفحة الملف فقط، وتغييره بسهولة
+**ما تغيّر:**
+- **في كل مكان يظهر الاسم فقط:** قائمة الحساب، وقوائم الأصدقاء، واختيار الأصدقاء للمجموعة، وأعضاء المجموعة.
+- **اسم المستخدم يظهر في صفحة الملف:** صفحة اللاعب، و«ملفي الشخصي».
+- **التغيير:** في «ملفي الشخصي» بجانب اسم المستخدم رابط «تغيير» يأخذك إلى الإعدادات ← «اسم المستخدم»، حيث يُغيَّر (حتى 5 مرات في اليوم).
+- البحث عن صديق ما زال باسم المستخدم.
+
+لا ملف قاعدة بيانات.
+
+الملفات: `src/components/layout/user-menu.tsx`، `src/components/layout/site-header.tsx`، `src/app/[locale]/friends/page.tsx`، `src/components/messages/friend-picker.tsx`، `src/app/[locale]/messages/[id]/group/page.tsx`، `src/app/[locale]/profile/page.tsx`، والنصوص في `messages/`. الاختبارات: `e2e/friends.spec.ts`، `e2e/players.spec.ts`.
+
+التعديل: «Usernames on profile pages only, with a link to change them»
+
+### 120. إضافة رقم الهاتف أو البريد الإلكتروني، أو تغييرهما
+**ما تغيّر** (في «الإعدادات»):
+- **«إضافة رقم هاتف» أو «تغيير رقم الهاتف»:**
+  - تكتب الرقم وكلمة المرور الحالية، فتظهر صفحة الرمز كما عند التسجيل بواتساب.
+  - ترسل الرمز من واتساب **الرقم الجديد نفسه**، فيصبح رقم حسابك، ويمكنك تسجيل الدخول به فوراً. الرقم القديم يصبح متاحاً لغيرك.
+  - رقم مرتبط بحساب آخر يُرفض.
+- **«إضافة بريد إلكتروني» أو «تغيير البريد الإلكتروني»:**
+  - تكتب البريد الجديد وكلمة المرور الحالية، فيصلك رمز إلى البريد الجديد تكتبه في الصفحة نفسها، فيتغيّر البريد.
+  - حساب أُنشئ بواتساب يستطيع إضافة بريد ويبقى يدخل برقمه أيضاً.
+- **الأمان:**
+  - كلمة المرور مطلوبة قبل أي تغيير، فالجلسة المفتوحة وحدها لا تكفي. والمحاولات الخاطئة محسوبة مثل تسجيل الدخول (5 كل 15 دقيقة).
+  - **إشعار** في الجرس عند كل تغيير («إن لم تكن أنت، غيّر كلمة المرور الآن») لا يمكن إيقافه، ويُسجَّل التغيير في سجل الإدارة.
+
+**ملفا قاعدة البيانات:** `…0046_phone_change_purpose.sql` **وحده**، ثم `…0047_phone_change.sql`. لا يغيّران بيانات موجودة، وتشغيلهما مرتين لا يضر.
+- قبل تشغيلهما: تغيير البريد يعمل، لكن دون الإشعار وسجل الإدارة حتى يُشغَّل …0047. أما تغيير الرقم فيقول إن الميزة تنتظر تحديث قاعدة البيانات.
+
+**في Supabase** (التفاصيل في `DEPLOYMENT.md` القسم 20):
+- رفع قالب البريد الجديد `supabase/templates/email_change.html`. صار يعرض الرمز بدل الرابط.
+- إيقاف «Secure email change»، ليصل الرمز إلى البريد الجديد فقط. حساب واتساب عنوانه الحالي داخلي لا يستقبل بريداً. مع بقائه مفعّلاً يعمل التغيير أيضاً، لكن حساب البريد يحتاج رمزين.
+
+الملفات: `src/server/account.ts`، `src/lib/password-check.ts`، `src/components/forms/contact-change-forms.tsx` (جديدة)، `src/app/[locale]/settings/page.tsx`، `src/lib/phone-verification.ts`، `src/server/whatsapp.ts`، `src/app/[locale]/verify-whatsapp/page.tsx`، `src/components/auth/whatsapp-waiter.tsx`، `src/lib/whatsapp-messages.ts`، `src/lib/notifications.ts`، `src/lib/supabase/types.ts`، `supabase/templates/email_change.html`، `supabase/config.toml`، والنصوص في `messages/`. الاختبارات: `tests/db/phone-change.test.ts` و`e2e/account-contact.spec.ts` (جديدان)، `tests/unit/whatsapp-messages.test.ts`.
+
+التعديل: «Add or change the phone number and the e-mail»
+
+### 121. صورة للمجموعة، يضيفها ويغيّرها المشرفون فقط
+**ما تغيّر:**
+- في صفحة المجموعة، **للمشرفين:** «صورة المجموعة» (أو «تغيير صورة المجموعة»)، و«إزالة الصورة».
+- **الصورة تظهر** في أعلى صفحة المجموعة (تكبر عند الضغط عليها)، وفي شريط المحادثة، وبجانب المجموعة في قائمة الرسائل. بدونها تبقى أيقونة المجموعة.
+- **الأعضاء العاديون** يرون الصورة ولا يستطيعون تغييرها. قاعدة البيانات ترفض أي تغيير من غير مشرف.
+- **عند التغيير أو الإزالة** تُحذف الصورة السابقة من التخزين.
+- الصورة تُصغَّر في الهاتف قبل الرفع، كباقي الصور.
+
+**ملف قاعدة البيانات `…0048_group_photos.sql`:** مخزن `group-photos` (عام، كصور الأعضاء، وأسماء ملفاته عشوائية لا يعرفها إلا أعضاء المجموعة)، وخانة الصورة، والدالة التي تحفظها. لا يغيّر بيانات موجودة، وتشغيله مرتين لا يضر.
+- قبل تشغيله: حفظ الصورة يقول إن الميزة تنتظر تحديث قاعدة البيانات، وباقي المجموعات يعمل كما هو.
+
+الملفات: `src/components/messages/group-photo-form.tsx` (جديد)، `src/server/groups.ts`، `src/app/[locale]/messages/[id]/group/page.tsx`، `src/app/[locale]/messages/[id]/page.tsx`، `src/app/[locale]/messages/page.tsx`، `src/lib/storage.ts`، `src/lib/supabase/types.ts`، والنصوص في `messages/`. الاختبارات: `tests/db/groups.test.ts`، `e2e/groups.spec.ts`.
+
+التعديل: «Group photos, set by admins»
+
+### 122. «نشط الآن» أو «نشط قبل…» حسب آخر وقت كان فيه العضو نشطاً
+**ما تغيّر:**
+- **في شريط المحادثة الفردية** تحت اسم الشخص: «نشط الآن» مع نقطة خضراء، أو «نشط قبل 10 دقائق» / «نشط قبل 3 ساعات» / «نشط أمس». يتحدث وحده كل دقيقة والصفحة مفتوحة.
+- **في قائمة الرسائل:** نقطة خضراء على صورة من هو نشط الآن.
+- **في صفحة اللاعب:** السطر نفسه تحت اسم المستخدم.
+- **من يراه:** أصدقاؤه ومن يشاركه محادثة فقط، ولا يظهر بين عضوين حظر أحدهما الآخر. الغرباء لا يرون شيئاً.
+- **الإعدادات ← «الخصوصية»:** «إظهار متى كنت نشطاً» (مفعّل افتراضياً). عند إلغائه لا يراه أحد.
+- **«نشط الآن»** = استعمل الموقع في آخر دقيقتين ونصف. الصفحة المفتوحة والمستعملة (لمسة أو كتابة أو تمرير في آخر 3 دقائق) تُبلغ عن ذلك مرة كل دقيقة تقريباً، فالتحديث ليس لحظياً بالثانية.
+- **الحمل على قاعدة البيانات:** صف صغير لكل عضو يُحدَّث في مكانه، مرة كل دقيقة على الأكثر لكل عضو نشط. ووقت النشاط يُجلب في الوقت نفسه مع باقي بيانات الصفحة، فلا يؤخر فتحها.
+
+**ملف قاعدة البيانات `…0049_presence.sql`:** جدول `user_presence`، والدوال: `touch_presence` (الكتابة، كل 45 ثانية على الأكثر)، و`last_seen` و`last_seen_in` (القراءة حسب القواعد أعلاه، 100 على الأكثر في الطلب)، و`set_presence_hidden` و`my_presence_hidden` (الإخفاء). لا يغيّر بيانات موجودة، وتشغيله مرتين لا يضر.
+- قبل تشغيله: لا يظهر شيء من هذا، ويبقى قسم «الخصوصية» مخفياً، وباقي الموقع يعمل كما هو.
+
+الملفات: `src/lib/presence.ts` و`src/components/messages/active-status.tsx` (جديدان)، `src/components/layout/live-refresh.tsx`، `src/app/[locale]/messages/[id]/page.tsx`، `src/app/[locale]/messages/page.tsx`، `src/app/[locale]/players/[id]/page.tsx`، `src/components/player/player-summary.tsx`، `src/app/[locale]/settings/page.tsx`، `src/server/profile.ts`، `src/lib/supabase/types.ts`، `DEPLOYMENT.md` (القسم 20: ملفات …0046 إلى …0049 وإعدادات البريد في Supabase)، والنصوص في `messages/`. الاختبارات: `tests/db/presence.test.ts`، `e2e/presence.spec.ts`.
+
+التعديل: «Active now, or how long ago»

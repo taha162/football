@@ -159,7 +159,9 @@
     "usernameFree": "متاح",
     "usernameTaken": "مأخوذ، جرّب غيره.",
     "usernameInvalid": "من 3 إلى 20: حروف إنجليزية صغيرة وأرقام و _ و . ويبدأ بحرف.",
-    "usernameChecking": "جارٍ التحقق…"
+    "usernameChecking": "جارٍ التحقق…",
+    "waSubtitleChange": "أرسل الرمز من واتساب رقمك الجديد لربطه بحسابك.",
+    "backToSettings": "رجوع إلى الإعدادات"
   },
   "onboarding": {
     "title": "جهّز ملفك كلاعب",
@@ -194,7 +196,9 @@
     "uploadPhoto": "رفع صورة",
     "removePhoto": "إزالة الصورة",
     "viewPublic": "عرض الملف العام",
-    "moreOptions": "خيارات إضافية"
+    "moreOptions": "خيارات إضافية",
+    "changeUsername": "تغيير",
+    "changeUsernameLabel": "تغيير اسم المستخدم"
   },
   "forms": {
     "city": "المدينة",
@@ -499,7 +503,12 @@
     "video_too_large": "الفيديو أكبر من 50 ميغابايت. اختر مقطعاً أقصر.",
     "video_type_not_allowed": "هذا النوع من الفيديو غير مدعوم. أرسل MP4 أو MOV أو WebM.",
     "invalid_video": "تعذّر إرسال الفيديو. جرّب مرة أخرى.",
-    "upload_cancelled": "أُلغي إرسال الفيديو."
+    "upload_cancelled": "أُلغي إرسال الفيديو.",
+    "wrong_password": "كلمة المرور غير صحيحة.",
+    "same_email": "هذا بريدك الحالي.",
+    "same_phone": "هذا رقمك الحالي.",
+    "phone_taken": "هذا الرقم مرتبط بحساب آخر في «الملعب».",
+    "no_email_change": "لا يوجد تغيير بريد ينتظر التأكيد."
   },
   "validation": {
     "invalid": "قيمة غير صالحة.",
@@ -638,7 +647,13 @@
     "group_member_removed": "أُزيل من المجموعة.",
     "group_admin_added": "أصبح مشرفاً.",
     "group_admin_removed": "لم يعد مشرفاً.",
-    "group_renamed": "تم تغيير اسم المجموعة."
+    "group_renamed": "تم تغيير اسم المجموعة.",
+    "email_code_sent": "أرسلنا رمز التأكيد.",
+    "email_code_other": "تم. بقي الرمز الآخر.",
+    "email_changed": "تم تغيير بريدك الإلكتروني.",
+    "group_photo_updated": "تم حفظ صورة المجموعة.",
+    "group_photo_removed": "أُزيلت صورة المجموعة.",
+    "privacy_saved": "تم حفظ إعدادات الخصوصية."
   },
   "notifications": {
     "generic": "لديك تحديث جديد.",
@@ -698,7 +713,9 @@
     "security_alert": "{kind, select, code_blocked {تنبيه أمني: رموز تحقق خاطئة متكررة} other {تنبيه أمني: كلمات مرور خاطئة متكررة}}{has_account, select, yes { على الحساب {account}} other {}}، فأُوقف تسجيل الدخول حتى 15 دقيقة. التفاصيل في سجل التدقيق.",
     "friend_request": "{from_name} يريد أن يكون صديقك.",
     "friend_accepted": "{from_name} قبل طلب صداقتك.",
-    "group_added": "{by_name} أضافك إلى مجموعة «{group_name}»."
+    "group_added": "{by_name} أضافك إلى مجموعة «{group_name}».",
+    "phone_changed": "تم ربط حسابك برقم هاتف جديد ينتهي بـ {phone_end}. إن لم تكن أنت، غيّر كلمة المرور الآن.",
+    "email_changed": "تم تغيير بريد حسابك إلى {email_hint}. إن لم تكن أنت، غيّر كلمة المرور الآن."
   },
   "notificationTypes": {
     "match_participant_joined": "انضمام لاعب لمباراتي",
@@ -1952,7 +1969,31 @@
     "whatsappPromos": "العروض والأخبار",
     "whatsappStopHint": "يمكنك أيضاً إيقاف كل الرسائل بإرسال 0 إلى رقم «الملعب» على واتساب.",
     "username": "اسم المستخدم",
-    "saveUsername": "حفظ اسم المستخدم"
+    "saveUsername": "حفظ اسم المستخدم",
+    "addEmail": "إضافة بريد إلكتروني",
+    "changeEmail": "تغيير البريد الإلكتروني",
+    "addPhone": "إضافة رقم هاتف",
+    "changePhone": "تغيير رقم الهاتف",
+    "newEmail": "البريد الجديد",
+    "newPhone": "رقم واتساب الجديد",
+    "newPhoneHint": "سترسل رمزاً من واتساب هذا الرقم لتأكيد أنه لك.",
+    "currentPassword": "كلمة المرور الحالية",
+    "currentPasswordHint": "للتأكد أنك صاحب الحساب.",
+    "sendEmailCode": "إرسال رمز التأكيد",
+    "verifyPhone": "تأكيد عبر واتساب",
+    "emailCodeSent": "أرسلنا رمزاً إلى <b>{email}</b>. أدخله هنا لتأكيد البريد الجديد.",
+    "emailCodeCurrent": "تأكد البريد الجديد. بقي رمز أرسلناه إلى بريدك الحالي <b>{email}</b>: أدخله هنا لإتمام التغيير.",
+    "emailCode": "رمز التأكيد",
+    "confirmEmail": "تأكيد",
+    "resendEmailCode": "إرسال الرمز مجدداً",
+    "otherEmail": "بريد آخر؟",
+    "phoneChangeUnavailable": "إضافة رقم أو تغييره غير متاحة الآن.",
+    "phoneChanged": "تم تحديث رقم هاتفك. يمكنك تسجيل الدخول به من الآن.",
+    "emailChanged": "تم تغيير بريدك الإلكتروني. سجّل الدخول به من الآن.",
+    "privacy": "الخصوصية",
+    "showActivity": "إظهار متى كنت نشطاً",
+    "showActivityHint": "يراه أصدقاؤك ومن تراسلهم فقط: «نشط الآن» أو «نشط قبل 5 دقائق». إن أخفيته لا يراه أحد.",
+    "savePrivacy": "حفظ الخصوصية"
   },
   "messages": {
     "title": "الرسائل",
@@ -2075,7 +2116,9 @@
     "playVideo": "تشغيل الفيديو",
     "removeVideo": "إزالة الفيديو",
     "uploadingVideo": "جارٍ رفع الفيديو",
-    "uploadPercent": "{percent}٪"
+    "uploadPercent": "{percent}٪",
+    "activeNow": "نشط الآن",
+    "activeAgo": "نشط {ago}"
   },
   "notificationsPage": {
     "title": "الإشعارات",
@@ -2653,6 +2696,11 @@
     "rename": "حفظ الاسم",
     "leave": "مغادرة المجموعة",
     "leaveTitle": "مغادرة «{name}»؟",
-    "leaveBody": "لن تصلك رسائلها ولن ترى ما فيها. إن كنت آخر مشرف فيها، يصبح أقدم عضو مشرفاً."
+    "leaveBody": "لن تصلك رسائلها ولن ترى ما فيها. إن كنت آخر مشرف فيها، يصبح أقدم عضو مشرفاً.",
+    "addPhoto": "صورة المجموعة",
+    "changePhoto": "تغيير صورة المجموعة",
+    "photoHint": "JPG أو PNG أو WebP. يراها كل أعضاء المجموعة.",
+    "savePhoto": "حفظ الصورة",
+    "removePhoto": "إزالة الصورة"
   }
 }

@@ -130,6 +130,12 @@ export async function pollWhatsappAction(): Promise<VerificationPoll> {
   const { data: consumed, error } = await admin.rpc("phone_verify_consume", { p_ticket_hash: hash });
   const account = consumed?.[0];
   if (error || !account?.email) return { state: "missing" };
+  // A new number for the signed-in member (migration 0047): it is already theirs; no new session.
+  if (account.purpose === "phone_change") {
+    await clearVerifyTicket();
+    revalidatePath("/[locale]", "layout");
+    return { state: "done", href: `/${await currentLocale()}/settings?phone=changed#phone` };
+  }
   const link = await admin.auth.admin.generateLink({ type: "magiclink", email: account.email });
   const tokenHash = link.data?.properties?.hashed_token;
   if (link.error || !tokenHash) {
