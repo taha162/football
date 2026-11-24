@@ -19,6 +19,7 @@ import {
 import { verifySecondFactorAction } from "@/server/mfa";
 import { startWhatsappResetAction, startWhatsappSignupAction } from "@/server/whatsapp";
 import { useActionMessage } from "@/components/ui/use-action-message";
+import { UsernameField } from "@/components/forms/username-field";
 
 /**
  * The WhatsApp number (the main way) or the e-mail, and the password. A
@@ -63,6 +64,7 @@ export function SignUpForm() {
       <FormField name="display_name" label={t("displayName")} hint={t("displayNameHint")} required>
         {(a) => <Input {...a} autoComplete="nickname" required minLength={2} maxLength={40} />}
       </FormField>
+      <UsernameField />
       <FormField name="email" label={t("email")} required>
         {(a) => <Input {...a} type="email" autoComplete="email" inputMode="email" required dir="ltr" />}
       </FormField>
@@ -100,6 +102,7 @@ export function WhatsappSignUpForm({ offerPromos = false }: { offerPromos?: bool
       <FormField name="display_name" label={t("displayName")} hint={t("displayNameHint")} required>
         {(a) => <Input {...a} autoComplete="nickname" required minLength={2} maxLength={40} />}
       </FormField>
+      <UsernameField />
       <FormField
         name="phone"
         label={t("waPhone")}

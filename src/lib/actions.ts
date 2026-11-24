@@ -26,6 +26,11 @@ const KNOWN_CODE = /^[a-z][a-z0-9_]{2,60}$/;
 export function dbErrorCode(error: Pick<PostgrestError, "message" | "code"> | null | undefined, context: string): string {
   if (!error) return "generic";
   if (error.code === "42501" && /permission denied/i.test(error.message)) return "forbidden";
+  // A function from a database update that hasn't been run yet: the feature waits for its SQL file.
+  if (error.code === "PGRST202") {
+    logger.warn("rpc_missing", { context });
+    return "feature_not_ready";
+  }
   if (KNOWN_CODE.test(error.message)) return error.message;
   logger.error("rpc_failed", { context, code: error.code, message: error.message });
   return "generic";

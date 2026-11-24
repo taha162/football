@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { admin, createAuthUser, emailedCode, emailedHtml, expect, PASSWORD, quietWhatsapp, test, testAddress } from "./fixtures";
+import { admin, createAuthUser, emailedCode, emailedHtml, expect, newUsername, PASSWORD, quietWhatsapp, test, testAddress } from "./fixtures";
 
 const phone = () => `9647${String(Math.floor(Math.random() * 1e9)).padStart(9, "0")}`;
 const localFormat = (e164: string) => `0${e164.slice(3)}`;
@@ -9,6 +9,7 @@ test.describe("Account verification", () => {
     const existing = await createAuthUser("Existing");
     await page.goto("/ar/sign-up?method=email");
     await page.getByRole("textbox", { name: "الاسم الظاهر" }).fill("لاعب مكرر");
+    await page.getByRole("textbox", { name: "اسم المستخدم" }).fill(newUsername());
     await page.getByRole("textbox", { name: "البريد الإلكتروني" }).fill(existing.email);
     await page.getByRole("textbox", { name: "كلمة المرور" }).fill(PASSWORD);
     await page.getByRole("checkbox", { name: /شروط الاستخدام/ }).check();
@@ -60,6 +61,7 @@ test.describe("Account verification", () => {
     const email = `e2e-code-${randomUUID().slice(0, 8)}@example.test`;
     await page.goto("/ar/sign-up?method=email");
     await page.getByRole("textbox", { name: "الاسم الظاهر" }).fill("لاعب الرمز");
+    await page.getByRole("textbox", { name: "اسم المستخدم" }).fill(newUsername());
     await page.getByRole("textbox", { name: "البريد الإلكتروني" }).fill(email);
     await page.getByRole("textbox", { name: "كلمة المرور" }).fill(PASSWORD);
     await page.getByRole("checkbox", { name: /شروط الاستخدام/ }).check();
@@ -100,6 +102,7 @@ test.describe("Account verification", () => {
         const page = await context.newPage();
         await page.goto("/ar/sign-up?method=whatsapp");
         await page.getByRole("textbox", { name: "الاسم الظاهر" }).fill(tag);
+        await page.getByRole("textbox", { name: "اسم المستخدم" }).fill(newUsername());
         await page.getByRole("textbox", { name: "رقم واتساب" }).fill(localFormat(phone()));
         await page.getByRole("textbox", { name: "كلمة المرور" }).fill(PASSWORD);
         await page.getByRole("checkbox", { name: /شروط الاستخدام/ }).check();

@@ -61,7 +61,8 @@
     "tournamentDashboard": "بطولاتي",
     "settings": "الإعدادات",
     "admin": "الإدارة",
-    "accountMenu": "قائمة حساب {name}"
+    "accountMenu": "قائمة حساب {name}",
+    "friends": "أصدقائي"
   },
   "footer": {
     "tagline": "مجتمع لكرة القدم الترفيهية في كل محافظات العراق.",
@@ -152,7 +153,13 @@
     "continueWhatsappNumber": "المتابعة برقم واتساب",
     "signUpEmail": "إنشاء حساب بالبريد الإلكتروني",
     "signUpWhatsapp": "إنشاء حساب برقم واتساب",
-    "showPassword": "إظهار كلمة المرور"
+    "showPassword": "إظهار كلمة المرور",
+    "username": "اسم المستخدم",
+    "usernameHint": "حروف إنجليزية صغيرة وأرقام و _ و . مثل ahmed_10. به يجدك أصدقاؤك.",
+    "usernameFree": "متاح",
+    "usernameTaken": "مأخوذ، جرّب غيره.",
+    "usernameInvalid": "من 3 إلى 20: حروف إنجليزية صغيرة وأرقام و _ و . ويبدأ بحرف.",
+    "usernameChecking": "جارٍ التحقق…"
   },
   "onboarding": {
     "title": "جهّز ملفك كلاعب",
@@ -475,7 +482,24 @@
     "invalid_link": "الرابط يجب أن يبدأ بـ https://",
     "venue_without_location": "ليس لهذا الملعب موقع على الخريطة.",
     "promo_media_unavailable": "ملف قاعدة البيانات …0031 غير مطبّق، فلا تُرسل الصورة والموقع والرابط بعد.",
-    "request_failed": "تعذّر الإرسال: لم يصل الطلب إلى الموقع (انقطع الاتصال، أو كان الملف أكبر من المسموح). ما كتبته واخترته باقٍ، فحاول مرة أخرى."
+    "request_failed": "تعذّر الإرسال: لم يصل الطلب إلى الموقع (انقطع الاتصال، أو كان الملف أكبر من المسموح). ما كتبته واخترته باقٍ، فحاول مرة أخرى.",
+    "pin_limit": "يمكنك تثبيت 3 محادثات فقط. ألغِ تثبيت واحدة أولاً.",
+    "invalid_nickname": "الكنية من حرف إلى 40 حرفاً.",
+    "feature_not_ready": "هذه الميزة لم تُفعَّل بعد: تنتظر تحديث قاعدة البيانات.",
+    "invalid_username": "اسم المستخدم من 3 إلى 20: حروف إنجليزية صغيرة وأرقام و _ و . ويبدأ بحرف.",
+    "username_taken": "اسم المستخدم مأخوذ، جرّب غيره.",
+    "cannot_friend_self": "لا يمكنك إضافة نفسك.",
+    "invalid_group_name": "اسم المجموعة من حرف واحد إلى 60 حرفاً.",
+    "group_needs_members": "اختر صديقاً واحداً على الأقل.",
+    "not_friends": "يمكنك أن تضيف أصدقاءك فقط.",
+    "group_full": "المجموعة لا تتسع لهذا العدد.",
+    "not_group_admin": "هذا لمشرفي المجموعة فقط.",
+    "group_creator": "منشئ المجموعة يبقى فيها ويبقى مشرفاً.",
+    "member_not_found": "هذا العضو ليس في المجموعة.",
+    "video_too_large": "الفيديو أكبر من 50 ميغابايت. اختر مقطعاً أقصر.",
+    "video_type_not_allowed": "هذا النوع من الفيديو غير مدعوم. أرسل MP4 أو MOV أو WebM.",
+    "invalid_video": "تعذّر إرسال الفيديو. جرّب مرة أخرى.",
+    "upload_cancelled": "أُلغي إرسال الفيديو."
   },
   "validation": {
     "invalid": "قيمة غير صالحة.",
@@ -603,7 +627,18 @@
     "whatsapp_settings_saved": "تم حفظ إعدادات واتساب.",
     "campaign_started": "بدأ الإرسال. تُرسل الرسائل ببطء على دفعات.",
     "campaign_stopped": "أُوقفت الحملة.",
-    "whatsapp_resumed": "استُؤنف الإرسال."
+    "whatsapp_resumed": "استُؤنف الإرسال.",
+    "username_saved": "تم حفظ اسم المستخدم.",
+    "friend_requested": "تم إرسال طلب الصداقة.",
+    "friend_added": "أصبحتما صديقين.",
+    "friend_declined": "تم رفض الطلب.",
+    "friend_request_cancelled": "تم إلغاء الطلب.",
+    "friend_removed": "تمت الإزالة من الأصدقاء.",
+    "group_members_added": "تمت الإضافة إلى المجموعة.",
+    "group_member_removed": "أُزيل من المجموعة.",
+    "group_admin_added": "أصبح مشرفاً.",
+    "group_admin_removed": "لم يعد مشرفاً.",
+    "group_renamed": "تم تغيير اسم المجموعة."
   },
   "notifications": {
     "generic": "لديك تحديث جديد.",
@@ -660,7 +695,10 @@
     "booking_cancelled_refund": "ألغى {venue_name} حجزك يوم {starts_at}، وسيُرجع لك العربون.",
     "booking_deposit_refunded": "أرجع {venue_name} عربون حجزك يوم {starts_at}.",
     "missed_call": "مكالمة فائتة من {caller_name}.",
-    "security_alert": "{kind, select, code_blocked {تنبيه أمني: رموز تحقق خاطئة متكررة} other {تنبيه أمني: كلمات مرور خاطئة متكررة}}{has_account, select, yes { على الحساب {account}} other {}}، فأُوقف تسجيل الدخول حتى 15 دقيقة. التفاصيل في سجل التدقيق."
+    "security_alert": "{kind, select, code_blocked {تنبيه أمني: رموز تحقق خاطئة متكررة} other {تنبيه أمني: كلمات مرور خاطئة متكررة}}{has_account, select, yes { على الحساب {account}} other {}}، فأُوقف تسجيل الدخول حتى 15 دقيقة. التفاصيل في سجل التدقيق.",
+    "friend_request": "{from_name} يريد أن يكون صديقك.",
+    "friend_accepted": "{from_name} قبل طلب صداقتك.",
+    "group_added": "{by_name} أضافك إلى مجموعة «{group_name}»."
   },
   "notificationTypes": {
     "match_participant_joined": "انضمام لاعب لمباراتي",
@@ -676,7 +714,10 @@
     "team_match_scheduled": "مباريات الفريق الجديدة",
     "new_message": "الرسائل المباشرة ورسائل الحجوزات",
     "tournament_update": "تحديثات البطولات",
-    "review_received": "التقييمات الواردة"
+    "review_received": "التقييمات الواردة",
+    "friend_request": "طلبات الصداقة",
+    "friend_accepted": "قبول طلبات صداقتك",
+    "group_added": "إضافتي إلى مجموعة"
   },
   "report": {
     "open": "إبلاغ",
@@ -1620,7 +1661,8 @@
     "promoReportValue": "أُرسل {sent} · فشل {failed} · تُخطّي {skipped} · بالانتظار {waiting}",
     "promoStop": "إيقاف الحملة",
     "promoStopTitle": "إيقاف الحملة؟",
-    "promoStopBody": "لن تُرسل الرسائل الباقية ({waiting}). ما أُرسل لا يمكن استرجاعه."
+    "promoStopBody": "لن تُرسل الرسائل الباقية ({waiting}). ما أُرسل لا يمكن استرجاعه.",
+    "reportedVideo": "الفيديو في الرسالة المبلّغ عنها"
   },
   "teams": {
     "title": "الفرق",
@@ -1908,7 +1950,9 @@
     "whatsappHint": "رسائل من رقم «الملعب» إلى رقمك المؤكَّد.",
     "whatsappBookings": "رسائل حجوزاتي: التأكيد والتغيير والإلغاء",
     "whatsappPromos": "العروض والأخبار",
-    "whatsappStopHint": "يمكنك أيضاً إيقاف كل الرسائل بإرسال 0 إلى رقم «الملعب» على واتساب."
+    "whatsappStopHint": "يمكنك أيضاً إيقاف كل الرسائل بإرسال 0 إلى رقم «الملعب» على واتساب.",
+    "username": "اسم المستخدم",
+    "saveUsername": "حفظ اسم المستخدم"
   },
   "messages": {
     "title": "الرسائل",
@@ -1921,7 +1965,8 @@
       "booking": "حجز",
       "challenge": "تحدٍّ",
       "tournament": "بطولة",
-      "direct": "مباشرة"
+      "direct": "مباشرة",
+      "group": "مجموعة"
     },
     "locked": "للقراءة فقط",
     "noMessages": "لا رسائل بعد.",
@@ -1946,7 +1991,7 @@
     "placeholder": "اكتب رسالة…",
     "send": "إرسال",
     "safetyNote": "لا تشارك كلمات المرور أو بيانات الدفع في الدردشة. استخدم زر الإبلاغ على أي رسالة مخالفة.",
-    "attach": "إرفاق صورة",
+    "attach": "إرفاق صورة أو فيديو",
     "removeImage": "إزالة الصورة",
     "photo": "صورة",
     "openImage": "فتح الصورة",
@@ -1988,7 +2033,49 @@
     "callNoAnswer": "مكالمة لم يُرَد عليها",
     "back": "رجوع",
     "today": "اليوم",
-    "yesterday": "أمس"
+    "yesterday": "أمس",
+    "rowMenu": "خيارات محادثة {name}",
+    "pin": "تثبيت المحادثة",
+    "unpin": "إلغاء التثبيت",
+    "pinned": "مثبّتة",
+    "mute": "كتم الإشعارات",
+    "unmute": "إلغاء الكتم",
+    "muted": "مكتومة",
+    "muteTitle": "كتم الإشعارات لمدة",
+    "muteBody": "لن تضيء رسائلها نقطة «الرسائل»، ولن تصلك منها إشعارات. تبقى الرسائل غير المقروءة ظاهرة في القائمة.",
+    "mute8h": "8 ساعات",
+    "muteWeek": "أسبوع",
+    "muteAlways": "دائماً",
+    "favorite": "إضافة إلى المفضلة",
+    "unfavorite": "إزالة من المفضلة",
+    "addNickname": "إضافة كنية",
+    "editNickname": "تعديل الكنية",
+    "nicknameTitle": "الكنية",
+    "nicknameLabel": "الكنية",
+    "nicknameHint": "تظهر لك وحدك بدل اسم المحادثة.",
+    "removeNickname": "إزالة الكنية",
+    "deleteChat": "حذف المحادثة",
+    "deleteChatTitle": "حذف المحادثة؟",
+    "deleteChatBody": "تختفي من قائمتك وتُخفى رسائلها السابقة عنك وحدك. لا يتغيّر شيء عند الآخرين، وتعود المحادثة مع أول رسالة جديدة.",
+    "filters": "تصفية المحادثات",
+    "filter": {
+      "all": "الكل",
+      "unread": "غير المقروءة",
+      "favorites": "المفضلة",
+      "groups": "المجموعات"
+    },
+    "emptyUnread": "لا رسائل غير مقروءة.",
+    "emptyFavorites": "لا محادثات في المفضلة بعد. اضغط مطولاً على محادثة لإضافتها.",
+    "emptyGroups": "لا محادثات جماعية بعد.",
+    "newGroup": "مجموعة جديدة",
+    "groupInfo": "معلومات المجموعة",
+    "membersCount": "{count, plural, one {عضو واحد} two {عضوان} few {# أعضاء} many {# عضواً} other {# عضو}}",
+    "video": "فيديو",
+    "videoAlt": "فيديو مرسل",
+    "playVideo": "تشغيل الفيديو",
+    "removeVideo": "إزالة الفيديو",
+    "uploadingVideo": "جارٍ رفع الفيديو",
+    "uploadPercent": "{percent}٪"
   },
   "notificationsPage": {
     "title": "الإشعارات",
@@ -2492,5 +2579,80 @@
       "headset": "الصوت في السماعات المتصلة بالهاتف.",
       "failed": "لم يقبل الهاتف تبديل السماعة. حاول مرة أخرى."
     }
+  },
+  "media": {
+    "viewer": "عرض الوسائط",
+    "close": "إغلاق",
+    "zoom": "تكبير",
+    "fit": "ملاءمة الشاشة",
+    "save": "حفظ",
+    "saveFailed": "تعذّر الحفظ. حاول مرة أخرى.",
+    "profilePicture": "صورة {name}",
+    "openProfilePicture": "تكبير صورة {name}"
+  },
+  "friends": {
+    "title": "الأصدقاء",
+    "description": "أضف أصدقاءك باسم المستخدم، وراسلهم بسهولة.",
+    "notReady": "الأصدقاء ينتظرون تحديث قاعدة البيانات.",
+    "addTitle": "إضافة صديق",
+    "usernameLabel": "اسم مستخدم صديقك",
+    "usernamePlaceholder": "اسم المستخدم",
+    "search": "بحث",
+    "result": "نتيجة البحث",
+    "noOne": "لا يوجد عضو باسم المستخدم @{username}.",
+    "addHint": "اكتب اسم المستخدم كما يظهر في صفحة صديقك، مثل ahmed_10.",
+    "incoming": "طلبات الصداقة ({count})",
+    "friendsTitle": "أصدقائي ({count})",
+    "sent": "طلبات أرسلتها ({count})",
+    "empty": "لا أصدقاء بعد.",
+    "emptyBody": "ابحث عن صديقك باسم المستخدم في الأعلى، وأرسل له طلباً.",
+    "add": "إضافة صديق",
+    "requestSent": "تم إرسال الطلب",
+    "cancelRequest": "إلغاء الطلب",
+    "accept": "قبول",
+    "decline": "رفض",
+    "isFriend": "صديقك",
+    "message": "مراسلة",
+    "isYou": "هذا أنت",
+    "cantAdd": "لا يمكن إضافته",
+    "remove": "إزالة",
+    "removeTitle": "إزالة {name} من الأصدقاء؟",
+    "removeBody": "تبقى محادثاتكما كما هي، ويمكن لأي منكما إرسال طلب جديد لاحقاً."
+  },
+  "groups": {
+    "newTitle": "مجموعة جديدة",
+    "newDescription": "سمّها وأضف إليها أصدقاءك. ستكون مشرفها.",
+    "nameLabel": "اسم المجموعة",
+    "namePlaceholder": "مثلاً: خماسي الجمعة",
+    "pickLabel": "أصدقاؤك",
+    "search": "ابحث في أصدقائك",
+    "selected": "{count, plural, =0 {لم تختر أحداً بعد} one {اخترت صديقاً واحداً} two {اخترت صديقين} few {اخترت # أصدقاء} many {اخترت # صديقاً} other {اخترت # صديق}}",
+    "noMatch": "لا أحد بهذا الاسم بين أصدقائك.",
+    "create": "إنشاء المجموعة",
+    "creating": "جارٍ الإنشاء…",
+    "noFriends": "أضف أصدقاء أولاً",
+    "noFriendsBody": "تتكوّن المجموعة من أصدقائك. ابحث عنهم باسم المستخدم في صفحة الأصدقاء.",
+    "toFriends": "إلى الأصدقاء",
+    "notReady": "المجموعات تنتظر تحديث قاعدة البيانات.",
+    "backToChat": "رجوع إلى المحادثة",
+    "membersTitle": "الأعضاء ({count})",
+    "admin": "مشرف",
+    "creator": "منشئ المجموعة",
+    "you": "أنت",
+    "makeAdmin": "تعيين مشرفاً",
+    "removeAdmin": "إلغاء الإشراف",
+    "remove": "إزالة",
+    "removeTitle": "إزالة {name} من المجموعة؟",
+    "removeBody": "لن يرى رسائل المجموعة بعد الآن، ويمكن إضافته من جديد لاحقاً.",
+    "addTitle": "إضافة أعضاء",
+    "add": "إضافة",
+    "adding": "جارٍ الإضافة…",
+    "allIn": "كل أصدقائك في المجموعة.",
+    "adminsOnly": "المشرفون يضيفون الأعضاء ويزيلونهم ويغيّرون الاسم.",
+    "renameTitle": "الاسم",
+    "rename": "حفظ الاسم",
+    "leave": "مغادرة المجموعة",
+    "leaveTitle": "مغادرة «{name}»؟",
+    "leaveBody": "لن تصلك رسائلها ولن ترى ما فيها. إن كنت آخر مشرف فيها، يصبح أقدم عضو مشرفاً."
   }
 }

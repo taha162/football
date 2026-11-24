@@ -24,7 +24,7 @@ test.describe("Mobile (Arabic, RTL)", () => {
     const account = page.getByRole("button", { name: `قائمة حساب ${player.name}` });
     await account.click();
     const menu = page.getByRole("menu");
-    await expect(menu.getByRole("menuitem")).toHaveText(["لوحتي", "ملفي الشخصي", "فرقي", "حجوزاتي", "الإعدادات", "تسجيل الخروج"]);
+    await expect(menu.getByRole("menuitem")).toHaveText(["لوحتي", "ملفي الشخصي", "أصدقائي", "فرقي", "حجوزاتي", "الإعدادات", "تسجيل الخروج"]);
     // On a phone the menu stays on the screen.
     const box = (await menu.boundingBox())!;
     expect(box.x).toBeGreaterThanOrEqual(0);
@@ -140,6 +140,32 @@ test.describe("Mobile (Arabic, RTL)", () => {
     await page.waitForURL(/\/ar\/messages$/);
     await expect(quickNav.getByRole("link", { name: "الرسائل", exact: true })).toBeVisible();
     await expect(quickNav.getByTestId("unread-dot")).toHaveCount(0);
+  });
+
+  test("a long press on a conversation opens its menu, not the conversation; a tap still opens it", async ({ page }) => {
+    const [me, friend] = [await createAuthUser("Hold me"), await createAuthUser("Hold friend")];
+    const conv = await rpc<string>(friend.id, "start_direct_conversation", { p_user_id: me.id });
+    await rpc(friend.id, "send_message", { p_conversation_id: conv, p_body: "اضغط مطولاً" });
+    await signIn(page, me);
+    await page.goto("/ar/messages");
+    // The press is read by the page's script: press once the page is interactive.
+    await page.waitForLoadState("networkidle");
+    const row = page.locator("li", { hasText: friend.name });
+    // No «⌄» to see on a phone: it is there for screen readers only (one pixel).
+    expect((await row.getByRole("button", { name: `خيارات محادثة ${friend.name}` }).boundingBox())?.width ?? 0).toBeLessThanOrEqual(1);
+    const box = (await row.boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.waitForTimeout(800);
+    await page.mouse.up();
+    const menu = page.getByRole("dialog", { name: friend.name });
+    await expect(menu).toBeVisible();
+    await expect(page).toHaveURL(/\/ar\/messages$/);
+    await menu.getByRole("button", { name: "تثبيت المحادثة" }).click();
+    await expect(row.getByText("مثبّتة")).toBeAttached();
+    // A quick tap still opens the conversation.
+    await row.getByRole("link").click();
+    await page.waitForURL(new RegExp(`/ar/messages/${conv}`));
   });
 
   test("a member's pages fit the narrowest phone (320 px), even with long unbroken words", async ({ page }) => {

@@ -14,7 +14,7 @@ test.describe("Account menu", () => {
     const menu = page.getByRole("menu");
     await expect(menu.getByText(user.name, { exact: true })).toBeVisible();
     await expect(menu.getByTestId("account-contact")).toHaveText(user.email);
-    await expect(menu.getByRole("menuitem")).toHaveText(["لوحتي", "ملفي الشخصي", "فرقي", "حجوزاتي", "الإعدادات", "الإدارة", "تسجيل الخروج"]);
+    await expect(menu.getByRole("menuitem")).toHaveText(["لوحتي", "ملفي الشخصي", "أصدقائي", "فرقي", "حجوزاتي", "الإعدادات", "الإدارة", "تسجيل الخروج"]);
     await expect(menu.getByRole("menuitem", { name: "لوحتي" })).toBeFocused();
 
     // ↑ from the first goes round to the last, Home back to the first; Escape closes it and returns to the picture.
@@ -53,6 +53,6 @@ test.describe("Account menu", () => {
     const user = await createAuthUser("Plain");
     await signIn(page, user);
     await page.getByRole("button", { name: `قائمة حساب ${user.name}` }).click();
-    await expect(page.getByRole("menu").getByRole("menuitem")).toHaveText(["لوحتي", "ملفي الشخصي", "فرقي", "حجوزاتي", "الإعدادات", "تسجيل الخروج"]);
+    await expect(page.getByRole("menu").getByRole("menuitem")).toHaveText(["لوحتي", "ملفي الشخصي", "أصدقائي", "فرقي", "حجوزاتي", "الإعدادات", "تسجيل الخروج"]);
   });
 });

@@ -199,14 +199,14 @@ isOneToOne: false
                   ]
                 },"conversation_members": {
                   Row: {
-                    "conversation_id": string,"created_at": string,"user_id": string
+                    "conversation_id": string,"created_at": string,"role": string,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "conversation_id": string,"created_at"?: string,"user_id": string
+                    "conversation_id": string,"created_at"?: string,"role"?: string,"user_id": string
                   }
                   Update: {
-                    "conversation_id"?: string,"created_at"?: string,"user_id"?: string
+                    "conversation_id"?: string,"created_at"?: string,"role"?: string,"user_id"?: string
                   }
                   Relationships: [
                     {
@@ -217,6 +217,32 @@ isOneToOne: false
       referencedColumns: ["id"]
     },{
       foreignKeyName: "conversation_members_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"conversation_prefs": {
+                  Row: {
+                    "cleared_at": string | null,"conversation_id": string,"favorite": boolean,"muted_until": string | null,"nickname": string | null,"pinned_at": string | null,"updated_at": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "cleared_at"?: string | null,"conversation_id": string,"favorite"?: boolean,"muted_until"?: string | null,"nickname"?: string | null,"pinned_at"?: string | null,"updated_at"?: string,"user_id": string
+                  }
+                  Update: {
+                    "cleared_at"?: string | null,"conversation_id"?: string,"favorite"?: boolean,"muted_until"?: string | null,"nickname"?: string | null,"pinned_at"?: string | null,"updated_at"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "conversation_prefs_conversation_id_fkey"
+      columns: ["conversation_id"]
+isOneToOne: false
+      referencedRelation: "conversations"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "conversation_prefs_user_id_fkey"
       columns: ["user_id"]
 isOneToOne: false
       referencedRelation: "profiles"
@@ -251,14 +277,14 @@ isOneToOne: false
                   ]
                 },"conversations": {
                   Row: {
-                    "booking_id": string | null,"challenge_id": string | null,"created_at": string,"direct_key": string | null,"id": string,"is_locked": boolean,"kind": Database["public"]['Enums']["conversation_kind"],"last_message_at": string | null,"match_id": string | null,"team_id": string | null,"tournament_id": string | null
+                    "booking_id": string | null,"challenge_id": string | null,"created_at": string,"created_by": string | null,"direct_key": string | null,"id": string,"is_locked": boolean,"kind": Database["public"]['Enums']["conversation_kind"],"last_message_at": string | null,"match_id": string | null,"team_id": string | null,"title": string | null,"tournament_id": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "booking_id"?: string | null,"challenge_id"?: string | null,"created_at"?: string,"direct_key"?: string | null,"id"?: string,"is_locked"?: boolean,"kind": Database["public"]['Enums']["conversation_kind"],"last_message_at"?: string | null,"match_id"?: string | null,"team_id"?: string | null,"tournament_id"?: string | null
+                    "booking_id"?: string | null,"challenge_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"direct_key"?: string | null,"id"?: string,"is_locked"?: boolean,"kind": Database["public"]['Enums']["conversation_kind"],"last_message_at"?: string | null,"match_id"?: string | null,"team_id"?: string | null,"title"?: string | null,"tournament_id"?: string | null
                   }
                   Update: {
-                    "booking_id"?: string | null,"challenge_id"?: string | null,"created_at"?: string,"direct_key"?: string | null,"id"?: string,"is_locked"?: boolean,"kind"?: Database["public"]['Enums']["conversation_kind"],"last_message_at"?: string | null,"match_id"?: string | null,"team_id"?: string | null,"tournament_id"?: string | null
+                    "booking_id"?: string | null,"challenge_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"direct_key"?: string | null,"id"?: string,"is_locked"?: boolean,"kind"?: Database["public"]['Enums']["conversation_kind"],"last_message_at"?: string | null,"match_id"?: string | null,"team_id"?: string | null,"title"?: string | null,"tournament_id"?: string | null
                   }
                   Relationships: [
                     {
@@ -272,6 +298,12 @@ isOneToOne: true
       columns: ["challenge_id"]
 isOneToOne: true
       referencedRelation: "opponent_challenges"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "conversations_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
       referencedColumns: ["id"]
     },{
       foreignKeyName: "conversations_match_id_fkey"
@@ -306,6 +338,38 @@ isOneToOne: true
                   }
                   Relationships: [
                     
+                  ]
+                },"friendships": {
+                  Row: {
+                    "accepted_at": string | null,"created_at": string,"requested_by": string,"status": string,"user_a": string,"user_b": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "accepted_at"?: string | null,"created_at"?: string,"requested_by": string,"status"?: string,"user_a": string,"user_b": string
+                  }
+                  Update: {
+                    "accepted_at"?: string | null,"created_at"?: string,"requested_by"?: string,"status"?: string,"user_a"?: string,"user_b"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "friendships_requested_by_fkey"
+      columns: ["requested_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "friendships_user_a_fkey"
+      columns: ["user_a"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "friendships_user_b_fkey"
+      columns: ["user_b"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
                   ]
                 },"match_events": {
                   Row: {
@@ -569,14 +633,14 @@ isOneToOne: false
                   ]
                 },"messages": {
                   Row: {
-                    "body": string,"call_outcome": string | null,"call_seconds": number | null,"conversation_id": string,"created_at": string,"deleted_at": string | null,"edited_at": string | null,"id": number,"image_path": string | null,"location_accuracy": number | null,"location_lat": number | null,"location_lng": number | null,"sender_id": string | null,"voice_path": string | null,"voice_seconds": number | null
+                    "body": string,"call_outcome": string | null,"call_seconds": number | null,"conversation_id": string,"created_at": string,"deleted_at": string | null,"edited_at": string | null,"id": number,"image_path": string | null,"location_accuracy": number | null,"location_lat": number | null,"location_lng": number | null,"sender_id": string | null,"video_path": string | null,"video_seconds": number | null,"voice_path": string | null,"voice_seconds": number | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "body": string,"call_outcome"?: string | null,"call_seconds"?: number | null,"conversation_id": string,"created_at"?: string,"deleted_at"?: string | null,"edited_at"?: string | null,"id"?: never,"image_path"?: string | null,"location_accuracy"?: number | null,"location_lat"?: number | null,"location_lng"?: number | null,"sender_id"?: string | null,"voice_path"?: string | null,"voice_seconds"?: number | null
+                    "body": string,"call_outcome"?: string | null,"call_seconds"?: number | null,"conversation_id": string,"created_at"?: string,"deleted_at"?: string | null,"edited_at"?: string | null,"id"?: never,"image_path"?: string | null,"location_accuracy"?: number | null,"location_lat"?: number | null,"location_lng"?: number | null,"sender_id"?: string | null,"video_path"?: string | null,"video_seconds"?: number | null,"voice_path"?: string | null,"voice_seconds"?: number | null
                   }
                   Update: {
-                    "body"?: string,"call_outcome"?: string | null,"call_seconds"?: number | null,"conversation_id"?: string,"created_at"?: string,"deleted_at"?: string | null,"edited_at"?: string | null,"id"?: never,"image_path"?: string | null,"location_accuracy"?: number | null,"location_lat"?: number | null,"location_lng"?: number | null,"sender_id"?: string | null,"voice_path"?: string | null,"voice_seconds"?: number | null
+                    "body"?: string,"call_outcome"?: string | null,"call_seconds"?: number | null,"conversation_id"?: string,"created_at"?: string,"deleted_at"?: string | null,"edited_at"?: string | null,"id"?: never,"image_path"?: string | null,"location_accuracy"?: number | null,"location_lat"?: number | null,"location_lng"?: number | null,"sender_id"?: string | null,"video_path"?: string | null,"video_seconds"?: number | null,"voice_path"?: string | null,"voice_seconds"?: number | null
                   }
                   Relationships: [
                     {
@@ -781,14 +845,14 @@ isOneToOne: false
                   ]
                 },"profiles": {
                   Row: {
-                    "area_id": string | null,"avatar_path": string | null,"bio": string | null,"city_id": string | null,"created_at": string,"display_name": string,"id": string,"onboarded_at": string | null,"positions": (Database["public"]['Enums']["player_position"])[],"preferred_formats": (Database["public"]['Enums']["match_format"])[],"show_match_history": boolean,"skill_level": Database["public"]['Enums']["skill_level"] | null,"status": Database["public"]['Enums']["account_status"],"suspended_at": string | null,"suspension_reason": string | null,"updated_at": string
+                    "area_id": string | null,"avatar_path": string | null,"bio": string | null,"city_id": string | null,"created_at": string,"display_name": string,"id": string,"onboarded_at": string | null,"positions": (Database["public"]['Enums']["player_position"])[],"preferred_formats": (Database["public"]['Enums']["match_format"])[],"show_match_history": boolean,"skill_level": Database["public"]['Enums']["skill_level"] | null,"status": Database["public"]['Enums']["account_status"],"suspended_at": string | null,"suspension_reason": string | null,"updated_at": string,"username": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "area_id"?: string | null,"avatar_path"?: string | null,"bio"?: string | null,"city_id"?: string | null,"created_at"?: string,"display_name": string,"id": string,"onboarded_at"?: string | null,"positions"?: (Database["public"]['Enums']["player_position"])[],"preferred_formats"?: (Database["public"]['Enums']["match_format"])[],"show_match_history"?: boolean,"skill_level"?: Database["public"]['Enums']["skill_level"] | null,"status"?: Database["public"]['Enums']["account_status"],"suspended_at"?: string | null,"suspension_reason"?: string | null,"updated_at"?: string
+                    "area_id"?: string | null,"avatar_path"?: string | null,"bio"?: string | null,"city_id"?: string | null,"created_at"?: string,"display_name": string,"id": string,"onboarded_at"?: string | null,"positions"?: (Database["public"]['Enums']["player_position"])[],"preferred_formats"?: (Database["public"]['Enums']["match_format"])[],"show_match_history"?: boolean,"skill_level"?: Database["public"]['Enums']["skill_level"] | null,"status"?: Database["public"]['Enums']["account_status"],"suspended_at"?: string | null,"suspension_reason"?: string | null,"updated_at"?: string,"username": string
                   }
                   Update: {
-                    "area_id"?: string | null,"avatar_path"?: string | null,"bio"?: string | null,"city_id"?: string | null,"created_at"?: string,"display_name"?: string,"id"?: string,"onboarded_at"?: string | null,"positions"?: (Database["public"]['Enums']["player_position"])[],"preferred_formats"?: (Database["public"]['Enums']["match_format"])[],"show_match_history"?: boolean,"skill_level"?: Database["public"]['Enums']["skill_level"] | null,"status"?: Database["public"]['Enums']["account_status"],"suspended_at"?: string | null,"suspension_reason"?: string | null,"updated_at"?: string
+                    "area_id"?: string | null,"avatar_path"?: string | null,"bio"?: string | null,"city_id"?: string | null,"created_at"?: string,"display_name"?: string,"id"?: string,"onboarded_at"?: string | null,"positions"?: (Database["public"]['Enums']["player_position"])[],"preferred_formats"?: (Database["public"]['Enums']["match_format"])[],"show_match_history"?: boolean,"skill_level"?: Database["public"]['Enums']["skill_level"] | null,"status"?: Database["public"]['Enums']["account_status"],"suspended_at"?: string | null,"suspension_reason"?: string | null,"updated_at"?: string,"username"?: string
                   }
                   Relationships: [
                     {
@@ -1461,7 +1525,10 @@ isOneToOne: true
             [_ in never]: never
           }
           Functions: {
-            "add_venue_image":
+            "add_group_members":
+{ Args: { "p_conversation_id": string,"p_member_ids": (string)[] }; Returns: number
+                           },
+"add_venue_image":
 { Args: { "p_path": string,"p_venue_id": string }; Returns: string
                            },
 "add_venue_staff":
@@ -1543,6 +1610,9 @@ isOneToOne: true
 "auth_throttle":
 { Args: { "p_buckets": Json,"p_record": boolean }; Returns: boolean
                            },
+"begin_video_upload":
+{ Args: { "p_conversation_id": string }; Returns: undefined
+                           },
 "block_user":
 { Args: { "p_user_id": string }; Returns: undefined
                            },
@@ -1555,8 +1625,14 @@ isOneToOne: true
 "cancel_booking":
 { Args: { "p_booking_id": string,"p_reason"?: string }; Returns: undefined
                            },
+"cancel_friend_request":
+{ Args: { "p_user_id": string }; Returns: undefined
+                           },
 "cancel_match":
 { Args: { "p_match_id": string,"p_reason"?: string }; Returns: undefined
+                           },
+"clear_conversation":
+{ Args: { "p_conversation_id": string }; Returns: undefined
                            },
 "close_opponent_request":
 { Args: { "p_request_id": string }; Returns: undefined
@@ -1572,6 +1648,9 @@ isOneToOne: true
                            },
 "confirm_tournament_result":
 { Args: { "p_match_id": string }; Returns: undefined
+                           },
+"create_group":
+{ Args: { "p_member_ids": (string)[],"p_title": string }; Returns: string
                            },
 "create_manual_booking":
 { Args: { "p_customer_name"?: string,"p_duration_minutes": number,"p_field_id": string,"p_kind": Database["public"]['Enums']["booking_kind"],"p_note"?: string,"p_price_total"?: number,"p_start_local": string }; Returns: string
@@ -1621,9 +1700,17 @@ isOneToOne: true
 "entity_conversation_id":
 { Args: { "p_entity_id": string,"p_kind": Database["public"]['Enums']["conversation_kind"] }; Returns: string
                            },
+"favorite_conversation":
+{ Args: { "p_conversation_id": string,"p_favorite": boolean }; Returns: undefined
+                           },
 "field_busy_intervals":
 { Args: { "p_field_id": string,"p_local_date": string }; Returns: {
               "ends_at": string,"starts_at": string
+            }[]
+                           },
+"find_member":
+{ Args: { "p_username": string }; Returns: {
+              "avatar_path": string,"display_name": string,"id": string,"relation": string,"username": string
             }[]
                            },
 "free_start_times":
@@ -1642,6 +1729,9 @@ isOneToOne: true
                            },
 "join_match":
 { Args: { "p_match_id": string,"p_position"?: Database["public"]['Enums']["player_position"],"p_waitlist_if_full"?: boolean }; Returns: Json
+                           },
+"leave_group":
+{ Args: { "p_conversation_id": string }; Returns: undefined
                            },
 "leave_match":
 { Args: { "p_match_id": string }; Returns: Json
@@ -1667,13 +1757,24 @@ isOneToOne: true
 "match_transition_allowed":
 { Args: { "p_from": Database["public"]['Enums']["match_status"],"p_to": Database["public"]['Enums']["match_status"] }; Returns: boolean
                            },
+"mute_conversation":
+{ Args: { "p_conversation_id": string,"p_hours": number }; Returns: undefined
+                           },
 "my_conversations":
 { Args: { "p_limit"?: number }; Returns: {
-              "conversation_id": string,"is_locked": boolean,"kind": Database["public"]['Enums']["conversation_kind"],"last_kind": string,"last_message": string,"last_message_at": string,"ref_id": string,"title": string,"unread_count": number
+              "conversation_id": string,"favorite": boolean,"is_locked": boolean,"kind": Database["public"]['Enums']["conversation_kind"],"last_kind": string,"last_message": string,"last_message_at": string,"muted": boolean,"nickname": string,"pinned": boolean,"ref_id": string,"title": string,"unread_count": number
+            }[]
+                           },
+"my_friends":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "avatar_path": string,"display_name": string,"relation": string,"since": string,"user_id": string,"username": string
             }[]
                            },
 "my_phone":
 { Args: Record<PropertyKey, never>; Returns: string
+                           },
+"orphan_message_videos":
+{ Args: { "p_limit"?: number }; Returns: string[]
                            },
 "phone_verify_cleanup":
 { Args: Record<PropertyKey, never>; Returns: Json
@@ -1690,6 +1791,9 @@ isOneToOne: true
                            },
 "phone_verify_start":
 { Args: { "p_client_key": string,"p_code": string,"p_phone"?: string,"p_purpose": Database["public"]['Enums']["phone_verify_purpose"],"p_ticket_hash": string,"p_user_id": string }; Returns: string
+                           },
+"pin_conversation":
+{ Args: { "p_conversation_id": string,"p_pinned": boolean }; Returns: undefined
                            },
 "player_reputation":
 { Args: { "p_user_id": string }; Returns: Json
@@ -1712,6 +1816,12 @@ isOneToOne: true
 "register_tournament_team":
 { Args: { "p_team_id": string,"p_tournament_id": string }; Returns: string
                            },
+"remove_friend":
+{ Args: { "p_user_id": string }; Returns: undefined
+                           },
+"remove_group_member":
+{ Args: { "p_conversation_id": string,"p_user_id": string }; Returns: undefined
+                           },
 "remove_match_participant":
 { Args: { "p_participant_id": string,"p_reason"?: string }; Returns: undefined
                            },
@@ -1723,6 +1833,9 @@ isOneToOne: true
                            },
 "remove_venue_staff":
 { Args: { "p_user_id": string,"p_venue_id": string }; Returns: undefined
+                           },
+"rename_group":
+{ Args: { "p_conversation_id": string,"p_title": string }; Returns: undefined
                            },
 "report_booking_deposit":
 { Args: { "p_booking_id": string,"p_reference": string }; Returns: undefined
@@ -1741,6 +1854,9 @@ isOneToOne: true
                            },
 "respond_challenge":
 { Args: { "p_accept": boolean,"p_challenge_id": string }; Returns: string
+                           },
+"respond_friend_request":
+{ Args: { "p_accept": boolean,"p_user_id": string }; Returns: undefined
                            },
 "respond_match_invitation":
 { Args: { "p_accept": boolean,"p_invitation_id": string,"p_position"?: Database["public"]['Enums']["player_position"] }; Returns: Json
@@ -1830,11 +1946,20 @@ isOneToOne: true
 "send_challenge":
 { Args: { "p_challenger_team_id": string,"p_cost_per_team"?: number,"p_duration_minutes": number,"p_format"?: Database["public"]['Enums']["match_format"],"p_location_note"?: string,"p_message"?: string,"p_request_id"?: string,"p_start_local": string,"p_target_team_id"?: string,"p_venue_id"?: string }; Returns: string
                            },
+"send_friend_request":
+{ Args: { "p_username": string }; Returns: string
+                           },
 "send_message":
-{ Args: { "p_body": string,"p_conversation_id": string,"p_image_path"?: string,"p_location_accuracy"?: number,"p_location_lat"?: number,"p_location_lng"?: number,"p_voice_path"?: string,"p_voice_seconds"?: number }; Returns: number
+{ Args: { "p_body": string,"p_conversation_id": string,"p_image_path"?: string,"p_location_accuracy"?: number,"p_location_lat"?: number,"p_location_lng"?: number,"p_video_path"?: string,"p_video_seconds"?: number,"p_voice_path"?: string,"p_voice_seconds"?: number }; Returns: number
+                           },
+"set_conversation_nickname":
+{ Args: { "p_conversation_id": string,"p_nickname": string }; Returns: undefined
                            },
 "set_field_pricing_rules":
 { Args: { "p_field_id": string,"p_rules": Json }; Returns: undefined
+                           },
+"set_group_admin":
+{ Args: { "p_admin": boolean,"p_conversation_id": string,"p_user_id": string }; Returns: undefined
                            },
 "set_match_events":
 { Args: { "p_events": Json,"p_match_id": string }; Returns: number
@@ -1862,6 +1987,9 @@ isOneToOne: true
                            },
 "set_tournament_status":
 { Args: { "p_status": Database["public"]['Enums']["tournament_status"],"p_tournament_id": string }; Returns: undefined
+                           },
+"set_username":
+{ Args: { "p_username": string }; Returns: string
                            },
 "set_venue_cover":
 { Args: { "p_path": string,"p_venue_id": string }; Returns: undefined
@@ -1926,6 +2054,9 @@ isOneToOne: true
 "upsert_venue_field":
 { Args: { "p_field_id": string,"p_formats": (Database["public"]['Enums']["match_format"])[],"p_has_lights": boolean,"p_is_active"?: boolean,"p_is_covered": boolean,"p_name": string,"p_price_per_hour": number,"p_surface": Database["public"]['Enums']["field_surface"],"p_venue_id": string }; Returns: string
                            },
+"username_available":
+{ Args: { "p_username": string }; Returns: string
+                           },
 "venue_rating":
 { Args: { "p_venue_id": string }; Returns: Json
                            },
@@ -1969,7 +2100,7 @@ isOneToOne: true
                            }
           }
           Enums: {
-            "account_status": "active"|"suspended","app_role": "admin"|"moderator","attendance_status": "attended"|"no_show"|"excused","booking_kind": "customer"|"manual"|"block","booking_mode": "platform"|"contact_only","booking_status": "requested"|"confirmed"|"rejected"|"cancelled"|"completed"|"no_show"|"expired","campaign_status": "sending"|"stopped"|"done","challenge_status": "pending"|"accepted"|"declined"|"withdrawn"|"expired","conversation_kind": "match"|"team"|"booking"|"challenge"|"tournament"|"direct","deposit_status": "pending"|"reported"|"received"|"refund_due"|"refunded"|"forfeited","field_surface": "artificial_turf"|"natural_grass"|"indoor"|"futsal_court"|"other","fixture_stage": "group"|"knockout","fixture_status": "scheduled"|"completed"|"cancelled","invitation_status": "pending"|"accepted"|"declined"|"revoked"|"expired","listing_status": "open"|"closed","manual_payment_status": "unpaid"|"paid"|"waived","match_booking_status": "none"|"external"|"requested"|"confirmed","match_event_type": "goal"|"assist"|"own_goal"|"clean_sheet","match_format": "5v5"|"6v6"|"7v7"|"8v8"|"9v9"|"11v11","match_join_policy": "open"|"approval"|"invite_only","match_result_status": "reported"|"confirmed"|"disputed","match_status": "draft"|"open"|"full"|"confirmed"|"in_progress"|"completed"|"cancelled","match_type": "open"|"team_needs_players"|"team_vs_team"|"private","opponent_request_status": "open"|"matched"|"closed","outbound_kind": "booking"|"promo","outbound_status": "queued"|"sending"|"sent"|"failed"|"skipped","participant_status": "pending"|"confirmed"|"left"|"removed"|"rejected","payment_collector": "organizer"|"venue"|"each_player"|"none","phone_verify_purpose": "signup"|"reset","phone_verify_status": "pending"|"verified"|"phone_taken"|"no_account"|"consumed","player_position": "goalkeeper"|"defender"|"midfielder"|"forward","report_category": "spam"|"harassment"|"fake_listing"|"fraudulent_booking"|"inappropriate_content"|"unsafe_behavior"|"other","report_status": "open"|"in_review"|"resolved"|"dismissed","report_target": "user"|"match"|"team"|"venue"|"message"|"review"|"tournament"|"booking","request_status": "pending"|"approved"|"rejected"|"withdrawn","result_status": "none"|"submitted"|"confirmed"|"disputed","review_status": "published"|"hidden","skill_level": "beginner"|"intermediate"|"advanced","team_join_policy": "request"|"invite_only","team_role": "captain"|"manager"|"player","team_side": "home"|"away","tournament_format": "round_robin"|"single_elimination"|"groups_knockout","tournament_status": "draft"|"registration_open"|"registration_closed"|"in_progress"|"completed"|"cancelled","tournament_team_status": "pending"|"approved"|"rejected"|"waitlisted"|"withdrawn","venue_role": "owner"|"manager"|"staff","verification_status": "unverified"|"pending"|"verified"|"rejected","visibility_level": "public"|"private","waitlist_status": "waiting"|"promoted"|"left"|"removed"|"expired"
+            "account_status": "active"|"suspended","app_role": "admin"|"moderator","attendance_status": "attended"|"no_show"|"excused","booking_kind": "customer"|"manual"|"block","booking_mode": "platform"|"contact_only","booking_status": "requested"|"confirmed"|"rejected"|"cancelled"|"completed"|"no_show"|"expired","campaign_status": "sending"|"stopped"|"done","challenge_status": "pending"|"accepted"|"declined"|"withdrawn"|"expired","conversation_kind": "match"|"team"|"booking"|"challenge"|"tournament"|"direct"|"group","deposit_status": "pending"|"reported"|"received"|"refund_due"|"refunded"|"forfeited","field_surface": "artificial_turf"|"natural_grass"|"indoor"|"futsal_court"|"other","fixture_stage": "group"|"knockout","fixture_status": "scheduled"|"completed"|"cancelled","invitation_status": "pending"|"accepted"|"declined"|"revoked"|"expired","listing_status": "open"|"closed","manual_payment_status": "unpaid"|"paid"|"waived","match_booking_status": "none"|"external"|"requested"|"confirmed","match_event_type": "goal"|"assist"|"own_goal"|"clean_sheet","match_format": "5v5"|"6v6"|"7v7"|"8v8"|"9v9"|"11v11","match_join_policy": "open"|"approval"|"invite_only","match_result_status": "reported"|"confirmed"|"disputed","match_status": "draft"|"open"|"full"|"confirmed"|"in_progress"|"completed"|"cancelled","match_type": "open"|"team_needs_players"|"team_vs_team"|"private","opponent_request_status": "open"|"matched"|"closed","outbound_kind": "booking"|"promo","outbound_status": "queued"|"sending"|"sent"|"failed"|"skipped","participant_status": "pending"|"confirmed"|"left"|"removed"|"rejected","payment_collector": "organizer"|"venue"|"each_player"|"none","phone_verify_purpose": "signup"|"reset","phone_verify_status": "pending"|"verified"|"phone_taken"|"no_account"|"consumed","player_position": "goalkeeper"|"defender"|"midfielder"|"forward","report_category": "spam"|"harassment"|"fake_listing"|"fraudulent_booking"|"inappropriate_content"|"unsafe_behavior"|"other","report_status": "open"|"in_review"|"resolved"|"dismissed","report_target": "user"|"match"|"team"|"venue"|"message"|"review"|"tournament"|"booking","request_status": "pending"|"approved"|"rejected"|"withdrawn","result_status": "none"|"submitted"|"confirmed"|"disputed","review_status": "published"|"hidden","skill_level": "beginner"|"intermediate"|"advanced","team_join_policy": "request"|"invite_only","team_role": "captain"|"manager"|"player","team_side": "home"|"away","tournament_format": "round_robin"|"single_elimination"|"groups_knockout","tournament_status": "draft"|"registration_open"|"registration_closed"|"in_progress"|"completed"|"cancelled","tournament_team_status": "pending"|"approved"|"rejected"|"waitlisted"|"withdrawn","venue_role": "owner"|"manager"|"staff","verification_status": "unverified"|"pending"|"verified"|"rejected","visibility_level": "public"|"private","waitlist_status": "waiting"|"promoted"|"left"|"removed"|"expired"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -2085,7 +2216,7 @@ export type CompositeTypes<
 export const Constants = {
   "public": {
           Enums: {
-            "account_status": ["active", "suspended"],"app_role": ["admin", "moderator"],"attendance_status": ["attended", "no_show", "excused"],"booking_kind": ["customer", "manual", "block"],"booking_mode": ["platform", "contact_only"],"booking_status": ["requested", "confirmed", "rejected", "cancelled", "completed", "no_show", "expired"],"campaign_status": ["sending", "stopped", "done"],"challenge_status": ["pending", "accepted", "declined", "withdrawn", "expired"],"conversation_kind": ["match", "team", "booking", "challenge", "tournament", "direct"],"deposit_status": ["pending", "reported", "received", "refund_due", "refunded", "forfeited"],"field_surface": ["artificial_turf", "natural_grass", "indoor", "futsal_court", "other"],"fixture_stage": ["group", "knockout"],"fixture_status": ["scheduled", "completed", "cancelled"],"invitation_status": ["pending", "accepted", "declined", "revoked", "expired"],"listing_status": ["open", "closed"],"manual_payment_status": ["unpaid", "paid", "waived"],"match_booking_status": ["none", "external", "requested", "confirmed"],"match_event_type": ["goal", "assist", "own_goal", "clean_sheet"],"match_format": ["5v5", "6v6", "7v7", "8v8", "9v9", "11v11"],"match_join_policy": ["open", "approval", "invite_only"],"match_result_status": ["reported", "confirmed", "disputed"],"match_status": ["draft", "open", "full", "confirmed", "in_progress", "completed", "cancelled"],"match_type": ["open", "team_needs_players", "team_vs_team", "private"],"opponent_request_status": ["open", "matched", "closed"],"outbound_kind": ["booking", "promo"],"outbound_status": ["queued", "sending", "sent", "failed", "skipped"],"participant_status": ["pending", "confirmed", "left", "removed", "rejected"],"payment_collector": ["organizer", "venue", "each_player", "none"],"phone_verify_purpose": ["signup", "reset"],"phone_verify_status": ["pending", "verified", "phone_taken", "no_account", "consumed"],"player_position": ["goalkeeper", "defender", "midfielder", "forward"],"report_category": ["spam", "harassment", "fake_listing", "fraudulent_booking", "inappropriate_content", "unsafe_behavior", "other"],"report_status": ["open", "in_review", "resolved", "dismissed"],"report_target": ["user", "match", "team", "venue", "message", "review", "tournament", "booking"],"request_status": ["pending", "approved", "rejected", "withdrawn"],"result_status": ["none", "submitted", "confirmed", "disputed"],"review_status": ["published", "hidden"],"skill_level": ["beginner", "intermediate", "advanced"],"team_join_policy": ["request", "invite_only"],"team_role": ["captain", "manager", "player"],"team_side": ["home", "away"],"tournament_format": ["round_robin", "single_elimination", "groups_knockout"],"tournament_status": ["draft", "registration_open", "registration_closed", "in_progress", "completed", "cancelled"],"tournament_team_status": ["pending", "approved", "rejected", "waitlisted", "withdrawn"],"venue_role": ["owner", "manager", "staff"],"verification_status": ["unverified", "pending", "verified", "rejected"],"visibility_level": ["public", "private"],"waitlist_status": ["waiting", "promoted", "left", "removed", "expired"]
+            "account_status": ["active", "suspended"],"app_role": ["admin", "moderator"],"attendance_status": ["attended", "no_show", "excused"],"booking_kind": ["customer", "manual", "block"],"booking_mode": ["platform", "contact_only"],"booking_status": ["requested", "confirmed", "rejected", "cancelled", "completed", "no_show", "expired"],"campaign_status": ["sending", "stopped", "done"],"challenge_status": ["pending", "accepted", "declined", "withdrawn", "expired"],"conversation_kind": ["match", "team", "booking", "challenge", "tournament", "direct", "group"],"deposit_status": ["pending", "reported", "received", "refund_due", "refunded", "forfeited"],"field_surface": ["artificial_turf", "natural_grass", "indoor", "futsal_court", "other"],"fixture_stage": ["group", "knockout"],"fixture_status": ["scheduled", "completed", "cancelled"],"invitation_status": ["pending", "accepted", "declined", "revoked", "expired"],"listing_status": ["open", "closed"],"manual_payment_status": ["unpaid", "paid", "waived"],"match_booking_status": ["none", "external", "requested", "confirmed"],"match_event_type": ["goal", "assist", "own_goal", "clean_sheet"],"match_format": ["5v5", "6v6", "7v7", "8v8", "9v9", "11v11"],"match_join_policy": ["open", "approval", "invite_only"],"match_result_status": ["reported", "confirmed", "disputed"],"match_status": ["draft", "open", "full", "confirmed", "in_progress", "completed", "cancelled"],"match_type": ["open", "team_needs_players", "team_vs_team", "private"],"opponent_request_status": ["open", "matched", "closed"],"outbound_kind": ["booking", "promo"],"outbound_status": ["queued", "sending", "sent", "failed", "skipped"],"participant_status": ["pending", "confirmed", "left", "removed", "rejected"],"payment_collector": ["organizer", "venue", "each_player", "none"],"phone_verify_purpose": ["signup", "reset"],"phone_verify_status": ["pending", "verified", "phone_taken", "no_account", "consumed"],"player_position": ["goalkeeper", "defender", "midfielder", "forward"],"report_category": ["spam", "harassment", "fake_listing", "fraudulent_booking", "inappropriate_content", "unsafe_behavior", "other"],"report_status": ["open", "in_review", "resolved", "dismissed"],"report_target": ["user", "match", "team", "venue", "message", "review", "tournament", "booking"],"request_status": ["pending", "approved", "rejected", "withdrawn"],"result_status": ["none", "submitted", "confirmed", "disputed"],"review_status": ["published", "hidden"],"skill_level": ["beginner", "intermediate", "advanced"],"team_join_policy": ["request", "invite_only"],"team_role": ["captain", "manager", "player"],"team_side": ["home", "away"],"tournament_format": ["round_robin", "single_elimination", "groups_knockout"],"tournament_status": ["draft", "registration_open", "registration_closed", "in_progress", "completed", "cancelled"],"tournament_team_status": ["pending", "approved", "rejected", "waitlisted", "withdrawn"],"venue_role": ["owner", "manager", "staff"],"verification_status": ["unverified", "pending", "verified", "rejected"],"visibility_level": ["public", "private"],"waitlist_status": ["waiting", "promoted", "left", "removed", "expired"]
           }
         }
 } as const

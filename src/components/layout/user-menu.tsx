@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { Building2, CalendarCheck, LayoutDashboard, LogOut, Settings, ShieldCheck, Trophy, UserRound, Users, type LucideIcon } from "lucide-react";
+import { Building2, CalendarCheck, LayoutDashboard, LogOut, Settings, ShieldCheck, Trophy, UserRound, Users, UsersRound, type LucideIcon } from "lucide-react";
 import { usePathname } from "@/i18n/navigation";
 import { signOutAction } from "@/server/auth";
 import { Avatar } from "@/components/ui/avatar";
@@ -35,6 +35,7 @@ const Divider = () => <div role="separator" className="my-1 h-px bg-line" />;
  */
 export function UserMenu({
   name,
+  username = null,
   avatarSrc,
   contact,
   isModerator,
@@ -42,6 +43,8 @@ export function UserMenu({
   organizesTournaments,
 }: {
   name: string;
+  /** Their @username, under their name (null before migration 0041). */
+  username?: string | null;
   avatarSrc: string | null;
   /** The member's number or e-mail, under their name. */
   contact: string | null;
@@ -144,6 +147,11 @@ export function UserMenu({
             <Avatar src={avatarSrc} name={name} size={40} />
             <div className="flex min-w-0 flex-col">
               <span className="truncate text-sm font-semibold text-ink">{name}</span>
+              {username ? (
+                <span className="truncate text-xs font-medium text-accent" data-testid="account-username">
+                  <bdi dir="ltr">@{username}</bdi>
+                </span>
+              ) : null}
               {contact ? (
                 <span className="truncate text-xs text-muted" data-testid="account-contact">
                   <bdi dir="ltr">{contact}</bdi>
@@ -153,6 +161,7 @@ export function UserMenu({
           </div>
           <Item href="/dashboard" icon={LayoutDashboard}>{t("dashboard")}</Item>
           <Item href="/profile" icon={UserRound}>{t("profile")}</Item>
+          <Item href="/friends" icon={UsersRound}>{t("friends")}</Item>
           <Item href="/my/teams" icon={Users}>{t("myTeams")}</Item>
           <Item href="/my/bookings" icon={CalendarCheck}>{t("myBookings")}</Item>
           <Item href="/settings" icon={Settings}>{t("settings")}</Item>

@@ -5,7 +5,7 @@ import { publicStorageUrl } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 import type { Profile } from "@/lib/auth";
 import { areaById, cityById, localizedName } from "@/server/reference";
-import { Avatar } from "@/components/ui/avatar";
+import { AvatarViewer } from "@/components/ui/avatar-viewer";
 import { Badge, Card, CardBody, Section, Stat } from "@/components/ui/primitives";
 import { LinkButton } from "@/components/ui/link-button";
 
@@ -41,9 +41,10 @@ export async function PlayerSummary({ profile, viewerId }: { profile: Profile; v
   return (
     <div className="flex flex-col gap-8">
       <div className="reveal-children flex flex-col gap-4 sm:flex-row sm:items-center">
-        <Avatar src={publicStorageUrl("avatars", profile.avatar_path)} name={profile.display_name} size={88} />
+        <AvatarViewer src={publicStorageUrl("avatars", profile.avatar_path)} name={profile.display_name} size={88} />
         <div className="flex flex-col gap-1.5">
           <h1 className="page-title font-display text-3xl font-bold">{profile.display_name}</h1>
+          {profile.username ? <p className="text-sm font-medium text-accent" data-testid="username"><bdi dir="ltr">@{profile.username}</bdi></p> : null}
           <p className="text-muted">{[localizedName(area, locale), localizedName(city, locale)].filter(Boolean).join("، ")}</p>
           <div className="flex flex-wrap gap-1.5">
             {profile.positions.map((p) => <Badge key={p} tone="accent">{e(`position.${p}`)}</Badge>)}

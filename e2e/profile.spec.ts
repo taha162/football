@@ -54,6 +54,25 @@ test.describe("Profile photo", () => {
     expect(await storedPictureSize(page, `avatars/${stored.name}`)).toEqual({ width: 1200, height: 1600 });
   });
 
+  test("a profile picture opens large inside the site, with no «حفظ»", async ({ page, browser }) => {
+    const user = await createAuthUser("Big face");
+    await uploadPhoto(page, user);
+    await expect(page.getByText("تم تحديث الصورة.")).toBeVisible();
+    // On a player's page, seen by someone else.
+    const other = await (await browser.newContext()).newPage();
+    await signIn(other, await createAuthUser("Looker"));
+    await other.goto(`/ar/players/${user.id}`);
+    await other.getByRole("button", { name: `تكبير صورة ${user.name}` }).click();
+    const viewer = other.getByRole("dialog", { name: `صورة ${user.name}` });
+    await expect(viewer).toBeVisible();
+    await expect.poll(() => viewer.getByRole("img").evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
+    await expect(viewer.getByRole("button", { name: "حفظ" })).toHaveCount(0);
+    await viewer.getByRole("button", { name: "إغلاق" }).click();
+    await expect(viewer).toBeHidden();
+    await expect(other).toHaveURL(new RegExp(`/ar/players/${user.id}`));
+    await other.context().close();
+  });
+
   test("when picture storage is not public, the upload is refused with a clear message", async ({ page }) => {
     const user = await createAuthUser("Private");
     await admin("update storage.buckets set public = false where id = 'avatars'");

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ImagePlus, Loader2, MapPin, Mic, SendHorizontal, Trash2, X } from "lucide-react";
+import { Film, ImagePlus, Loader2, MapPin, Mic, Play, SendHorizontal, Trash2, X } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { ActionForm, Hidden, SubmitButton, useErrorText, type FormAction } from "@/components/ui/action-form";
 import { Button } from "@/components/ui/button";
@@ -11,9 +11,11 @@ import { cn } from "@/lib/cn";
 import { formatDistance, formatDuration } from "@/lib/duration";
 import type { SharedPoint } from "@/lib/geo";
 import { THUMB_MAX_SIDE } from "@/lib/message-thumb";
+import { MAX_VIDEO_BYTES, videoTypeOf, type VideoType } from "@/lib/message-video";
 import { makeThumbnail, shrinkImage } from "@/lib/shrink-image";
-import { sendMessageAction } from "@/server/messages";
+import { sendMessageAction, sendVideoMessageAction, startVideoUpload } from "@/server/messages";
 import { LocationMap } from "./location-map";
+import { readVideo, uploadVideo } from "./video-attachment";
 
 /** Longest voice note, in seconds (the server accepts up to 300). */
 export const MAX_RECORDING_SECONDS = 120;
@@ -33,6 +35,9 @@ export function pickRecordingType(): string {
 const extensionOf = (type: string) => (type.includes("mp4") ? "m4a" : type.includes("ogg") ? "ogg" : "webm");
 
 type Mode = "text" | "location" | "voice";
+
+/** A video chosen to send, with what the browser could read from it. */
+type ChosenVideo = { file: File; type: VideoType; seconds: number | null; still: File | null; stillUrl: string | null };
 
 /**
  * What the member writes or sends: text with an optional picture, their
@@ -59,10 +64,12 @@ export function Composer({
 }
 
 /**
- * Text and/or one picture. The picture is previewed, and can be removed before
- * sending. Text alone leaves the box at once, so the next message can be
- * written while it is on its way; if it can't be sent, it comes back to the
- * box with the reason. A picture waits for its upload, as before.
+ * Text and/or one picture or video. Either is previewed, and can be removed
+ * before sending. Text alone leaves the box at once, so the next message can
+ * be written while it is on its way; if it can't be sent, it comes back to
+ * the box with the reason. A picture waits for its upload, as before. A video
+ * goes straight to storage (it is too big for the site's server), with a
+ * progress bar; removing it cancels the upload.
  */
 function TextComposer({
   conversationId,
@@ -76,6 +83,8 @@ function TextComposer({
   onTyping?: () => void;
 }) {
   const t = useTranslations("messages");
+  const locale = useLocale();
+  const errorText = useErrorText();
   const fileInput = useRef<HTMLInputElement>(null);
   // The picture's small copy, sent alongside it (lib/message-thumb.ts).
   const thumbInput = useRef<HTMLInputElement>(null);
@@ -87,6 +96,19 @@ function TextComposer({
   const typed = useRef("");
   const sending = useRef(false);
   const [preview, setPreview] = useState<string | null>(null);
+  // A chosen video (and the same, for the send action to read), its upload's progress, and why it can't go.
+  const [video, setVideo] = useState<ChosenVideo | null>(null);
+  const chosenVideo = useRef<ChosenVideo | null>(null);
+  const [progress, setProgress] = useState<number | null>(null);
+  const upload = useRef<XMLHttpRequest | null>(null);
+  const [videoError, setVideoError] = useState<string | null>(null);
+  const pickVideo = (next: ChosenVideo | null) => {
+    chosenVideo.current = next;
+    setVideo((old) => {
+      if (old?.stillUrl && old.stillUrl !== next?.stillUrl) URL.revokeObjectURL(old.stillUrl);
+      return next;
+    });
+  };
   // While text is being written, location and voice step aside: the box gets their room (small phones).
   const [hasText, setHasText] = useState(false);
   /** The box grows with what is written, up to six lines, then scrolls. */
@@ -99,9 +121,39 @@ function TextComposer({
     setHasText(Boolean(el.value.trim()));
   };
 
+  /** A video: a one-time upload link, the file straight to storage, then the message (with the still). */
+  const sendVideo = async (prev: Parameters<FormAction>[0], chosen: ChosenVideo, body: string): ReturnType<FormAction> => {
+    setVideoError(null);
+    const start = await startVideoUpload(conversationId, { type: chosen.type, size: chosen.file.size }).catch(() => null);
+    if (!start?.ok) return { ok: false, error: start?.error ?? "request_failed", at: Date.now() };
+    setProgress(0);
+    try {
+      await uploadVideo(start.url, chosen.file, chosen.type, setProgress, upload);
+    } catch (e) {
+      setProgress(null);
+      const code = (e as Error).message;
+      return { ok: false, error: code === "cancelled" ? "upload_cancelled" : code, at: Date.now() };
+    }
+    const out = new FormData();
+    out.set("conversation_id", conversationId);
+    out.set("video_path", start.path);
+    out.set("body", body);
+    if (chosen.seconds) out.set("video_seconds", String(chosen.seconds));
+    if (chosen.still) out.set("poster", chosen.still);
+    try {
+      return await sendVideoMessageAction(prev, out);
+    } catch {
+      return { ok: false, error: "request_failed", at: Date.now() };
+    } finally {
+      setProgress(null);
+    }
+  };
+
   const send: FormAction = async (prev, fd) => {
     const body = String(fd.get("body") ?? "").trim();
     const image = fd.get("image");
+    const chosen = chosenVideo.current;
+    if (chosen) return sendVideo(prev, chosen, body);
     const textOnly = Boolean(onSending) && body !== "" && !(image instanceof File && image.size > 0);
     if (textOnly) {
       onSending!(body);
@@ -135,6 +187,37 @@ function TextComposer({
       if (old) URL.revokeObjectURL(old);
       return null;
     });
+    // A video on its way stops here.
+    upload.current?.abort();
+    pickVideo(null);
+    setProgress(null);
+    setVideoError(null);
+  };
+
+  /** A chosen video: checked, previewed with a still and its length (read in the browser), not sent with the form. */
+  const chooseVideo = async (file: File) => {
+    if (fileInput.current) fileInput.current.value = "";
+    if (thumbInput.current) thumbInput.current.value = "";
+    setPreview((old) => {
+      if (old) URL.revokeObjectURL(old);
+      return null;
+    });
+    const type = videoTypeOf(file);
+    if (!type) {
+      pickVideo(null);
+      return setVideoError(errorText.error("video_type_not_allowed"));
+    }
+    if (file.size > MAX_VIDEO_BYTES) {
+      pickVideo(null);
+      return setVideoError(errorText.error("video_too_large"));
+    }
+    setVideoError(null);
+    const first: ChosenVideo = { file, type, seconds: null, still: null, stillUrl: null };
+    pickVideo(first);
+    const { seconds, still } = await readVideo(file);
+    // Removed, or another chosen, meanwhile.
+    if (chosenVideo.current?.file !== file) return;
+    pickVideo({ ...first, seconds, still, stillUrl: still ? URL.createObjectURL(still) : null });
   };
 
   // Round, 44 px; 40 px on the narrowest phones (under 360 px), so the box keeps room to write.
@@ -157,6 +240,51 @@ function TextComposer({
       className="gap-2"
     >
       <Hidden values={{ conversation_id: conversationId }} />
+      {video ? (
+        <div className="flex flex-col gap-2">
+          <div className="relative w-fit">
+            <div className="relative grid h-40 min-w-32 place-items-center overflow-hidden rounded-xl border border-line bg-surface-3">
+              {video.stillUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element -- local still of the chosen video
+                <img src={video.stillUrl} alt="" className="h-40 w-auto max-w-[min(18rem,70vw)] object-cover" />
+              ) : (
+                <Film aria-hidden="true" className="size-8 text-muted" />
+              )}
+              <span aria-hidden="true" className="absolute inset-0 grid place-items-center">
+                <span className="grid size-10 place-items-center rounded-full bg-black/55 text-white">
+                  <Play className="size-5 translate-x-px" />
+                </span>
+              </span>
+              {video.seconds ? (
+                <span className="num absolute bottom-1.5 start-1.5 rounded bg-black/60 px-1.5 text-[11px] font-medium text-white">{formatDuration(video.seconds, locale)}</span>
+              ) : null}
+            </div>
+            <button type="button" onClick={clear} aria-label={t("removeVideo")} className="absolute -top-2 -end-2 flex size-7 items-center justify-center rounded-full bg-surface-3 text-ink shadow">
+              <X aria-hidden="true" className="size-4" />
+            </button>
+          </div>
+          {progress !== null ? (
+            <div className="flex items-center gap-2">
+              <div
+                role="progressbar"
+                aria-label={t("uploadingVideo")}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.round(progress * 100)}
+                className="h-1.5 w-40 overflow-hidden rounded-full bg-surface-3"
+              >
+                <div className="h-full rounded-full bg-accent transition-[width] duration-200" style={{ width: `${Math.round(progress * 100)}%` }} />
+              </div>
+              <span className="num text-xs text-muted">{t("uploadPercent", { percent: Math.round(progress * 100) })}</span>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+      {videoError ? (
+        <Alert tone="warning" className="alert-pop">
+          {videoError}
+        </Alert>
+      ) : null}
       {preview ? (
         <div className="relative w-fit">
           {/* eslint-disable-next-line @next/next/no-img-element -- local preview of the chosen file */}
@@ -178,7 +306,7 @@ function TextComposer({
             id="message-body"
             name="body"
             rows={1}
-            required={!preview}
+            required={!preview && !video}
             maxLength={2000}
             placeholder={t("placeholder")}
             // 16px: phones don't zoom into the box when it takes the focus. The box keeps the page's direction, so
@@ -204,12 +332,16 @@ function TextComposer({
               ref={fileInput}
               type="file"
               name="image"
-              accept="image/jpeg,image/png,image/webp,image/*"
+              accept="image/jpeg,image/png,image/webp,image/*,video/mp4,video/quicktime,video/webm,video/*"
               className="sr-only"
               onChange={async (e) => {
                 const input = e.currentTarget;
                 const chosen = input.files?.[0];
                 if (!chosen) return clear();
+                // A video goes its own way (straight to storage on send), not with the form.
+                if (chosen.type.startsWith("video/") || videoTypeOf(chosen)) return chooseVideo(chosen);
+                pickVideo(null);
+                setVideoError(null);
                 // Phone photos: at most 1600 px as JPEG before sending (src/lib/shrink-image.ts), and previewed as sent.
                 const small = await shrinkImage(chosen);
                 if (small !== chosen) {

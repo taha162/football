@@ -7,7 +7,9 @@ import { redirect } from "@/i18n/navigation";
 import { dbErrorCode, fail, ok, str, uuid, type ActionState } from "@/lib/actions";
 import { logger } from "@/lib/log";
 import { DELETE_WORD } from "@/lib/member-deletion";
+import { getCurrentUser } from "@/lib/auth";
 import { removeMessageFiles } from "@/lib/message-files";
+import { MESSAGE_VIDEOS, posterPathOf } from "@/lib/message-video";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -82,6 +84,25 @@ export async function resetSecondFactorAction(_: ActionState, fd: FormData): Pro
 const MEMBER_FILE_BUCKETS = ["avatars", "message-images", "message-voice"] as const;
 
 /**
+ * The videos a member sent, with their stills (none before migration 0045).
+ * Nothing is returned to the caller: the paths only serve to remove the files
+ * once the database has accepted the deletion. Anything missed is removed by
+ * the scheduled clean-up of videos no message points at.
+ */
+async function memberVideoFiles(userId: string): Promise<string[]> {
+  const service = createAdminClient();
+  if (!service) return [];
+  const paths: string[] = [];
+  for (let from = 0; from < 20_000; from += 1000) {
+    const { data, error } = await service.from("messages").select("video_path").eq("sender_id", userId).not("video_path", "is", null).range(from, from + 999);
+    if (error || !data?.length) break;
+    for (const row of data) if (row.video_path) paths.push(row.video_path, posterPathOf(row.video_path));
+    if (data.length < 1000) break;
+  }
+  return paths;
+}
+
+/**
  * Deletes a member completely (Admin → Users → «حذف نهائي»). The database
  * decides who may (admins only, after the second step; never oneself, an
  * admin or a venue's owner), does it in one transaction, records it, and says
@@ -94,6 +115,9 @@ export async function deleteMemberAction(_: ActionState, fd: FormData): Promise<
   if (!user.success) return fail("invalid");
   if (str(fd, "confirm") !== DELETE_WORD) return fail("validation", { confirm: "delete_word" });
   const supabase = await createClient();
+  // Their videos (and stills): read first, as the deletion takes their messages with it (migration 0045).
+  // Only for an admin: the server key isn't used for anyone else (the database checks the role again).
+  const videos = (await getCurrentUser())?.isAdmin ? await memberVideoFiles(user.data) : [];
   const { data, error } = await supabase.rpc("admin_delete_user", { p_user_id: user.data, p_reason: str(fd, "reason") ?? "" });
   if (error) {
     const code = dbErrorCode(error, "admin_delete_user");
@@ -114,6 +138,11 @@ export async function deleteMemberAction(_: ActionState, fd: FormData): Promise<
       const { error: removeError } = storage ? await storage.from(bucket).remove(chunk) : { error: { message: "no_service_role" } };
       if (removeError) left += chunk.length;
     }
+  }
+  for (let i = 0; i < videos.length; i += 100) {
+    const chunk = videos.slice(i, i + 100);
+    const { error: removeError } = storage ? await storage.from(MESSAGE_VIDEOS).remove(chunk) : { error: { message: "no_service_role" } };
+    if (removeError) left += chunk.length;
   }
   const { data: me } = await supabase.auth.getUser();
   logger.info("admin_user_deleted", { user: user.data, by: me.user?.id ?? null, files_left: left });

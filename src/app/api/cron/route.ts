@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { logger } from "@/lib/log";
 import { API_LIMITS, hit, limitAddress, spent, tooManyRequests } from "@/lib/rate-limit";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { MESSAGE_VIDEOS } from "@/lib/message-video";
 import { deliverWhatsapp } from "@/lib/whatsapp-outbox";
 
 export const dynamic = "force-dynamic";
@@ -18,8 +19,9 @@ function authorized(request: NextRequest): boolean {
 
 /**
  * Scheduled maintenance: expires stale booking requests, sends match
- * reminders, closes expired listings, auto-completes past matches, and hands
- * waiting WhatsApp messages to the bot.
+ * reminders, closes expired listings, auto-completes past matches, hands
+ * waiting WhatsApp messages to the bot, and removes chat videos no message
+ * points at any more.
  * Call every 15 minutes with `Authorization: Bearer $CRON_SECRET`
  * (e.g. Vercel Cron or any scheduler). Idempotent.
  */
@@ -59,12 +61,24 @@ export async function GET(request: NextRequest) {
   // Old notifications and audit entries, past their keeping periods (…0038); missing before that runs.
   const { data: retention, error: retentionError } = await admin.rpc("run_retention_cleanup");
   if (retentionError && retentionError.code !== "PGRST202") logger.error("cron_retention_failed", { code: retentionError.code });
+  // Chat videos (and stills) no message points at, a day on: uploads never sent, deleted messages (…0045).
+  const { data: orphans, error: orphansError } = await admin.rpc("orphan_message_videos", { p_limit: 500 });
+  if (orphansError && orphansError.code !== "PGRST202") logger.error("cron_orphan_videos_failed", { code: orphansError.code });
+  const videoNames = (Array.isArray(orphans) ? orphans : []).filter((n): n is string => typeof n === "string");
+  let videosRemoved = 0;
+  for (let i = 0; i < videoNames.length; i += 100) {
+    const chunk = videoNames.slice(i, i + 100);
+    const { error: removeError } = await admin.storage.from(MESSAGE_VIDEOS).remove(chunk);
+    if (removeError) logger.error("cron_orphan_videos_remove_failed", { message: removeError.message.slice(0, 120) });
+    else videosRemoved += chunk.length;
+  }
   const result = {
     ...(data as Record<string, unknown>),
     ...((cleanup as Record<string, unknown>) ?? {}),
     ...((calls as Record<string, unknown>) ?? {}),
     ...((waCleanup as Record<string, unknown>) ?? {}),
     ...(retention ? { retention } : {}),
+    ...(videosRemoved ? { videos_removed: videosRemoved } : {}),
     ...(whatsapp ? { whatsapp } : {}),
   };
   logger.info("cron_completed", { ms: Date.now() - started, ...result });

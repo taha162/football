@@ -37,11 +37,23 @@ test.describe("Conversations", () => {
     await expect.poll(() => picture.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
     const src = (await picture.getAttribute("src"))!;
     expect(src).toContain("/storage/v1/object/sign/message-images/");
-    // The conversation shows the picture's small copy; tapping it opens the picture itself.
+    // The conversation shows the picture's small copy; tapping it opens the picture itself, inside the site.
     expect(src).toContain(".thumb.jpg");
-    const full = (await other.getByRole("link", { name: "فتح الصورة" }).getAttribute("href"))!;
+    await other.getByRole("button", { name: "فتح الصورة" }).click();
+    const viewer = other.getByRole("dialog", { name: "صورة مرسلة" });
+    await expect(viewer).toBeVisible();
+    const full = (await viewer.getByRole("img").getAttribute("src"))!;
     expect(full).toContain("/storage/v1/object/sign/message-images/");
     expect(full).not.toContain(".thumb.");
+    await expect(other).toHaveURL(new RegExp(`/ar/messages/${conv}`));
+    // «حفظ» downloads it, without leaving the conversation.
+    const download = other.waitForEvent("download");
+    await viewer.getByRole("button", { name: "حفظ" }).click();
+    expect((await download).suggestedFilename()).toMatch(/^almalab-\d+\.jpg$/);
+    // Escape (or the phone's back button) closes it.
+    await other.keyboard.press("Escape");
+    await expect(viewer).toBeHidden();
+    await expect(other).toHaveURL(new RegExp(`/ar/messages/${conv}`));
     // Without the signature, the file isn't served.
     expect((await other.request.get(src.replace("/object/sign/", "/object/public/").split("?")[0])).ok()).toBe(false);
     await other.context().close();

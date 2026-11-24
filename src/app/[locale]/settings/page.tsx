@@ -7,6 +7,8 @@ import { createClient } from "@/lib/supabase/server";
 import { whatsappConfig } from "@/lib/whatsapp";
 import { blockUserAction, savePreferencesAction } from "@/server/profile";
 import { saveWhatsappSettingsAction } from "@/server/whatsapp";
+import { setUsernameAction } from "@/server/username";
+import { UsernameField } from "@/components/forms/username-field";
 import { signOutAction } from "@/server/auth";
 import { SecondFactorSettings } from "@/components/auth/second-factor-settings";
 import { ActionForm, InlineAction, SubmitButton } from "@/components/ui/action-form";
@@ -63,6 +65,20 @@ export default async function SettingsPage({ params }: PageProps<"/[locale]/sett
           </CardBody>
         </Card>
       </Section>
+
+      {/* Their username, for friends to find them (migration 0041; absent before it runs). */}
+      {user.profile.username ? (
+        <Section title={t("username")} id="username">
+          <Card>
+            <CardBody>
+              <ActionForm action={setUsernameAction}>
+                <UsernameField defaultValue={user.profile.username} />
+                <SubmitButton className="self-start">{t("saveUsername")}</SubmitButton>
+              </ActionForm>
+            </CardBody>
+          </Card>
+        </Section>
+      ) : null}
 
       <Section title={t("secondFactor")} id="two-step">
         <Card>

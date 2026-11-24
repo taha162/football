@@ -61,7 +61,8 @@
     "tournamentDashboard": "My tournaments",
     "settings": "Settings",
     "admin": "Administration",
-    "accountMenu": "Account menu for {name}"
+    "accountMenu": "Account menu for {name}",
+    "friends": "My friends"
   },
   "footer": {
     "tagline": "A community for recreational football, in every governorate of Iraq.",
@@ -152,7 +153,13 @@
     "continueWhatsappNumber": "Continue with a WhatsApp number",
     "signUpEmail": "Sign up with e-mail",
     "signUpWhatsapp": "Sign up with a WhatsApp number",
-    "showPassword": "Show password"
+    "showPassword": "Show password",
+    "username": "Username",
+    "usernameHint": "Lower-case English letters, digits, _ and ., like ahmed_10. Friends find you by it.",
+    "usernameFree": "Available",
+    "usernameTaken": "Taken, try another.",
+    "usernameInvalid": "3 to 20: lower-case English letters, digits, _ and ., starting with a letter.",
+    "usernameChecking": "Checking…"
   },
   "onboarding": {
     "title": "Set up your player profile",
@@ -475,7 +482,24 @@
     "invalid_link": "The link must start with https://",
     "venue_without_location": "This venue has no place on the map.",
     "promo_media_unavailable": "Database file …0031 is not applied, so pictures, places and links can't be sent yet.",
-    "request_failed": "Couldn't send: the request didn't reach the site (the connection dropped, or the file was too large). What you wrote and chose is still here; please try again."
+    "request_failed": "Couldn't send: the request didn't reach the site (the connection dropped, or the file was too large). What you wrote and chose is still here; please try again.",
+    "pin_limit": "You can pin 3 conversations. Unpin one first.",
+    "invalid_nickname": "A nickname is 1 to 40 characters.",
+    "feature_not_ready": "This feature isn't on yet: it waits for a database update.",
+    "invalid_username": "A username is 3 to 20 lower-case English letters, digits, _ and ., starting with a letter.",
+    "username_taken": "That username is taken; try another.",
+    "cannot_friend_self": "You can't add yourself.",
+    "invalid_group_name": "A group name is 1 to 60 characters.",
+    "group_needs_members": "Choose at least one friend.",
+    "not_friends": "You can only add your friends.",
+    "group_full": "The group has no room for that many.",
+    "not_group_admin": "Only the group's admins can do that.",
+    "group_creator": "The group's creator stays in it, as an admin.",
+    "member_not_found": "That member is not in the group.",
+    "video_too_large": "The video is over 50 MB. Choose a shorter clip.",
+    "video_type_not_allowed": "This kind of video isn't supported. Send MP4, MOV or WebM.",
+    "invalid_video": "The video couldn't be sent. Try again.",
+    "upload_cancelled": "Sending the video was cancelled."
   },
   "validation": {
     "invalid": "Invalid value.",
@@ -603,7 +627,18 @@
     "whatsapp_settings_saved": "WhatsApp settings saved.",
     "campaign_started": "Sending has started. Messages go out slowly, in batches.",
     "campaign_stopped": "The campaign was stopped.",
-    "whatsapp_resumed": "Sending resumed."
+    "whatsapp_resumed": "Sending resumed.",
+    "username_saved": "Username saved.",
+    "friend_requested": "Friend request sent.",
+    "friend_added": "You're friends now.",
+    "friend_declined": "Request declined.",
+    "friend_request_cancelled": "Request cancelled.",
+    "friend_removed": "Removed from friends.",
+    "group_members_added": "Added to the group.",
+    "group_member_removed": "Removed from the group.",
+    "group_admin_added": "They are now an admin.",
+    "group_admin_removed": "They are no longer an admin.",
+    "group_renamed": "Group renamed."
   },
   "notifications": {
     "generic": "You have a new update.",
@@ -660,7 +695,10 @@
     "booking_cancelled_refund": "{venue_name} cancelled your booking on {starts_at}. The venue will return your deposit.",
     "booking_deposit_refunded": "{venue_name} has returned your deposit for the booking on {starts_at}.",
     "missed_call": "Missed call from {caller_name}.",
-    "security_alert": "{kind, select, code_blocked {Security alert: repeated wrong codes} other {Security alert: repeated wrong passwords}}{has_account, select, yes { on the account {account}} other {}}, so signing in is paused for up to 15 minutes. Details in the audit log."
+    "security_alert": "{kind, select, code_blocked {Security alert: repeated wrong codes} other {Security alert: repeated wrong passwords}}{has_account, select, yes { on the account {account}} other {}}, so signing in is paused for up to 15 minutes. Details in the audit log.",
+    "friend_request": "{from_name} wants to be your friend.",
+    "friend_accepted": "{from_name} accepted your friend request.",
+    "group_added": "{by_name} added you to the group “{group_name}”."
   },
   "notificationTypes": {
     "match_participant_joined": "Someone joins my match",
@@ -676,7 +714,10 @@
     "team_match_scheduled": "New team fixtures",
     "new_message": "Direct and booking messages",
     "tournament_update": "Tournament updates",
-    "review_received": "Reviews received"
+    "review_received": "Reviews received",
+    "friend_request": "Friend requests",
+    "friend_accepted": "Your friend requests accepted",
+    "group_added": "Being added to a group"
   },
   "report": {
     "open": "Report",
@@ -1620,7 +1661,8 @@
     "promoReportValue": "{sent} sent · {failed} failed · {skipped} skipped · {waiting} waiting",
     "promoStop": "Stop campaign",
     "promoStopTitle": "Stop this campaign?",
-    "promoStopBody": "The remaining messages ({waiting}) won't be sent. What was sent can't be recalled."
+    "promoStopBody": "The remaining messages ({waiting}) won't be sent. What was sent can't be recalled.",
+    "reportedVideo": "The video in the reported message"
   },
   "teams": {
     "title": "Teams",
@@ -1908,7 +1950,9 @@
     "whatsappHint": "Messages from Al-Malab's number to your verified number.",
     "whatsappBookings": "My booking messages: confirmed, changed and cancelled",
     "whatsappPromos": "Offers and news",
-    "whatsappStopHint": "You can also stop all messages by sending 0 to Al-Malab's number on WhatsApp."
+    "whatsappStopHint": "You can also stop all messages by sending 0 to Al-Malab's number on WhatsApp.",
+    "username": "Username",
+    "saveUsername": "Save username"
   },
   "messages": {
     "title": "Messages",
@@ -1921,7 +1965,8 @@
       "booking": "Booking",
       "challenge": "Challenge",
       "tournament": "Tournament",
-      "direct": "Direct"
+      "direct": "Direct",
+      "group": "Group"
     },
     "locked": "Read-only",
     "noMessages": "No messages yet.",
@@ -1946,7 +1991,7 @@
     "placeholder": "Write a message…",
     "send": "Send",
     "safetyNote": "Never share passwords or payment details in chat. Use the report button on any message that breaks the rules.",
-    "attach": "Attach a picture",
+    "attach": "Attach a photo or video",
     "removeImage": "Remove the picture",
     "photo": "Photo",
     "openImage": "Open the picture",
@@ -1988,7 +2033,49 @@
     "callNoAnswer": "Call not answered",
     "back": "Back",
     "today": "Today",
-    "yesterday": "Yesterday"
+    "yesterday": "Yesterday",
+    "rowMenu": "Options for {name}",
+    "pin": "Pin conversation",
+    "unpin": "Unpin",
+    "pinned": "Pinned",
+    "mute": "Mute notifications",
+    "unmute": "Unmute",
+    "muted": "Muted",
+    "muteTitle": "Mute for",
+    "muteBody": "Its messages won't light the messages dot or notify you. Unread ones still show in the list.",
+    "mute8h": "8 hours",
+    "muteWeek": "A week",
+    "muteAlways": "Always",
+    "favorite": "Add to favourites",
+    "unfavorite": "Remove from favourites",
+    "addNickname": "Add a nickname",
+    "editNickname": "Edit nickname",
+    "nicknameTitle": "Nickname",
+    "nicknameLabel": "Nickname",
+    "nicknameHint": "Only you see it, in place of the conversation's name.",
+    "removeNickname": "Remove nickname",
+    "deleteChat": "Delete conversation",
+    "deleteChatTitle": "Delete this conversation?",
+    "deleteChatBody": "It leaves your list and its earlier messages are hidden from you only. Nothing changes for anyone else, and it comes back with the next message.",
+    "filters": "Filter conversations",
+    "filter": {
+      "all": "All",
+      "unread": "Unread",
+      "favorites": "Favourites",
+      "groups": "Groups"
+    },
+    "emptyUnread": "No unread messages.",
+    "emptyFavorites": "No favourites yet. Press and hold a conversation to add it.",
+    "emptyGroups": "No group conversations yet.",
+    "newGroup": "New group",
+    "groupInfo": "Group info",
+    "membersCount": "{count, plural, one {# member} other {# members}}",
+    "video": "Video",
+    "videoAlt": "Video sent",
+    "playVideo": "Play video",
+    "removeVideo": "Remove video",
+    "uploadingVideo": "Uploading the video",
+    "uploadPercent": "{percent}%"
   },
   "notificationsPage": {
     "title": "Notifications",
@@ -2492,5 +2579,80 @@
       "headset": "The sound is in the headphones connected to the phone.",
       "failed": "The phone didn't switch the speaker. Try again."
     }
+  },
+  "media": {
+    "viewer": "Media viewer",
+    "close": "Close",
+    "zoom": "Zoom in",
+    "fit": "Fit to screen",
+    "save": "Save",
+    "saveFailed": "Couldn't save it. Try again.",
+    "profilePicture": "{name}'s picture",
+    "openProfilePicture": "Enlarge {name}'s picture"
+  },
+  "friends": {
+    "title": "Friends",
+    "description": "Add friends by username, and message them easily.",
+    "notReady": "Friends wait for a database update.",
+    "addTitle": "Add a friend",
+    "usernameLabel": "Your friend's username",
+    "usernamePlaceholder": "username",
+    "search": "Search",
+    "result": "Search result",
+    "noOne": "No member has the username @{username}.",
+    "addHint": "Type the username as it shows on your friend's page, like ahmed_10.",
+    "incoming": "Friend requests ({count})",
+    "friendsTitle": "My friends ({count})",
+    "sent": "Requests you sent ({count})",
+    "empty": "No friends yet.",
+    "emptyBody": "Find a friend by username above and send a request.",
+    "add": "Add friend",
+    "requestSent": "Request sent",
+    "cancelRequest": "Cancel request",
+    "accept": "Accept",
+    "decline": "Decline",
+    "isFriend": "Friend",
+    "message": "Message",
+    "isYou": "That's you",
+    "cantAdd": "Can't be added",
+    "remove": "Remove",
+    "removeTitle": "Remove {name} from your friends?",
+    "removeBody": "Your conversations stay as they are, and either of you can send a new request later."
+  },
+  "groups": {
+    "newTitle": "New group",
+    "newDescription": "Name it and add your friends. You will be its admin.",
+    "nameLabel": "Group name",
+    "namePlaceholder": "e.g. Friday five-a-side",
+    "pickLabel": "Your friends",
+    "search": "Search your friends",
+    "selected": "{count, plural, =0 {Nobody chosen yet} one {# friend chosen} other {# friends chosen}}",
+    "noMatch": "None of your friends has that name.",
+    "create": "Create group",
+    "creating": "Creating…",
+    "noFriends": "Add friends first",
+    "noFriendsBody": "A group is made of your friends. Find them by username on the friends page.",
+    "toFriends": "Go to friends",
+    "notReady": "Groups are waiting for a database update.",
+    "backToChat": "Back to the conversation",
+    "membersTitle": "Members ({count})",
+    "admin": "Admin",
+    "creator": "Created the group",
+    "you": "You",
+    "makeAdmin": "Make admin",
+    "removeAdmin": "Remove as admin",
+    "remove": "Remove",
+    "removeTitle": "Remove {name} from the group?",
+    "removeBody": "They will no longer see the group's messages, and can be added again later.",
+    "addTitle": "Add members",
+    "add": "Add",
+    "adding": "Adding…",
+    "allIn": "All your friends are in the group.",
+    "adminsOnly": "Admins add and remove members and change the name.",
+    "renameTitle": "Name",
+    "rename": "Save name",
+    "leave": "Leave group",
+    "leaveTitle": "Leave “{name}”?",
+    "leaveBody": "You will stop getting its messages and lose access to them. If you are its last admin, the longest-standing member becomes one."
   }
 }

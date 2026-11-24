@@ -4,7 +4,7 @@ import { redirect } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { isSupabaseConfigured } from "@/lib/env";
 import { logger } from "@/lib/log";
-import { PROFILE_COLUMNS, type Profile } from "@/lib/profile-columns";
+import { selectProfile, type Profile } from "@/lib/profile-columns";
 import { hasSecondFactor } from "@/lib/second-factor";
 import { createClient } from "@/lib/supabase/server";
 
@@ -41,8 +41,8 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   const claims = data?.claims;
   if (error || !claims?.sub) return null;
   const id = claims.sub;
-  const [{ data: profile }, { data: roles }] = await Promise.all([
-    supabase.from("profiles").select(PROFILE_COLUMNS).eq("id", id).maybeSingle(),
+  const [profile, { data: roles }] = await Promise.all([
+    selectProfile(supabase, id),
     supabase.from("user_roles").select("role").eq("user_id", id),
   ]);
   if (!profile) return null;

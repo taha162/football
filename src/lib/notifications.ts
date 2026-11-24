@@ -16,6 +16,8 @@ const VENUE_STAFF_BOOKING_TYPES = new Set([
 ]);
 
 export function notificationHref(type: string, p: NotificationPayload): string {
+  // Friend requests and their answers (migration 0042).
+  if (type === "friend_request" || type === "friend_accepted") return "/friends";
   if (p.match_id) return `/matches/${str(p.match_id)}`;
   if (p.conversation_id) return `/messages/${str(p.conversation_id)}`;
   if (p.tournament_id) return `/tournaments/${str(p.tournament_id)}`;
@@ -47,6 +49,9 @@ export function notificationArgs(p: NotificationPayload, formatDate: (iso: strin
 
 /** Types users may switch off in settings (others are mandatory). */
 export const OPTIONAL_NOTIFICATION_TYPES = [
+  "friend_request",
+  "friend_accepted",
+  "group_added",
   "match_participant_joined",
   "match_participant_left",
   "match_reminder",
