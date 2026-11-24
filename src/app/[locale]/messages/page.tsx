@@ -46,10 +46,19 @@ export default async function MessagesPage({ params, searchParams }: PageProps<"
   );
   // One-to-one conversations show the other person's picture: one request for the whole list.
   const direct = rows.filter((c) => c.kind === "direct").map((c) => c.conversation_id);
-  const { data: others } = direct.length
-    ? await supabase.from("conversation_members").select("conversation_id, profile:profiles(avatar_path)").in("conversation_id", direct).neq("user_id", user.id)
-    : { data: [] };
+  // And groups their photo (migration 0048; before it runs the request fails and none shows). Both at once.
+  const groupIds = rows.filter((c) => c.kind === "group").map((c) => c.conversation_id);
+  const [{ data: others }, { data: groupRows }] = await Promise.all([
+    direct.length
+      ? supabase.from("conversation_members").select("conversation_id, profile:profiles(avatar_path)").in("conversation_id", direct).neq("user_id", user.id)
+      : Promise.resolve({ data: [] }),
+    groupIds.length ? supabase.from("conversations").select("id, photo_path").in("id", groupIds) : Promise.resolve({ data: [] }),
+  ]);
   const faces = new Map((others ?? []).map((m) => [m.conversation_id, publicStorageUrl("avatars", m.profile?.avatar_path)]));
+  for (const g of groupRows ?? []) {
+    const photo = publicStorageUrl("group-photos", g.photo_path);
+    if (photo) faces.set(g.id, photo);
+  }
   const now = new Date();
   // A message with no text says what it carried. (last_kind is absent on a
   // database without the location/voice/calls update: an empty text is a picture.)
@@ -117,7 +126,7 @@ export default async function MessagesPage({ params, searchParams }: PageProps<"
                 nickname={c.nickname}
               >
                 <LinkButton href={`/messages/${c.conversation_id}`} className="ripple flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2">
-                  {c.kind === "direct" ? (
+                  {c.kind === "direct" || faces.has(c.conversation_id) ? (
                     <Avatar src={faces.get(c.conversation_id) ?? null} name={title} size={48} />
                   ) : (
                     <span aria-hidden="true" className="grid size-12 shrink-0 place-items-center rounded-full bg-surface-3 text-muted">

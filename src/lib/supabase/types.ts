@@ -277,14 +277,14 @@ isOneToOne: false
                   ]
                 },"conversations": {
                   Row: {
-                    "booking_id": string | null,"challenge_id": string | null,"created_at": string,"created_by": string | null,"direct_key": string | null,"id": string,"is_locked": boolean,"kind": Database["public"]['Enums']["conversation_kind"],"last_message_at": string | null,"match_id": string | null,"team_id": string | null,"title": string | null,"tournament_id": string | null
+                    "booking_id": string | null,"challenge_id": string | null,"created_at": string,"created_by": string | null,"direct_key": string | null,"id": string,"is_locked": boolean,"kind": Database["public"]['Enums']["conversation_kind"],"last_message_at": string | null,"match_id": string | null,"photo_path": string | null,"team_id": string | null,"title": string | null,"tournament_id": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "booking_id"?: string | null,"challenge_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"direct_key"?: string | null,"id"?: string,"is_locked"?: boolean,"kind": Database["public"]['Enums']["conversation_kind"],"last_message_at"?: string | null,"match_id"?: string | null,"team_id"?: string | null,"title"?: string | null,"tournament_id"?: string | null
+                    "booking_id"?: string | null,"challenge_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"direct_key"?: string | null,"id"?: string,"is_locked"?: boolean,"kind": Database["public"]['Enums']["conversation_kind"],"last_message_at"?: string | null,"match_id"?: string | null,"photo_path"?: string | null,"team_id"?: string | null,"title"?: string | null,"tournament_id"?: string | null
                   }
                   Update: {
-                    "booking_id"?: string | null,"challenge_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"direct_key"?: string | null,"id"?: string,"is_locked"?: boolean,"kind"?: Database["public"]['Enums']["conversation_kind"],"last_message_at"?: string | null,"match_id"?: string | null,"team_id"?: string | null,"title"?: string | null,"tournament_id"?: string | null
+                    "booking_id"?: string | null,"challenge_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"direct_key"?: string | null,"id"?: string,"is_locked"?: boolean,"kind"?: Database["public"]['Enums']["conversation_kind"],"last_message_at"?: string | null,"match_id"?: string | null,"photo_path"?: string | null,"team_id"?: string | null,"title"?: string | null,"tournament_id"?: string | null
                   }
                   Relationships: [
                     {
@@ -1963,6 +1963,9 @@ isOneToOne: true
                            },
 "set_group_admin":
 { Args: { "p_admin": boolean,"p_conversation_id": string,"p_user_id": string }; Returns: undefined
+                           },
+"set_group_photo":
+{ Args: { "p_conversation_id": string,"p_path": string }; Returns: string
                            },
 "set_match_events":
 { Args: { "p_events": Json,"p_match_id": string }; Returns: number

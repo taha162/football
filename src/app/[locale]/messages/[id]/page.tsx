@@ -112,6 +112,7 @@ export default async function ConversationPage({ params, searchParams }: PagePro
   const names = { ...memberNames, ...Object.fromEntries((profiles ?? []).map((p) => [p.id, p.display_name])) };
 
   const groupTitle = isGroup ? ((conv as { title?: string | null }).title ?? null) : null;
+  const groupPhoto = isGroup ? publicStorageUrl("group-photos", (conv as { photo_path?: string | null }).photo_path) : null;
   let title = (conv.kind === "direct" ? null : isGroup ? groupTitle : await conversationTitle(supabase, conv)) ?? t(`kind.${conv.kind}`);
   let link: string | null = null;
   if (conv.match_id) link = `/matches/${conv.match_id}`;
@@ -162,9 +163,13 @@ export default async function ConversationPage({ params, searchParams }: PagePro
           ) : isGroup ? (
             // The group's page: members, admins, adding and leaving.
             <Link href={`/messages/${id}/group`} aria-label={`${title} — ${t("groupInfo")}`} className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl py-1 pe-2">
-              <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-full bg-surface-3 text-muted">
-                <UsersRound className="size-5" />
-              </span>
+              {groupPhoto ? (
+                <Avatar src={groupPhoto} name={title} size={40} />
+              ) : (
+                <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-full bg-surface-3 text-muted">
+                  <UsersRound className="size-5" />
+                </span>
+              )}
               {heading}
             </Link>
           ) : (

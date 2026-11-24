@@ -650,7 +650,9 @@
     "group_renamed": "Group renamed.",
     "email_code_sent": "Confirmation code sent.",
     "email_code_other": "Done. One code left.",
-    "email_changed": "Your e-mail is changed."
+    "email_changed": "Your e-mail is changed.",
+    "group_photo_updated": "Group photo saved.",
+    "group_photo_removed": "Group photo removed."
   },
   "notifications": {
     "generic": "You have a new update.",
@@ -2687,6 +2689,11 @@
     "rename": "Save name",
     "leave": "Leave group",
     "leaveTitle": "Leave “{name}”?",
-    "leaveBody": "You will stop getting its messages and lose access to them. If you are its last admin, the longest-standing member becomes one."
+    "leaveBody": "You will stop getting its messages and lose access to them. If you are its last admin, the longest-standing member becomes one.",
+    "addPhoto": "Group photo",
+    "changePhoto": "Change the group photo",
+    "photoHint": "JPG, PNG or WebP. Everyone in the group sees it.",
+    "savePhoto": "Save photo",
+    "removePhoto": "Remove photo"
   }
 }

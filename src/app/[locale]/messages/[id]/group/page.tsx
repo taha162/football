@@ -9,6 +9,8 @@ import { publicStorageUrl } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 import { addGroupMembersAction, leaveGroupAction, removeGroupMemberAction, renameGroupAction, setGroupAdminAction } from "@/server/groups";
 import { FriendPicker, type PickableFriend } from "@/components/messages/friend-picker";
+import { GroupPhotoForm } from "@/components/messages/group-photo-form";
+import { AvatarViewer } from "@/components/ui/avatar-viewer";
 import { ActionForm, FormField, Hidden, InlineAction, SubmitButton } from "@/components/ui/action-form";
 import { Avatar } from "@/components/ui/avatar";
 import { ConfirmAction } from "@/components/ui/confirm-action";
@@ -43,7 +45,8 @@ export default async function GroupPage({ params }: PageProps<"/[locale]/message
   const m = await getTranslations("messages");
   const supabase = await createClient();
   const [{ data: conv }, { data: rows }] = await Promise.all([
-    supabase.from("conversations").select("kind, title, created_by").eq("id", id).maybeSingle(),
+    // Every column: the photo (migration 0048) is simply absent before it runs.
+    supabase.from("conversations").select("*").eq("id", id).maybeSingle(),
     supabase
       .from("conversation_members")
       .select("user_id, role, created_at, profile:profiles(display_name, avatar_path)")
@@ -58,6 +61,7 @@ export default async function GroupPage({ params }: PageProps<"/[locale]/message
   if (!me) notFound();
   const isAdmin = me.role === "admin";
   const title = conv.title ?? m("kind.group");
+  const photo = publicStorageUrl("group-photos", (conv as { photo_path?: string | null }).photo_path);
   // Admins add friends of theirs who aren't in it yet.
   let addable: PickableFriend[] = [];
   if (isAdmin) {
@@ -78,9 +82,13 @@ export default async function GroupPage({ params }: PageProps<"/[locale]/message
       </Link>
 
       <header className="flex flex-col items-center gap-3 text-center">
-        <span aria-hidden="true" className="grid size-20 place-items-center rounded-full bg-surface-3 text-muted">
-          <UsersRound className="size-9" />
-        </span>
+        {photo ? (
+          <AvatarViewer src={photo} name={title} size={80} />
+        ) : (
+          <span aria-hidden="true" className="grid size-20 place-items-center rounded-full bg-surface-3 text-muted">
+            <UsersRound className="size-9" />
+          </span>
+        )}
         <h1 className="page-title font-display text-2xl font-bold sm:text-3xl">{title}</h1>
         <p className="text-sm text-muted">{m("membersCount", { count: members.length })}</p>
       </header>
@@ -88,6 +96,8 @@ export default async function GroupPage({ params }: PageProps<"/[locale]/message
       {isAdmin ? (
         <Card>
           <CardBody>
+            <GroupPhotoForm conversationId={id} hasPhoto={Boolean(photo)} />
+            <hr className="my-5 border-line" />
             <ActionForm action={renameGroupAction} className="gap-3">
               <Hidden values={{ conversation_id: id }} />
               <FormField name="title" label={t("renameTitle")} required>

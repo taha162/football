@@ -2193,3 +2193,18 @@
 الملفات: `src/server/account.ts`، `src/lib/password-check.ts`، `src/components/forms/contact-change-forms.tsx` (جديدة)، `src/app/[locale]/settings/page.tsx`، `src/lib/phone-verification.ts`، `src/server/whatsapp.ts`، `src/app/[locale]/verify-whatsapp/page.tsx`، `src/components/auth/whatsapp-waiter.tsx`، `src/lib/whatsapp-messages.ts`، `src/lib/notifications.ts`، `src/lib/supabase/types.ts`، `supabase/templates/email_change.html`، `supabase/config.toml`، والنصوص في `messages/`. الاختبارات: `tests/db/phone-change.test.ts` و`e2e/account-contact.spec.ts` (جديدان)، `tests/unit/whatsapp-messages.test.ts`.
 
 التعديل: «Add or change the phone number and the e-mail»
+
+### 121. صورة للمجموعة، يضيفها ويغيّرها المشرفون فقط
+**ما تغيّر:**
+- في صفحة المجموعة، **للمشرفين:** «صورة المجموعة» (أو «تغيير صورة المجموعة»)، و«إزالة الصورة».
+- **الصورة تظهر** في أعلى صفحة المجموعة (تكبر عند الضغط عليها)، وفي شريط المحادثة، وبجانب المجموعة في قائمة الرسائل. بدونها تبقى أيقونة المجموعة.
+- **الأعضاء العاديون** يرون الصورة ولا يستطيعون تغييرها. قاعدة البيانات ترفض أي تغيير من غير مشرف.
+- **عند التغيير أو الإزالة** تُحذف الصورة السابقة من التخزين.
+- الصورة تُصغَّر في الهاتف قبل الرفع، كباقي الصور.
+
+**ملف قاعدة البيانات `…0048_group_photos.sql`:** مخزن `group-photos` (عام، كصور الأعضاء، وأسماء ملفاته عشوائية لا يعرفها إلا أعضاء المجموعة)، وخانة الصورة، والدالة التي تحفظها. لا يغيّر بيانات موجودة، وتشغيله مرتين لا يضر.
+- قبل تشغيله: حفظ الصورة يقول إن الميزة تنتظر تحديث قاعدة البيانات، وباقي المجموعات يعمل كما هو.
+
+الملفات: `src/components/messages/group-photo-form.tsx` (جديد)، `src/server/groups.ts`، `src/app/[locale]/messages/[id]/group/page.tsx`، `src/app/[locale]/messages/[id]/page.tsx`، `src/app/[locale]/messages/page.tsx`، `src/lib/storage.ts`، `src/lib/supabase/types.ts`، والنصوص في `messages/`. الاختبارات: `tests/db/groups.test.ts`، `e2e/groups.spec.ts`.
+
+التعديل: «Group photos, set by admins»

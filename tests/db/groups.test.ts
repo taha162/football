@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { admin, asUser, createUser, errorOf, notificationsOf, rpc, rpcRows } from "./helpers";
 
@@ -155,5 +156,33 @@ describe("groups", () => {
     expect(await errorOf(asUser(b, "insert into public.conversation_members (conversation_id, user_id, role) values ($1, $2, 'admin')", [group, (await createUser("Sneaky")) ]))).toMatch(/permission denied/);
     expect(await errorOf(asUser(b, "update public.conversations set title = 'Hijacked' where id = $1", [group]))).toMatch(/permission denied/);
     expect(await rolesOf(group)).toEqual({ [a]: "admin", [b]: "member" });
+  });
+});
+
+/** Migration 0048: a group's photo, set by its admins. */
+describe("group photos", () => {
+  const stored = async (name: string) => {
+    await admin("insert into storage.objects (bucket_id, name, metadata) values ('group-photos', $1, '{\"mimetype\":\"image/jpeg\"}')", [name]);
+    return name;
+  };
+  it("an admin sets, changes and removes it; members can't; only a file in the group's folder", async () => {
+    const [a, b] = [await createUser("Photo admin"), await createUser("Photo member")];
+    await befriend(a, b);
+    const group = await rpc<string>(a, "create_group", { p_title: "With a photo", p_member_ids: [b] });
+    const other = await rpc<string>(a, "create_group", { p_title: "Another", p_member_ids: [b] });
+    const first = await stored(`${group}/${randomUUID()}.jpg`);
+    expect(await rpc(a, "set_group_photo", { p_conversation_id: group, p_path: first })).toBeNull();
+    expect((await admin("select photo_path from public.conversations where id = $1", [group]))[0].photo_path).toBe(first);
+    // Members see it with the group.
+    expect((await asUser(b, "select photo_path from public.conversations where id = $1", [group]))[0].photo_path).toBe(first);
+    const second = await stored(`${group}/${randomUUID()}.png`);
+    // The one it replaced comes back, for the server to remove.
+    expect(await rpc(a, "set_group_photo", { p_conversation_id: group, p_path: second })).toBe(first);
+    expect(await errorOf(rpc(b, "set_group_photo", { p_conversation_id: group, p_path: null }))).toMatch(/not_group_admin/);
+    // Another group's file, or one never uploaded: refused.
+    expect(await errorOf(rpc(a, "set_group_photo", { p_conversation_id: group, p_path: await stored(`${other}/${randomUUID()}.jpg`) }))).toMatch(/invalid_image/);
+    expect(await errorOf(rpc(a, "set_group_photo", { p_conversation_id: group, p_path: `${group}/${randomUUID()}.jpg` }))).toMatch(/invalid_image/);
+    expect(await rpc(a, "set_group_photo", { p_conversation_id: group, p_path: null })).toBe(second);
+    expect((await admin("select photo_path from public.conversations where id = $1", [group]))[0].photo_path).toBeNull();
   });
 });

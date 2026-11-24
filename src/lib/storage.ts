@@ -1,6 +1,6 @@
 import { publicEnv } from "@/lib/env";
 
-export type Bucket = "avatars" | "team-logos" | "venue-images" | "promo-images";
+export type Bucket = "avatars" | "team-logos" | "venue-images" | "promo-images" | "group-photos";
 
 /** Under the 4.5 MB the host (Vercel) accepts in one request; pictures are made smaller in the browser first (src/lib/shrink-image.ts). */
 export const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
