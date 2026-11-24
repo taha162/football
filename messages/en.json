@@ -159,7 +159,9 @@
     "usernameFree": "Available",
     "usernameTaken": "Taken, try another.",
     "usernameInvalid": "3 to 20: lower-case English letters, digits, _ and ., starting with a letter.",
-    "usernameChecking": "Checking…"
+    "usernameChecking": "Checking…",
+    "waSubtitleChange": "Send the code from your new number's WhatsApp to link it to your account.",
+    "backToSettings": "Back to settings"
   },
   "onboarding": {
     "title": "Set up your player profile",
@@ -501,7 +503,12 @@
     "video_too_large": "The video is over 50 MB. Choose a shorter clip.",
     "video_type_not_allowed": "This kind of video isn't supported. Send MP4, MOV or WebM.",
     "invalid_video": "The video couldn't be sent. Try again.",
-    "upload_cancelled": "Sending the video was cancelled."
+    "upload_cancelled": "Sending the video was cancelled.",
+    "wrong_password": "That password isn't right.",
+    "same_email": "That's your current address.",
+    "same_phone": "That's your current number.",
+    "phone_taken": "That number belongs to another Al-Malab account.",
+    "no_email_change": "There's no e-mail change waiting for a code."
   },
   "validation": {
     "invalid": "Invalid value.",
@@ -640,7 +647,10 @@
     "group_member_removed": "Removed from the group.",
     "group_admin_added": "They are now an admin.",
     "group_admin_removed": "They are no longer an admin.",
-    "group_renamed": "Group renamed."
+    "group_renamed": "Group renamed.",
+    "email_code_sent": "Confirmation code sent.",
+    "email_code_other": "Done. One code left.",
+    "email_changed": "Your e-mail is changed."
   },
   "notifications": {
     "generic": "You have a new update.",
@@ -700,7 +710,9 @@
     "security_alert": "{kind, select, code_blocked {Security alert: repeated wrong codes} other {Security alert: repeated wrong passwords}}{has_account, select, yes { on the account {account}} other {}}, so signing in is paused for up to 15 minutes. Details in the audit log.",
     "friend_request": "{from_name} wants to be your friend.",
     "friend_accepted": "{from_name} accepted your friend request.",
-    "group_added": "{by_name} added you to the group “{group_name}”."
+    "group_added": "{by_name} added you to the group “{group_name}”.",
+    "phone_changed": "Your account was linked to a new phone number ending in {phone_end}. If this wasn't you, change your password now.",
+    "email_changed": "Your account e-mail was changed to {email_hint}. If this wasn't you, change your password now."
   },
   "notificationTypes": {
     "match_participant_joined": "Someone joins my match",
@@ -1954,7 +1966,27 @@
     "whatsappPromos": "Offers and news",
     "whatsappStopHint": "You can also stop all messages by sending 0 to Al-Malab's number on WhatsApp.",
     "username": "Username",
-    "saveUsername": "Save username"
+    "saveUsername": "Save username",
+    "addEmail": "Add an e-mail",
+    "changeEmail": "Change e-mail",
+    "addPhone": "Add a phone number",
+    "changePhone": "Change phone number",
+    "newEmail": "New e-mail",
+    "newPhone": "New WhatsApp number",
+    "newPhoneHint": "You'll send a code from this number's WhatsApp to show it's yours.",
+    "currentPassword": "Current password",
+    "currentPasswordHint": "To make sure it's you.",
+    "sendEmailCode": "Send confirmation code",
+    "verifyPhone": "Confirm with WhatsApp",
+    "emailCodeSent": "We sent a code to <b>{email}</b>. Enter it here to confirm the new address.",
+    "emailCodeCurrent": "The new address is confirmed. One more code went to your current address <b>{email}</b>: enter it here to finish.",
+    "emailCode": "Confirmation code",
+    "confirmEmail": "Confirm",
+    "resendEmailCode": "Send the code again",
+    "otherEmail": "A different address?",
+    "phoneChangeUnavailable": "Adding or changing a number isn't available right now.",
+    "phoneChanged": "Your phone number is updated. You can sign in with it from now on.",
+    "emailChanged": "Your e-mail is changed. Sign in with it from now on."
   },
   "messages": {
     "title": "Messages",

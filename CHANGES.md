@@ -2169,3 +2169,27 @@
 الملفات: `src/components/layout/user-menu.tsx`، `src/components/layout/site-header.tsx`، `src/app/[locale]/friends/page.tsx`، `src/components/messages/friend-picker.tsx`، `src/app/[locale]/messages/[id]/group/page.tsx`، `src/app/[locale]/profile/page.tsx`، والنصوص في `messages/`. الاختبارات: `e2e/friends.spec.ts`، `e2e/players.spec.ts`.
 
 التعديل: «Usernames on profile pages only, with a link to change them»
+
+### 120. إضافة رقم الهاتف أو البريد الإلكتروني، أو تغييرهما
+**ما تغيّر** (في «الإعدادات»):
+- **«إضافة رقم هاتف» أو «تغيير رقم الهاتف»:**
+  - تكتب الرقم وكلمة المرور الحالية، فتظهر صفحة الرمز كما عند التسجيل بواتساب.
+  - ترسل الرمز من واتساب **الرقم الجديد نفسه**، فيصبح رقم حسابك، ويمكنك تسجيل الدخول به فوراً. الرقم القديم يصبح متاحاً لغيرك.
+  - رقم مرتبط بحساب آخر يُرفض.
+- **«إضافة بريد إلكتروني» أو «تغيير البريد الإلكتروني»:**
+  - تكتب البريد الجديد وكلمة المرور الحالية، فيصلك رمز إلى البريد الجديد تكتبه في الصفحة نفسها، فيتغيّر البريد.
+  - حساب أُنشئ بواتساب يستطيع إضافة بريد ويبقى يدخل برقمه أيضاً.
+- **الأمان:**
+  - كلمة المرور مطلوبة قبل أي تغيير، فالجلسة المفتوحة وحدها لا تكفي. والمحاولات الخاطئة محسوبة مثل تسجيل الدخول (5 كل 15 دقيقة).
+  - **إشعار** في الجرس عند كل تغيير («إن لم تكن أنت، غيّر كلمة المرور الآن») لا يمكن إيقافه، ويُسجَّل التغيير في سجل الإدارة.
+
+**ملفا قاعدة البيانات:** `…0046_phone_change_purpose.sql` **وحده**، ثم `…0047_phone_change.sql`. لا يغيّران بيانات موجودة، وتشغيلهما مرتين لا يضر.
+- قبل تشغيلهما: تغيير البريد يعمل، لكن دون الإشعار وسجل الإدارة حتى يُشغَّل …0047. أما تغيير الرقم فيقول إن الميزة تنتظر تحديث قاعدة البيانات.
+
+**في Supabase** (التفاصيل في `DEPLOYMENT.md` القسم 20):
+- رفع قالب البريد الجديد `supabase/templates/email_change.html`. صار يعرض الرمز بدل الرابط.
+- إيقاف «Secure email change»، ليصل الرمز إلى البريد الجديد فقط. حساب واتساب عنوانه الحالي داخلي لا يستقبل بريداً. مع بقائه مفعّلاً يعمل التغيير أيضاً، لكن حساب البريد يحتاج رمزين.
+
+الملفات: `src/server/account.ts`، `src/lib/password-check.ts`، `src/components/forms/contact-change-forms.tsx` (جديدة)، `src/app/[locale]/settings/page.tsx`، `src/lib/phone-verification.ts`، `src/server/whatsapp.ts`، `src/app/[locale]/verify-whatsapp/page.tsx`، `src/components/auth/whatsapp-waiter.tsx`، `src/lib/whatsapp-messages.ts`، `src/lib/notifications.ts`، `src/lib/supabase/types.ts`، `supabase/templates/email_change.html`، `supabase/config.toml`، والنصوص في `messages/`. الاختبارات: `tests/db/phone-change.test.ts` و`e2e/account-contact.spec.ts` (جديدان)، `tests/unit/whatsapp-messages.test.ts`.
+
+التعديل: «Add or change the phone number and the e-mail»

@@ -95,6 +95,9 @@ describe("WhatsApp replies to people who write", () => {
     expect(verificationReply({ matched: true, purpose: "signup", status: "phone_taken" })).toContain("مرتبط بحساب آخر");
     expect(verificationReply({ matched: true, purpose: "reset", status: "verified" })).toContain("كلمة مرور جديدة");
     expect(verificationReply({ matched: true, purpose: "reset", status: "no_account" })).toContain("لا يوجد حساب");
+    // A new number for an existing account (settings).
+    expect(verificationReply({ matched: true, purpose: "phone_change", status: "verified" })).toContain("تم ربط هذا الرقم بحسابك");
+    expect(verificationReply({ matched: true, purpose: "phone_change", status: "phone_taken" })).toContain("لم يتغيّر رقم حسابك");
     expect(verificationReply({ matched: false, reason: "no_pending_code" })).toContain("غير صالح");
     // Opened in Telegram before Telegram sign-up was removed: start again, without sending anyone to Telegram.
     expect(verificationReply({ matched: false, reason: "claimed" })).toContain("ابدأ من جديد");

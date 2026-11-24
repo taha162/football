@@ -18,6 +18,9 @@ const VENUE_STAFF_BOOKING_TYPES = new Set([
 export function notificationHref(type: string, p: NotificationPayload): string {
   // Friend requests and their answers (migration 0042).
   if (type === "friend_request" || type === "friend_accepted") return "/friends";
+  // The account's number or e-mail changed (migration 0047): where to check, or change it back.
+  if (type === "phone_changed") return "/settings#phone";
+  if (type === "email_changed") return "/settings#email";
   if (p.match_id) return `/matches/${str(p.match_id)}`;
   if (p.conversation_id) return `/messages/${str(p.conversation_id)}`;
   if (p.tournament_id) return `/tournaments/${str(p.tournament_id)}`;
