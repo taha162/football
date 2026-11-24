@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { BellOff, CalendarDays, Lock, MapPin, MessageCircle, Pin, Swords, Trophy, Users, type LucideIcon } from "lucide-react";
+import { BellOff, CalendarDays, Lock, MapPin, MessageCircle, Pin, Swords, Trophy, Users, UsersRound, type LucideIcon } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import type { Locale } from "@/i18n/routing";
 import { requireOnboardedUser } from "@/lib/auth";
@@ -11,10 +11,11 @@ import { ConversationListLive } from "@/components/messages/list-live";
 import { ConversationRow } from "@/components/messages/conversation-row";
 import { Avatar } from "@/components/ui/avatar";
 import { Container, EmptyState, PageHeader } from "@/components/ui/primitives";
+import { buttonClass } from "@/components/ui/button";
 import { LinkButton } from "@/components/ui/link-button";
 
 // Group conversations: what they belong to, in place of a face.
-const KIND_ICONS: Record<string, LucideIcon> = { match: CalendarDays, team: Users, booking: MapPin, challenge: Swords, tournament: Trophy };
+const KIND_ICONS: Record<string, LucideIcon> = { match: CalendarDays, team: Users, booking: MapPin, challenge: Swords, tournament: Trophy, group: UsersRound };
 
 // The list's filters, as in a messaging app. «المجموعات»: every conversation with more than two people.
 const FILTERS = ["all", "unread", "favorites", "groups"] as const;
@@ -65,7 +66,17 @@ export default async function MessagesPage({ params, searchParams }: PageProps<"
   const emptyTitle = filter === "unread" ? t("emptyUnread") : filter === "favorites" ? t("emptyFavorites") : filter === "groups" ? t("emptyGroups") : t("empty");
   return (
     <Container className="max-w-3xl py-10">
-      <PageHeader title={t("title")} description={t("description")} />
+      <PageHeader
+        title={t("title")}
+        description={t("description")}
+        actions={
+          // Groups of friends (migration 0044).
+          <LinkButton href="/messages/groups/new" className={buttonClass("secondary", "sm")}>
+            <UsersRound aria-hidden="true" className="size-4" />
+            {t("newGroup")}
+          </LinkButton>
+        }
+      />
       <ConversationListLive userId={user.id} conversationIds={all.map((c) => c.conversation_id)} />
       {all.length > 0 ? (
         <nav aria-label={t("filters")} className="-mx-4 mb-3 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">

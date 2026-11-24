@@ -51,6 +51,7 @@ export function notificationArgs(p: NotificationPayload, formatDate: (iso: strin
 export const OPTIONAL_NOTIFICATION_TYPES = [
   "friend_request",
   "friend_accepted",
+  "group_added",
   "match_participant_joined",
   "match_participant_left",
   "match_reminder",

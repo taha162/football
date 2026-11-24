@@ -488,7 +488,14 @@
     "feature_not_ready": "هذه الميزة لم تُفعَّل بعد: تنتظر تحديث قاعدة البيانات.",
     "invalid_username": "اسم المستخدم من 3 إلى 20: حروف إنجليزية صغيرة وأرقام و _ و . ويبدأ بحرف.",
     "username_taken": "اسم المستخدم مأخوذ، جرّب غيره.",
-    "cannot_friend_self": "لا يمكنك إضافة نفسك."
+    "cannot_friend_self": "لا يمكنك إضافة نفسك.",
+    "invalid_group_name": "اسم المجموعة من حرف واحد إلى 60 حرفاً.",
+    "group_needs_members": "اختر صديقاً واحداً على الأقل.",
+    "not_friends": "يمكنك أن تضيف أصدقاءك فقط.",
+    "group_full": "المجموعة لا تتسع لهذا العدد.",
+    "not_group_admin": "هذا لمشرفي المجموعة فقط.",
+    "group_creator": "منشئ المجموعة يبقى فيها ويبقى مشرفاً.",
+    "member_not_found": "هذا العضو ليس في المجموعة."
   },
   "validation": {
     "invalid": "قيمة غير صالحة.",
@@ -622,7 +629,12 @@
     "friend_added": "أصبحتما صديقين.",
     "friend_declined": "تم رفض الطلب.",
     "friend_request_cancelled": "تم إلغاء الطلب.",
-    "friend_removed": "تمت الإزالة من الأصدقاء."
+    "friend_removed": "تمت الإزالة من الأصدقاء.",
+    "group_members_added": "تمت الإضافة إلى المجموعة.",
+    "group_member_removed": "أُزيل من المجموعة.",
+    "group_admin_added": "أصبح مشرفاً.",
+    "group_admin_removed": "لم يعد مشرفاً.",
+    "group_renamed": "تم تغيير اسم المجموعة."
   },
   "notifications": {
     "generic": "لديك تحديث جديد.",
@@ -681,7 +693,8 @@
     "missed_call": "مكالمة فائتة من {caller_name}.",
     "security_alert": "{kind, select, code_blocked {تنبيه أمني: رموز تحقق خاطئة متكررة} other {تنبيه أمني: كلمات مرور خاطئة متكررة}}{has_account, select, yes { على الحساب {account}} other {}}، فأُوقف تسجيل الدخول حتى 15 دقيقة. التفاصيل في سجل التدقيق.",
     "friend_request": "{from_name} يريد أن يكون صديقك.",
-    "friend_accepted": "{from_name} قبل طلب صداقتك."
+    "friend_accepted": "{from_name} قبل طلب صداقتك.",
+    "group_added": "{by_name} أضافك إلى مجموعة «{group_name}»."
   },
   "notificationTypes": {
     "match_participant_joined": "انضمام لاعب لمباراتي",
@@ -699,7 +712,8 @@
     "tournament_update": "تحديثات البطولات",
     "review_received": "التقييمات الواردة",
     "friend_request": "طلبات الصداقة",
-    "friend_accepted": "قبول طلبات صداقتك"
+    "friend_accepted": "قبول طلبات صداقتك",
+    "group_added": "إضافتي إلى مجموعة"
   },
   "report": {
     "open": "إبلاغ",
@@ -1946,7 +1960,8 @@
       "booking": "حجز",
       "challenge": "تحدٍّ",
       "tournament": "بطولة",
-      "direct": "مباشرة"
+      "direct": "مباشرة",
+      "group": "مجموعة"
     },
     "locked": "للقراءة فقط",
     "noMessages": "لا رسائل بعد.",
@@ -2046,7 +2061,10 @@
     },
     "emptyUnread": "لا رسائل غير مقروءة.",
     "emptyFavorites": "لا محادثات في المفضلة بعد. اضغط مطولاً على محادثة لإضافتها.",
-    "emptyGroups": "لا محادثات جماعية بعد."
+    "emptyGroups": "لا محادثات جماعية بعد.",
+    "newGroup": "مجموعة جديدة",
+    "groupInfo": "معلومات المجموعة",
+    "membersCount": "{count, plural, one {عضو واحد} two {عضوان} few {# أعضاء} many {# عضواً} other {# عضو}}"
   },
   "notificationsPage": {
     "title": "الإشعارات",
@@ -2589,5 +2607,41 @@
     "remove": "إزالة",
     "removeTitle": "إزالة {name} من الأصدقاء؟",
     "removeBody": "تبقى محادثاتكما كما هي، ويمكن لأي منكما إرسال طلب جديد لاحقاً."
+  },
+  "groups": {
+    "newTitle": "مجموعة جديدة",
+    "newDescription": "سمّها وأضف إليها أصدقاءك. ستكون مشرفها.",
+    "nameLabel": "اسم المجموعة",
+    "namePlaceholder": "مثلاً: خماسي الجمعة",
+    "pickLabel": "أصدقاؤك",
+    "search": "ابحث في أصدقائك",
+    "selected": "{count, plural, =0 {لم تختر أحداً بعد} one {اخترت صديقاً واحداً} two {اخترت صديقين} few {اخترت # أصدقاء} many {اخترت # صديقاً} other {اخترت # صديق}}",
+    "noMatch": "لا أحد بهذا الاسم بين أصدقائك.",
+    "create": "إنشاء المجموعة",
+    "creating": "جارٍ الإنشاء…",
+    "noFriends": "أضف أصدقاء أولاً",
+    "noFriendsBody": "تتكوّن المجموعة من أصدقائك. ابحث عنهم باسم المستخدم في صفحة الأصدقاء.",
+    "toFriends": "إلى الأصدقاء",
+    "notReady": "المجموعات تنتظر تحديث قاعدة البيانات.",
+    "backToChat": "رجوع إلى المحادثة",
+    "membersTitle": "الأعضاء ({count})",
+    "admin": "مشرف",
+    "creator": "منشئ المجموعة",
+    "you": "أنت",
+    "makeAdmin": "تعيين مشرفاً",
+    "removeAdmin": "إلغاء الإشراف",
+    "remove": "إزالة",
+    "removeTitle": "إزالة {name} من المجموعة؟",
+    "removeBody": "لن يرى رسائل المجموعة بعد الآن، ويمكن إضافته من جديد لاحقاً.",
+    "addTitle": "إضافة أعضاء",
+    "add": "إضافة",
+    "adding": "جارٍ الإضافة…",
+    "allIn": "كل أصدقائك في المجموعة.",
+    "adminsOnly": "المشرفون يضيفون الأعضاء ويزيلونهم ويغيّرون الاسم.",
+    "renameTitle": "الاسم",
+    "rename": "حفظ الاسم",
+    "leave": "مغادرة المجموعة",
+    "leaveTitle": "مغادرة «{name}»؟",
+    "leaveBody": "لن تصلك رسائلها ولن ترى ما فيها. إن كنت آخر مشرف فيها، يصبح أقدم عضو مشرفاً."
   }
 }

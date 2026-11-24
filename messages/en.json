@@ -488,7 +488,14 @@
     "feature_not_ready": "This feature isn't on yet: it waits for a database update.",
     "invalid_username": "A username is 3 to 20 lower-case English letters, digits, _ and ., starting with a letter.",
     "username_taken": "That username is taken; try another.",
-    "cannot_friend_self": "You can't add yourself."
+    "cannot_friend_self": "You can't add yourself.",
+    "invalid_group_name": "A group name is 1 to 60 characters.",
+    "group_needs_members": "Choose at least one friend.",
+    "not_friends": "You can only add your friends.",
+    "group_full": "The group has no room for that many.",
+    "not_group_admin": "Only the group's admins can do that.",
+    "group_creator": "The group's creator stays in it, as an admin.",
+    "member_not_found": "That member is not in the group."
   },
   "validation": {
     "invalid": "Invalid value.",
@@ -622,7 +629,12 @@
     "friend_added": "You're friends now.",
     "friend_declined": "Request declined.",
     "friend_request_cancelled": "Request cancelled.",
-    "friend_removed": "Removed from friends."
+    "friend_removed": "Removed from friends.",
+    "group_members_added": "Added to the group.",
+    "group_member_removed": "Removed from the group.",
+    "group_admin_added": "They are now an admin.",
+    "group_admin_removed": "They are no longer an admin.",
+    "group_renamed": "Group renamed."
   },
   "notifications": {
     "generic": "You have a new update.",
@@ -681,7 +693,8 @@
     "missed_call": "Missed call from {caller_name}.",
     "security_alert": "{kind, select, code_blocked {Security alert: repeated wrong codes} other {Security alert: repeated wrong passwords}}{has_account, select, yes { on the account {account}} other {}}, so signing in is paused for up to 15 minutes. Details in the audit log.",
     "friend_request": "{from_name} wants to be your friend.",
-    "friend_accepted": "{from_name} accepted your friend request."
+    "friend_accepted": "{from_name} accepted your friend request.",
+    "group_added": "{by_name} added you to the group “{group_name}”."
   },
   "notificationTypes": {
     "match_participant_joined": "Someone joins my match",
@@ -699,7 +712,8 @@
     "tournament_update": "Tournament updates",
     "review_received": "Reviews received",
     "friend_request": "Friend requests",
-    "friend_accepted": "Your friend requests accepted"
+    "friend_accepted": "Your friend requests accepted",
+    "group_added": "Being added to a group"
   },
   "report": {
     "open": "Report",
@@ -1946,7 +1960,8 @@
       "booking": "Booking",
       "challenge": "Challenge",
       "tournament": "Tournament",
-      "direct": "Direct"
+      "direct": "Direct",
+      "group": "Group"
     },
     "locked": "Read-only",
     "noMessages": "No messages yet.",
@@ -2046,7 +2061,10 @@
     },
     "emptyUnread": "No unread messages.",
     "emptyFavorites": "No favourites yet. Press and hold a conversation to add it.",
-    "emptyGroups": "No group conversations yet."
+    "emptyGroups": "No group conversations yet.",
+    "newGroup": "New group",
+    "groupInfo": "Group info",
+    "membersCount": "{count, plural, one {# member} other {# members}}"
   },
   "notificationsPage": {
     "title": "Notifications",
@@ -2589,5 +2607,41 @@
     "remove": "Remove",
     "removeTitle": "Remove {name} from your friends?",
     "removeBody": "Your conversations stay as they are, and either of you can send a new request later."
+  },
+  "groups": {
+    "newTitle": "New group",
+    "newDescription": "Name it and add your friends. You will be its admin.",
+    "nameLabel": "Group name",
+    "namePlaceholder": "e.g. Friday five-a-side",
+    "pickLabel": "Your friends",
+    "search": "Search your friends",
+    "selected": "{count, plural, =0 {Nobody chosen yet} one {# friend chosen} other {# friends chosen}}",
+    "noMatch": "None of your friends has that name.",
+    "create": "Create group",
+    "creating": "Creating…",
+    "noFriends": "Add friends first",
+    "noFriendsBody": "A group is made of your friends. Find them by username on the friends page.",
+    "toFriends": "Go to friends",
+    "notReady": "Groups are waiting for a database update.",
+    "backToChat": "Back to the conversation",
+    "membersTitle": "Members ({count})",
+    "admin": "Admin",
+    "creator": "Created the group",
+    "you": "You",
+    "makeAdmin": "Make admin",
+    "removeAdmin": "Remove as admin",
+    "remove": "Remove",
+    "removeTitle": "Remove {name} from the group?",
+    "removeBody": "They will no longer see the group's messages, and can be added again later.",
+    "addTitle": "Add members",
+    "add": "Add",
+    "adding": "Adding…",
+    "allIn": "All your friends are in the group.",
+    "adminsOnly": "Admins add and remove members and change the name.",
+    "renameTitle": "Name",
+    "rename": "Save name",
+    "leave": "Leave group",
+    "leaveTitle": "Leave “{name}”?",
+    "leaveBody": "You will stop getting its messages and lose access to them. If you are its last admin, the longest-standing member becomes one."
   }
 }

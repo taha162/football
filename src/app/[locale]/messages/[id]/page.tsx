@@ -7,7 +7,7 @@ import { publicStorageUrl } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 import { CallButton } from "@/components/calls/call-button";
 import type { CallPeer } from "@/components/calls/call-provider";
-import { ArrowLeft, ExternalLink, MessageCircle } from "lucide-react";
+import { ArrowLeft, ExternalLink, MessageCircle, UsersRound } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { ChatScreen } from "@/components/messages/chat-screen";
 import { Thread, type ThreadMessage } from "@/components/messages/thread";
@@ -19,6 +19,7 @@ const PAGE = 100;
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 type Conversation = { kind: string; match_id: string | null; team_id: string | null; booking_id: string | null; tournament_id: string | null; challenge_id: string | null };
+type GroupMember = { user_id: string; profile: { display_name: string } | null };
 
 /**
  * A group conversation's name: the match, team, tournament, venue of the booking,
@@ -68,7 +69,15 @@ export default async function ConversationPage({ params, searchParams }: PagePro
   if (Number.isSafeInteger(before) && before > 0) q = q.lt("id", before);
   // Deleted for themselves: what came before stays hidden from them.
   if (pref?.cleared_at) q = q.gt("created_at", pref.cleared_at);
-  const { data: rows } = await q;
+  // A group (migration 0044): its members, for their names and how many they are; with the messages.
+  const isGroup = conv.kind === "group";
+  const [{ data: rows }, { data: groupRows }] = await Promise.all([
+    q,
+    isGroup
+      ? supabase.from("conversation_members").select("user_id, profile:profiles(display_name)").eq("conversation_id", id)
+      : Promise.resolve({ data: null }),
+  ]);
+  const groupMembers = (groupRows ?? []) as unknown as GroupMember[];
   const hasOlder = (rows ?? []).length > PAGE;
   const page = (rows ?? []).slice(0, PAGE).reverse();
   // Pictures and voice notes are private: signed links valid for an hour, made with the member's own session.
@@ -90,11 +99,14 @@ export default async function ConversationPage({ params, searchParams }: PagePro
     image_thumb_url: m.image_path ? (imageUrls.get(thumbPathOf(m.image_path)) ?? null) : null,
     voice_url: m.voice_path ? (voiceUrls.get(m.voice_path) ?? null) : null,
   }));
-  const senderIds = [...new Set(messages.map((m) => m.sender_id).filter(Boolean))] as string[];
+  // Names beside messages: a group's members are known already; others (and those who left) are looked up.
+  const memberNames = Object.fromEntries(groupMembers.flatMap((x) => (x.profile ? [[x.user_id, x.profile.display_name] as const] : [])));
+  const senderIds = [...new Set(messages.map((m) => m.sender_id).filter(Boolean))].filter((s) => !(s! in memberNames)) as string[];
   const { data: profiles } = senderIds.length ? await supabase.from("profiles").select("id, display_name").in("id", senderIds) : { data: [] };
-  const names = Object.fromEntries((profiles ?? []).map((p) => [p.id, p.display_name]));
+  const names = { ...memberNames, ...Object.fromEntries((profiles ?? []).map((p) => [p.id, p.display_name])) };
 
-  let title = (conv.kind === "direct" ? null : await conversationTitle(supabase, conv)) ?? t(`kind.${conv.kind}`);
+  const groupTitle = isGroup ? ((conv as { title?: string | null }).title ?? null) : null;
+  let title = (conv.kind === "direct" ? null : isGroup ? groupTitle : await conversationTitle(supabase, conv)) ?? t(`kind.${conv.kind}`);
   let link: string | null = null;
   if (conv.match_id) link = `/matches/${conv.match_id}`;
   else if (conv.team_id) link = `/teams/${conv.team_id}`;
@@ -123,7 +135,7 @@ export default async function ConversationPage({ params, searchParams }: PagePro
   const heading = (
     <span className="flex min-w-0 flex-col">
       <h1 className="truncate text-base font-semibold leading-tight">{title}</h1>
-      <span className="truncate text-xs text-muted">{t(`kind.${conv.kind}`)}</span>
+      <span className="truncate text-xs text-muted">{isGroup ? t("membersCount", { count: groupMembers.length }) : t(`kind.${conv.kind}`)}</span>
     </span>
   );
   return (
@@ -139,6 +151,14 @@ export default async function ConversationPage({ params, searchParams }: PagePro
             // Who it is with: their page (where «اتصال» and «مراسلة» are too).
             <Link href={`/players/${peer.id}`} className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl py-1 pe-2">
               <Avatar src={peer.avatarUrl} name={peer.name} size={40} />
+              {heading}
+            </Link>
+          ) : isGroup ? (
+            // The group's page: members, admins, adding and leaving.
+            <Link href={`/messages/${id}/group`} aria-label={`${title} — ${t("groupInfo")}`} className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl py-1 pe-2">
+              <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-full bg-surface-3 text-muted">
+                <UsersRound className="size-5" />
+              </span>
               {heading}
             </Link>
           ) : (
