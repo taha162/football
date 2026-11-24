@@ -2208,3 +2208,20 @@
 الملفات: `src/components/messages/group-photo-form.tsx` (جديد)، `src/server/groups.ts`، `src/app/[locale]/messages/[id]/group/page.tsx`، `src/app/[locale]/messages/[id]/page.tsx`، `src/app/[locale]/messages/page.tsx`، `src/lib/storage.ts`، `src/lib/supabase/types.ts`، والنصوص في `messages/`. الاختبارات: `tests/db/groups.test.ts`، `e2e/groups.spec.ts`.
 
 التعديل: «Group photos, set by admins»
+
+### 122. «نشط الآن» أو «نشط قبل…» حسب آخر وقت كان فيه العضو نشطاً
+**ما تغيّر:**
+- **في شريط المحادثة الفردية** تحت اسم الشخص: «نشط الآن» مع نقطة خضراء، أو «نشط قبل 10 دقائق» / «نشط قبل 3 ساعات» / «نشط أمس». يتحدث وحده كل دقيقة والصفحة مفتوحة.
+- **في قائمة الرسائل:** نقطة خضراء على صورة من هو نشط الآن.
+- **في صفحة اللاعب:** السطر نفسه تحت اسم المستخدم.
+- **من يراه:** أصدقاؤه ومن يشاركه محادثة فقط، ولا يظهر بين عضوين حظر أحدهما الآخر. الغرباء لا يرون شيئاً.
+- **الإعدادات ← «الخصوصية»:** «إظهار متى كنت نشطاً» (مفعّل افتراضياً). عند إلغائه لا يراه أحد.
+- **«نشط الآن»** = استعمل الموقع في آخر دقيقتين ونصف. الصفحة المفتوحة والمستعملة (لمسة أو كتابة أو تمرير في آخر 3 دقائق) تُبلغ عن ذلك مرة كل دقيقة تقريباً، فالتحديث ليس لحظياً بالثانية.
+- **الحمل على قاعدة البيانات:** صف صغير لكل عضو يُحدَّث في مكانه، مرة كل دقيقة على الأكثر لكل عضو نشط. ووقت النشاط يُجلب في الوقت نفسه مع باقي بيانات الصفحة، فلا يؤخر فتحها.
+
+**ملف قاعدة البيانات `…0049_presence.sql`:** جدول `user_presence`، والدوال: `touch_presence` (الكتابة، كل 45 ثانية على الأكثر)، و`last_seen` و`last_seen_in` (القراءة حسب القواعد أعلاه، 100 على الأكثر في الطلب)، و`set_presence_hidden` و`my_presence_hidden` (الإخفاء). لا يغيّر بيانات موجودة، وتشغيله مرتين لا يضر.
+- قبل تشغيله: لا يظهر شيء من هذا، ويبقى قسم «الخصوصية» مخفياً، وباقي الموقع يعمل كما هو.
+
+الملفات: `src/lib/presence.ts` و`src/components/messages/active-status.tsx` (جديدان)، `src/components/layout/live-refresh.tsx`، `src/app/[locale]/messages/[id]/page.tsx`، `src/app/[locale]/messages/page.tsx`، `src/app/[locale]/players/[id]/page.tsx`، `src/components/player/player-summary.tsx`، `src/app/[locale]/settings/page.tsx`، `src/server/profile.ts`، `src/lib/supabase/types.ts`، `DEPLOYMENT.md` (القسم 20: ملفات …0046 إلى …0049 وإعدادات البريد في Supabase)، والنصوص في `messages/`. الاختبارات: `tests/db/presence.test.ts`، `e2e/presence.spec.ts`.
+
+التعديل: «Active now, or how long ago»

@@ -10,6 +10,7 @@ import { CallButton } from "@/components/calls/call-button";
 import type { CallPeer } from "@/components/calls/call-provider";
 import { ArrowLeft, ExternalLink, MessageCircle, UsersRound } from "lucide-react";
 import { Link } from "@/i18n/navigation";
+import { ActiveStatus } from "@/components/messages/active-status";
 import { ChatScreen } from "@/components/messages/chat-screen";
 import { Thread, type ThreadMessage } from "@/components/messages/thread";
 import { Avatar } from "@/components/ui/avatar";
@@ -124,12 +125,18 @@ export default async function ConversationPage({ params, searchParams }: PagePro
   let peer: CallPeer | null = null;
   // And when they last read it, for «شوهدت» (their read time reaches members of a direct conversation, 0033).
   let seenAt: string | null = null;
+  let peerSeen: string | null = null;
+  // The clock it was read by: the status's first render in the browser uses it too.
+  const seenRead = new Date().getTime();
   if (conv.kind === "direct") {
-    const [{ data: members }, { data: read }] = await Promise.all([
+    const [{ data: members }, { data: read }, { data: active }] = await Promise.all([
       supabase.from("conversation_members").select("user_id, profile:profiles(display_name, avatar_path)").eq("conversation_id", id).neq("user_id", user.id),
       supabase.from("conversation_reads").select("last_read_at").eq("conversation_id", id).neq("user_id", user.id).maybeSingle(),
+      // When they were last active, for «نشط الآن» (migration 0049; unknown before it, or when they hide it).
+      supabase.rpc("last_seen_in", { p_conversation_ids: [id] }),
     ]);
     seenAt = read?.last_read_at ?? null;
+    peerSeen = (active ?? [])[0]?.last_seen_at ?? null;
     const other = members?.[0];
     title = other?.profile?.display_name ?? title;
     if (other) peer = { id: other.user_id, name: other.profile?.display_name ?? title, avatarUrl: publicStorageUrl("avatars", other.profile?.avatar_path) };
@@ -142,7 +149,15 @@ export default async function ConversationPage({ params, searchParams }: PagePro
   const heading = (
     <span className="flex min-w-0 flex-col">
       <h1 className="truncate text-base font-semibold leading-tight">{title}</h1>
-      <span className="truncate text-xs text-muted">{isGroup ? t("membersCount", { count: groupMembers.length }) : t(`kind.${conv.kind}`)}</span>
+      <span className="truncate text-xs text-muted">
+        {isGroup ? (
+          t("membersCount", { count: groupMembers.length })
+        ) : peer ? (
+          <ActiveStatus userId={peer.id} initial={peerSeen} at={seenRead} fallback={t(`kind.${conv.kind}`)} />
+        ) : (
+          t(`kind.${conv.kind}`)
+        )}
+      </span>
     </span>
   );
   return (

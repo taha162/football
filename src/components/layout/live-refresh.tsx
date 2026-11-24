@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { RealtimeChannel } from "@supabase/supabase-js";
+import { PRESENCE_BEAT_MS } from "@/lib/presence";
 import { getBrowserClient, getRealtimeClient } from "@/lib/supabase/client";
 
 /** Events close together make one refresh. */
@@ -35,6 +36,11 @@ function typing() {
  *   booked…). A page left untouched for 3 minutes stops checking until they're
  *   back.
  * A refresh waits while they're typing.
+ *
+ * It also tells the site the person is active («نشط الآن», migration 0049):
+ * on opening, on coming back to the tab, and every minute while the tab is
+ * visible and used in the last 3 minutes. The database writes it at most
+ * every 45 seconds; before 0049 the call fails and nothing shows.
  */
 export function LiveRefresh({ userId, checkSeconds = 90 }: { userId: string; checkSeconds?: number }) {
   const router = useRouter();
@@ -68,6 +74,19 @@ export function LiveRefresh({ userId, checkSeconds = 90 }: { userId: string; che
       }, ms);
     };
 
+    // «نشط الآن»: only while the tab is seen and used.
+    const beat = () => {
+      if (document.visibilityState !== "visible" || Date.now() - active > IDLE_MS) return;
+      void getBrowserClient()
+        .rpc("touch_presence")
+        .then(
+          () => undefined,
+          () => undefined,
+        );
+    };
+    beat();
+    const beating = setInterval(beat, PRESENCE_BEAT_MS);
+
     const poll = setInterval(() => {
       if (Date.now() - active > IDLE_MS) return;
       if (Date.now() - last >= POLL_MS - 1_000) refresh();
@@ -75,6 +94,7 @@ export function LiveRefresh({ userId, checkSeconds = 90 }: { userId: string; che
     const onVisible = () => {
       if (document.visibilityState !== "visible") return;
       touched();
+      beat();
       if (Date.now() - last > 5_000) schedule(300);
     };
     const onOnline = () => schedule(300);
@@ -108,6 +128,7 @@ export function LiveRefresh({ userId, checkSeconds = 90 }: { userId: string; che
       closed = true;
       if (settle) clearTimeout(settle);
       clearInterval(poll);
+      clearInterval(beating);
       for (const e of activity) window.removeEventListener(e, touched);
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("online", onOnline);

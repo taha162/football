@@ -6,7 +6,7 @@ import { OPTIONAL_NOTIFICATION_TYPES } from "@/lib/notifications";
 import { isPhoneAccountEmail } from "@/lib/phone";
 import { createClient } from "@/lib/supabase/server";
 import { whatsappConfig } from "@/lib/whatsapp";
-import { blockUserAction, savePreferencesAction } from "@/server/profile";
+import { blockUserAction, savePreferencesAction, setActivityVisibilityAction } from "@/server/profile";
 import { saveWhatsappSettingsAction } from "@/server/whatsapp";
 import { setUsernameAction } from "@/server/username";
 import { UsernameField } from "@/components/forms/username-field";
@@ -27,13 +27,15 @@ export default async function SettingsPage({ params, searchParams }: PageProps<"
   const t = await getTranslations("settings");
   const nt = await getTranslations("notificationTypes");
   const supabase = await createClient();
-  const [{ data: prefs }, { data: blocks }, { data: phone }, consent, { data: authUser }] = await Promise.all([
+  const [{ data: prefs }, { data: blocks }, { data: phone }, consent, { data: authUser }, activityHidden] = await Promise.all([
     supabase.from("user_preferences").select("*").eq("user_id", user.id).maybeSingle(),
     supabase.from("user_blocks").select("blocked_id, profile:profiles!user_blocks_blocked_id_fkey(display_name)").eq("blocker_id", user.id),
     supabase.rpc("my_phone"),
     supabase.from("whatsapp_consent").select("opted_in_at, opted_out_at, bookings_off_at").eq("user_id", user.id).maybeSingle(),
     // An e-mail change waiting for its code (Supabase keeps the new address until it is confirmed).
     supabase.auth.getUser(),
+    // Whether they hide when they were active (migration 0049; the section waits for it).
+    supabase.rpc("my_presence_hidden"),
   ]);
   const pendingEmail = authUser.user?.new_email ?? null;
   const waitingForCurrent = (await cookies()).get("malaab_email_change_left")?.value === "current";
@@ -108,6 +110,20 @@ export default async function SettingsPage({ params, searchParams }: PageProps<"
           </Card>
         </Section>
       ) : null}
+
+      {activityHidden.error ? null : (
+        <Section title={t("privacy")} id="privacy">
+          <Card>
+            <CardBody>
+              <ActionForm action={setActivityVisibilityAction}>
+                <Checkbox name="show_activity" defaultChecked={!activityHidden.data} label={t("showActivity")} />
+                <p className="text-xs text-muted">{t("showActivityHint")}</p>
+                <SubmitButton className="self-start">{t("savePrivacy")}</SubmitButton>
+              </ActionForm>
+            </CardBody>
+          </Card>
+        </Section>
+      )}
 
       <Section title={t("secondFactor")} id="two-step">
         <Card>

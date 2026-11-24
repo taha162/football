@@ -1297,6 +1297,26 @@ isOneToOne: true
       referencedColumns: ["id"]
     }
                   ]
+                },"user_presence": {
+                  Row: {
+                    "hidden": boolean,"last_seen_at": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "hidden"?: boolean,"last_seen_at"?: string,"user_id": string
+                  }
+                  Update: {
+                    "hidden"?: boolean,"last_seen_at"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "user_presence_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: true
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"user_roles": {
                   Row: {
                     "granted_at": string,"granted_by": string | null,"role": Database["public"]['Enums']["app_role"],"user_id": string
@@ -1733,6 +1753,16 @@ isOneToOne: true
 "join_match":
 { Args: { "p_match_id": string,"p_position"?: Database["public"]['Enums']["player_position"],"p_waitlist_if_full"?: boolean }; Returns: Json
                            },
+"last_seen":
+{ Args: { "p_user_ids": (string)[] }; Returns: {
+              "last_seen_at": string,"user_id": string
+            }[]
+                           },
+"last_seen_in":
+{ Args: { "p_conversation_ids": (string)[] }; Returns: {
+              "conversation_id": string,"last_seen_at": string,"user_id": string
+            }[]
+                           },
 "leave_group":
 { Args: { "p_conversation_id": string }; Returns: undefined
                            },
@@ -1775,6 +1805,9 @@ isOneToOne: true
                            },
 "my_phone":
 { Args: Record<PropertyKey, never>; Returns: string
+                           },
+"my_presence_hidden":
+{ Args: Record<PropertyKey, never>; Returns: boolean
                            },
 "orphan_message_videos":
 { Args: { "p_limit"?: number }; Returns: string[]
@@ -1982,6 +2015,9 @@ isOneToOne: true
 "set_participant_details":
 { Args: { "p_attendance"?: Database["public"]['Enums']["attendance_status"],"p_participant_id": string,"p_payment_status"?: Database["public"]['Enums']["manual_payment_status"],"p_team_side"?: Database["public"]['Enums']["team_side"] }; Returns: undefined
                            },
+"set_presence_hidden":
+{ Args: { "p_hidden": boolean }; Returns: undefined
+                           },
 "set_team_logo":
 { Args: { "p_path": string,"p_team_id": string }; Returns: undefined
                            },
@@ -2026,6 +2062,9 @@ isOneToOne: true
                            },
 "tg_receive_contact":
 { Args: { "p_phone": string,"p_tg_user_id": number }; Returns: Json
+                           },
+"touch_presence":
+{ Args: Record<PropertyKey, never>; Returns: undefined
                            },
 "tournament_transition_allowed":
 { Args: { "p_from": Database["public"]['Enums']["tournament_status"],"p_to": Database["public"]['Enums']["tournament_status"] }; Returns: boolean

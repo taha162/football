@@ -5,6 +5,7 @@ import type { Locale } from "@/i18n/routing";
 import { requireOnboardedUser } from "@/lib/auth";
 import { cn } from "@/lib/cn";
 import { badgeCount, formatDateTime, formatListTime } from "@/lib/format";
+import { isActiveNow } from "@/lib/presence";
 import { publicStorageUrl } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 import { ConversationListLive } from "@/components/messages/list-live";
@@ -46,13 +47,15 @@ export default async function MessagesPage({ params, searchParams }: PageProps<"
   );
   // One-to-one conversations show the other person's picture: one request for the whole list.
   const direct = rows.filter((c) => c.kind === "direct").map((c) => c.conversation_id);
-  // And groups their photo (migration 0048; before it runs the request fails and none shows). Both at once.
+  // And groups their photo (migration 0048; before it runs the request fails and none shows);
+  // and a green dot on the people active now (0049, the same way). All at once.
   const groupIds = rows.filter((c) => c.kind === "group").map((c) => c.conversation_id);
-  const [{ data: others }, { data: groupRows }] = await Promise.all([
+  const [{ data: others }, { data: groupRows }, { data: active }] = await Promise.all([
     direct.length
       ? supabase.from("conversation_members").select("conversation_id, profile:profiles(avatar_path)").in("conversation_id", direct).neq("user_id", user.id)
       : Promise.resolve({ data: [] }),
     groupIds.length ? supabase.from("conversations").select("id, photo_path").in("id", groupIds) : Promise.resolve({ data: [] }),
+    direct.length ? supabase.rpc("last_seen_in", { p_conversation_ids: direct }) : Promise.resolve({ data: [] }),
   ]);
   const faces = new Map((others ?? []).map((m) => [m.conversation_id, publicStorageUrl("avatars", m.profile?.avatar_path)]));
   for (const g of groupRows ?? []) {
@@ -60,6 +63,7 @@ export default async function MessagesPage({ params, searchParams }: PageProps<"
     if (photo) faces.set(g.id, photo);
   }
   const now = new Date();
+  const online = new Set((active ?? []).filter((s) => isActiveNow(s.last_seen_at, now.getTime())).map((s) => s.conversation_id));
   // A message with no text says what it carried. (last_kind is absent on a
   // database without the location/voice/calls update: an empty text is a picture.)
   const preview = (c: (typeof rows)[number]) => {
@@ -127,7 +131,14 @@ export default async function MessagesPage({ params, searchParams }: PageProps<"
               >
                 <LinkButton href={`/messages/${c.conversation_id}`} className="ripple flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2">
                   {c.kind === "direct" || faces.has(c.conversation_id) ? (
-                    <Avatar src={faces.get(c.conversation_id) ?? null} name={title} size={48} />
+                    <span className="relative shrink-0">
+                      <Avatar src={faces.get(c.conversation_id) ?? null} name={title} size={48} />
+                      {online.has(c.conversation_id) ? (
+                        <span className="absolute bottom-0 end-0 size-3.5 rounded-full border-2 border-bg bg-success" title={t("activeNow")} data-testid="online-dot">
+                          <span className="sr-only">{t("activeNow")}</span>
+                        </span>
+                      ) : null}
+                    </span>
                   ) : (
                     <span aria-hidden="true" className="grid size-12 shrink-0 place-items-center rounded-full bg-surface-3 text-muted">
                       <Icon className="size-5" />

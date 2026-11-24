@@ -652,7 +652,8 @@
     "email_code_other": "تم. بقي الرمز الآخر.",
     "email_changed": "تم تغيير بريدك الإلكتروني.",
     "group_photo_updated": "تم حفظ صورة المجموعة.",
-    "group_photo_removed": "أُزيلت صورة المجموعة."
+    "group_photo_removed": "أُزيلت صورة المجموعة.",
+    "privacy_saved": "تم حفظ إعدادات الخصوصية."
   },
   "notifications": {
     "generic": "لديك تحديث جديد.",
@@ -1988,7 +1989,11 @@
     "otherEmail": "بريد آخر؟",
     "phoneChangeUnavailable": "إضافة رقم أو تغييره غير متاحة الآن.",
     "phoneChanged": "تم تحديث رقم هاتفك. يمكنك تسجيل الدخول به من الآن.",
-    "emailChanged": "تم تغيير بريدك الإلكتروني. سجّل الدخول به من الآن."
+    "emailChanged": "تم تغيير بريدك الإلكتروني. سجّل الدخول به من الآن.",
+    "privacy": "الخصوصية",
+    "showActivity": "إظهار متى كنت نشطاً",
+    "showActivityHint": "يراه أصدقاؤك ومن تراسلهم فقط: «نشط الآن» أو «نشط قبل 5 دقائق». إن أخفيته لا يراه أحد.",
+    "savePrivacy": "حفظ الخصوصية"
   },
   "messages": {
     "title": "الرسائل",
@@ -2111,7 +2116,9 @@
     "playVideo": "تشغيل الفيديو",
     "removeVideo": "إزالة الفيديو",
     "uploadingVideo": "جارٍ رفع الفيديو",
-    "uploadPercent": "{percent}٪"
+    "uploadPercent": "{percent}٪",
+    "activeNow": "نشط الآن",
+    "activeAgo": "نشط {ago}"
   },
   "notificationsPage": {
     "title": "الإشعارات",

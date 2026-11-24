@@ -9,6 +9,7 @@ import { CallButton } from "@/components/calls/call-button";
 import { blockUserAction } from "@/server/profile";
 import { startDirectConversationAction } from "@/server/messages";
 import { PlayerSummary } from "@/components/player/player-summary";
+import { ActiveStatus } from "@/components/messages/active-status";
 import { FriendActions, type FriendRelation } from "@/components/friends/friend-actions";
 import { ReportButton } from "@/components/report-button";
 import { ActionForm, Hidden, SubmitButton } from "@/components/ui/action-form";
@@ -34,12 +35,17 @@ export default async function PlayerPage({ params }: PageProps<"/[locale]/player
   const me = viewer && !isSelf ? viewer.id : null;
   // A block by the viewer, and where the two stand as friends (a pair is stored
   // lower id first; before migration 0042 the query fails and nothing is shown).
-  const [{ data: block }, pair] = await Promise.all([
+  const [{ data: block }, pair, { data: seen }] = await Promise.all([
     me ? supabase.from("user_blocks").select("blocked_id").eq("blocker_id", me).eq("blocked_id", id).maybeSingle() : Promise.resolve({ data: null }),
     me
       ? supabase.from("friendships").select("status, requested_by").eq("user_a", me < id ? me : id).eq("user_b", me < id ? id : me).maybeSingle()
       : Promise.resolve(null),
+    // «نشط الآن» / «نشط قبل…»: for friends and people they talk with (migration 0049; nothing before it).
+    me ? supabase.rpc("last_seen", { p_user_ids: [id] }) : Promise.resolve({ data: null }),
   ]);
+  const lastSeen = (seen ?? [])[0]?.last_seen_at ?? null;
+  // The clock it was read by: the status's first render in the browser uses it too.
+  const seenRead = new Date().getTime();
   let relation: FriendRelation | null = null;
   if (me && pair && !pair.error && !block && profile.username) {
     relation = !pair.data ? "none" : pair.data.status === "accepted" ? "friend" : pair.data.requested_by === me ? "requested" : "incoming";
@@ -67,7 +73,7 @@ export default async function PlayerPage({ params }: PageProps<"/[locale]/player
         ) : null}
         {viewer && !isSelf ? <ReportButton targetType="user" targetId={id} /> : null}
       </div>
-      <PlayerSummary profile={profile} viewerId={viewer?.id ?? null} />
+      <PlayerSummary profile={profile} viewerId={viewer?.id ?? null} status={lastSeen ? <ActiveStatus userId={id} initial={lastSeen} at={seenRead} /> : null} />
     </Container>
   );
 }

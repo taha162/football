@@ -652,7 +652,8 @@
     "email_code_other": "Done. One code left.",
     "email_changed": "Your e-mail is changed.",
     "group_photo_updated": "Group photo saved.",
-    "group_photo_removed": "Group photo removed."
+    "group_photo_removed": "Group photo removed.",
+    "privacy_saved": "Privacy settings saved."
   },
   "notifications": {
     "generic": "You have a new update.",
@@ -1988,7 +1989,11 @@
     "otherEmail": "A different address?",
     "phoneChangeUnavailable": "Adding or changing a number isn't available right now.",
     "phoneChanged": "Your phone number is updated. You can sign in with it from now on.",
-    "emailChanged": "Your e-mail is changed. Sign in with it from now on."
+    "emailChanged": "Your e-mail is changed. Sign in with it from now on.",
+    "privacy": "Privacy",
+    "showActivity": "Show when I was active",
+    "showActivityHint": "Only your friends and the people you message see it: “Active now” or “Active 5 minutes ago”. Hidden, nobody does.",
+    "savePrivacy": "Save privacy"
   },
   "messages": {
     "title": "Messages",
@@ -2111,7 +2116,9 @@
     "playVideo": "Play video",
     "removeVideo": "Remove video",
     "uploadingVideo": "Uploading the video",
-    "uploadPercent": "{percent}%"
+    "uploadPercent": "{percent}%",
+    "activeNow": "Active now",
+    "activeAgo": "Active {ago}"
   },
   "notificationsPage": {
     "title": "Notifications",
