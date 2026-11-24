@@ -9,8 +9,9 @@ import { Input } from "@/components/ui/field";
 export type PickableFriend = { id: string; name: string; username: string; avatarUrl: string | null };
 
 /**
- * Friends to tick for a group («member» boxes in the surrounding form), with a
- * search over names and usernames once the list is long. A search only hides
+ * Friends to tick for a group («member» boxes in the surrounding form), by
+ * name (their @username is on their page), with a search over names and
+ * usernames once the list is long. A search only hides
  * rows: every box stays in the form, so what was ticked survives it.
  */
 export function FriendPicker({ friends, name = "member" }: { friends: PickableFriend[]; name?: string }) {
@@ -68,10 +69,7 @@ export function FriendPicker({ friends, name = "member" }: { friends: PickableFr
                 className="size-5 shrink-0 rounded accent-[var(--color-accent)]"
               />
               <Avatar src={f.avatarUrl} name={f.name} size={36} />
-              <span className="flex min-w-0 flex-col">
-                <span className="truncate font-medium">{f.name}</span>
-                <span className="max-w-full self-start truncate text-xs text-muted" dir="ltr">@{f.username}</span>
-              </span>
+              <span className="min-w-0 truncate font-medium">{f.name}</span>
             </label>
           </li>
         ))}

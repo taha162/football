@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: PageProps<"/[locale]/messages
 type Member = {
   user_id: string;
   role: string;
-  profile: { display_name: string; username: string | null; avatar_path: string | null } | null;
+  profile: { display_name: string; avatar_path: string | null } | null;
 };
 type Friend = { user_id: string; display_name: string; username: string; avatar_path: string | null; relation: string };
 
@@ -46,7 +46,7 @@ export default async function GroupPage({ params }: PageProps<"/[locale]/message
     supabase.from("conversations").select("kind, title, created_by").eq("id", id).maybeSingle(),
     supabase
       .from("conversation_members")
-      .select("user_id, role, created_at, profile:profiles(display_name, username, avatar_path)")
+      .select("user_id, role, created_at, profile:profiles(display_name, avatar_path)")
       .eq("conversation_id", id)
       .order("created_at")
       .order("user_id"),
@@ -114,12 +114,7 @@ export default async function GroupPage({ params }: PageProps<"/[locale]/message
                 <div className="flex min-w-0 flex-1 items-center gap-3">
                   <Link href={`/players/${x.user_id}`} className="flex min-w-0 flex-1 items-center gap-3">
                     <Avatar src={publicStorageUrl("avatars", x.profile?.avatar_path)} name={name} size={44} />
-                    <span className="flex min-w-0 flex-col">
-                      <span className="truncate font-semibold">{self ? `${name} (${t("you")})` : name}</span>
-                      {x.profile?.username ? (
-                        <span className="max-w-full self-start truncate text-sm text-muted" dir="ltr">@{x.profile.username}</span>
-                      ) : null}
-                    </span>
+                    <span className="min-w-0 truncate font-semibold">{self ? `${name} (${t("you")})` : name}</span>
                   </Link>
                   <span className="flex shrink-0 flex-col items-end gap-1">
                     {x.role === "admin" ? <Badge tone="accent">{t("admin")}</Badge> : null}

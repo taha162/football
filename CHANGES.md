@@ -2156,3 +2156,16 @@
 الملفات: `src/lib/message-video.ts`، `src/components/messages/video-attachment.ts` (جديدان)، `src/components/messages/composer.tsx`، `src/components/messages/thread.tsx`، `src/server/messages.ts`، `src/lib/message-files.ts`، `src/server/admin.ts`، `src/app/api/cron/route.ts`، `src/app/[locale]/messages/[id]/page.tsx`، `src/app/[locale]/messages/page.tsx`، `src/app/[locale]/admin/reports/page.tsx`، `src/lib/supabase/types.ts`، `DEPLOYMENT.md`، والنصوص في `messages/`. الاختبارات: `tests/db/videos.test.ts` و`e2e/videos.spec.ts` (جديدان) مع مقطع اختبار صغير `e2e/assets/clip.webm` (3 ثوانٍ، 22 كيلوبايت).
 
 التعديل: «Videos in conversations»
+
+### 119. اسم المستخدم في صفحة الملف فقط، وتغييره بسهولة
+**ما تغيّر:**
+- **في كل مكان يظهر الاسم فقط:** قائمة الحساب، وقوائم الأصدقاء، واختيار الأصدقاء للمجموعة، وأعضاء المجموعة.
+- **اسم المستخدم يظهر في صفحة الملف:** صفحة اللاعب، و«ملفي الشخصي».
+- **التغيير:** في «ملفي الشخصي» بجانب اسم المستخدم رابط «تغيير» يأخذك إلى الإعدادات ← «اسم المستخدم»، حيث يُغيَّر (حتى 5 مرات في اليوم).
+- البحث عن صديق ما زال باسم المستخدم.
+
+لا ملف قاعدة بيانات.
+
+الملفات: `src/components/layout/user-menu.tsx`، `src/components/layout/site-header.tsx`، `src/app/[locale]/friends/page.tsx`، `src/components/messages/friend-picker.tsx`، `src/app/[locale]/messages/[id]/group/page.tsx`، `src/app/[locale]/profile/page.tsx`، والنصوص في `messages/`. الاختبارات: `e2e/friends.spec.ts`، `e2e/players.spec.ts`.
+
+التعديل: «Usernames on profile pages only, with a link to change them»

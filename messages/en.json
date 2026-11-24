@@ -194,7 +194,9 @@
     "uploadPhoto": "Upload photo",
     "removePhoto": "Remove photo",
     "viewPublic": "View public profile",
-    "moreOptions": "More options"
+    "moreOptions": "More options",
+    "changeUsername": "Change",
+    "changeUsernameLabel": "Change username"
   },
   "forms": {
     "city": "City",

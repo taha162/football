@@ -23,16 +23,13 @@ export async function generateMetadata({ params }: PageProps<"/[locale]/friends"
 
 type Person = { user_id: string; display_name: string; username: string; avatar_path: string | null; relation: string };
 
-/** A member in a list: face, name and @username (to their page), and what can be done. */
-function PersonRow({ person, children }: { person: Pick<Person, "user_id" | "display_name" | "username" | "avatar_path">; children: React.ReactNode }) {
+/** A member in a list: face and name (to their page, where the @username is), and what can be done. */
+function PersonRow({ person, children }: { person: Pick<Person, "user_id" | "display_name" | "avatar_path">; children: React.ReactNode }) {
   return (
     <li className="flex flex-wrap items-center gap-3 border-b border-line px-4 py-3 last:border-b-0">
       <Link href={`/players/${person.user_id}`} className="flex min-w-0 flex-1 items-center gap-3">
         <Avatar src={publicStorageUrl("avatars", person.avatar_path)} name={person.display_name} size={44} />
-        <span className="flex min-w-0 flex-col">
-          <span className="truncate font-semibold">{person.display_name}</span>
-          <span className="max-w-full self-start truncate text-sm text-muted" dir="ltr">@{person.username}</span>
-        </span>
+        <span className="min-w-0 truncate font-semibold">{person.display_name}</span>
       </Link>
       <div className="flex shrink-0 items-center gap-2">{children}</div>
     </li>

@@ -194,7 +194,9 @@
     "uploadPhoto": "رفع صورة",
     "removePhoto": "إزالة الصورة",
     "viewPublic": "عرض الملف العام",
-    "moreOptions": "خيارات إضافية"
+    "moreOptions": "خيارات إضافية",
+    "changeUsername": "تغيير",
+    "changeUsernameLabel": "تغيير اسم المستخدم"
   },
   "forms": {
     "city": "المدينة",

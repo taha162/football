@@ -249,9 +249,15 @@ test.describe("Usernames", () => {
     await expect(section.getByText("متاح", { exact: true })).toBeVisible();
     await section.getByRole("button", { name: "حفظ اسم المستخدم" }).click();
     await expect(page.getByText("تم حفظ اسم المستخدم.")).toBeVisible();
+    // Shown on their pages only: the account menu has the name, not the username.
     await page.getByRole("button", { name: `قائمة حساب ${me.name}` }).click();
-    await expect(page.getByTestId("account-username")).toHaveText(`@${name}`);
+    await expect(page.getByRole("menu").getByText(`@${name}`)).toHaveCount(0);
     await page.goto(`/ar/players/${me.id}`);
     await expect(page.getByTestId("username")).toHaveText(`@${name}`);
+    await page.goto("/ar/profile");
+    await expect(page.getByTestId("username")).toHaveText(`@${name}`);
+    await page.getByRole("link", { name: "تغيير اسم المستخدم" }).click();
+    await page.waitForURL(/\/ar\/settings/);
+    await expect(page.getByRole("region", { name: "اسم المستخدم" }).getByRole("textbox", { name: "اسم المستخدم" })).toHaveValue(name);
   });
 });

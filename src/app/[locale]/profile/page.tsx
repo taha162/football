@@ -30,7 +30,15 @@ export default async function ProfilePage({ params }: PageProps<"/[locale]/profi
         <CardBody className="flex flex-col gap-4 sm:flex-row sm:items-start">
           <AvatarViewer src={publicStorageUrl("avatars", p.avatar_path)} name={p.display_name} size={80} />
           <div className="flex flex-1 flex-col gap-3">
-            {p.username ? <p className="text-sm font-medium text-accent" data-testid="username"><bdi dir="ltr">@{p.username}</bdi></p> : null}
+            {/* The username shows here and on their page only (elsewhere, the name); it is changed in settings. */}
+            {p.username ? (
+              <p className="flex flex-wrap items-center gap-2 text-sm">
+                <span className="font-medium text-accent" data-testid="username"><bdi dir="ltr">@{p.username}</bdi></span>
+                <LinkButton href="/settings#username" aria-label={t("changeUsernameLabel")} className="text-muted underline underline-offset-2 hover:text-ink">
+                  {t("changeUsername")}
+                </LinkButton>
+              </p>
+            ) : null}
             <AvatarForm hasAvatar={Boolean(p.avatar_path)} />
           </div>
         </CardBody>
