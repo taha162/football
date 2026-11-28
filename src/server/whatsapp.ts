@@ -1,6 +1,5 @@
 "use server";
 
-import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { getLocale } from "next-intl/server";
@@ -10,14 +9,12 @@ import { isLocale, type Locale } from "@/i18n/routing";
 import { bool, dbErrorCode, fail, ok, str, uuid, zodFieldErrors, type ActionState } from "@/lib/actions";
 import { getCurrentUser } from "@/lib/auth";
 import { logger } from "@/lib/log";
-import { normalizePhone, PHONE_ACCOUNT_DOMAIN } from "@/lib/phone";
-import { clearVerifyTicket, createVerification, getVerifyTicket, hashTicket } from "@/lib/phone-verification";
+import { clearVerifyTicket, getVerifyTicket, setVerifyTicket } from "@/lib/phone-verification";
+import { openSession, resetWithWhatsapp, signUpWithWhatsapp, verificationState } from "@/server/signup-core";
 import { inspectImage, randomFileName, UPLOAD_CACHE_SECONDS } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { usernameField, usernameFree } from "@/lib/username-server";
 import { createClient } from "@/lib/supabase/server";
 import type { Json } from "@/lib/supabase/types";
-import { buckets, count } from "@/lib/throttle";
 import { bot, whatsappConfig } from "@/lib/whatsapp";
 import { deliverWhatsapp } from "@/lib/whatsapp-outbox";
 
@@ -26,63 +23,23 @@ async function currentLocale(): Promise<Locale> {
   return isLocale(l) ? l : "ar";
 }
 
-/** The WhatsApp number typed on the form (07…, +964…, Arabic digits all fine), as E.164 digits. */
-const typedPhone = z
-  .string()
-  .trim()
-  .refine((v) => normalizePhone(v) !== null, "invalid_phone")
-  .transform((v) => normalizePhone(v)!);
 
 /**
  * Sign-up without e-mail: the user types their WhatsApp number, and the
- * account is activated when they send the code from that number's WhatsApp.
+ * account is activated when they send the code from that number's WhatsApp
+ * (server/signup-core.ts, shared with the phone app).
  */
 export async function startWhatsappSignupAction(_: ActionState, fd: FormData): Promise<ActionState> {
-  const wa = whatsappConfig();
-  if (!wa.enabled) return fail("whatsapp_unavailable");
-  const parsed = z
-    .object({
-      display_name: z.string().trim().min(2, "too_short").max(40, "too_long"),
-      username: usernameField,
-      phone: typedPhone,
-      password: z.string().min(8, "password_too_short").max(72, "password_too_long"),
-      accept_terms: z.literal("on", { message: "must_accept_terms" }),
-    })
-    .safeParse({
-      display_name: fd.get("display_name"),
-      username: fd.get("username") ?? "",
-      phone: fd.get("phone") ?? "",
-      password: fd.get("password"),
-      accept_terms: fd.get("accept_terms") ?? undefined,
-    });
-  if (!parsed.success) return fail("validation", zodFieldErrors(parsed.error));
-  // The same per-device limit as the other sign-ups, counted before any account exists.
-  if (!(await count(await buckets(["signupDevice"])))) return fail("too_many_attempts");
   const locale = await currentLocale();
-  const admin = createAdminClient()!;
-  if ((await usernameFree(admin, parsed.data.username)) === "taken") return fail("validation", { username: "username_taken" });
-  const { data, error } = await admin.auth.admin.createUser({
-    email: `wa_${randomUUID().replace(/-/g, "")}@${PHONE_ACCOUNT_DOMAIN}`,
-    password: parsed.data.password,
-    email_confirm: false,
-    // The profile takes the username if still free (migration 0041).
-    user_metadata: { display_name: parsed.data.display_name, username: parsed.data.username, locale, signup_method: "whatsapp" },
-  });
-  if (error || !data.user) {
-    logger.warn("whatsapp_signup_create_failed", { status: error?.status });
-    return fail(error?.message?.toLowerCase().includes("password") ? "weak_password" : "auth_failed");
-  }
-  // Offers on WhatsApp come with signing up with WhatsApp (the form says so, with a ticked box that
-  // can't be unticked), whenever offers can be sent at all. Settings or "0" turns them off later.
-  if (wa.canSend) {
-    const { error: consentError } = await admin.rpc("wa_signup_consent", { p_user_id: data.user.id, p_promos: true });
-    if (consentError) logger.warn("whatsapp_signup_consent_failed", { code: consentError.code });
-  }
-  const failure = await createVerification("signup", data.user.id, parsed.data.phone);
-  if (failure) {
-    await admin.auth.admin.deleteUser(data.user.id);
-    return fail(failure);
-  }
+  const result = await signUpWithWhatsapp({
+    display_name: fd.get("display_name"),
+    username: fd.get("username") ?? "",
+    phone: fd.get("phone") ?? "",
+    password: fd.get("password"),
+    accept_terms: fd.get("accept_terms") ?? undefined,
+  }, locale);
+  if (!result.ok) return fail(result.code, result.fields);
+  await setVerifyTicket(result.ticket);
   redirect({ href: "/verify-whatsapp", locale });
   return ok();
 }
@@ -92,11 +49,9 @@ export async function startWhatsappSignupAction(_: ActionState, fd: FormData): P
  * and sends the code from that number's WhatsApp, which identifies the account.
  */
 export async function startWhatsappResetAction(_: ActionState, fd: FormData): Promise<ActionState> {
-  if (!whatsappConfig().enabled) return fail("whatsapp_unavailable");
-  const phone = typedPhone.safeParse(fd.get("phone") ?? "");
-  if (!phone.success) return fail("validation", { phone: "invalid_phone" });
-  const failure = await createVerification("reset", null, phone.data);
-  if (failure) return fail(failure);
+  const result = await resetWithWhatsapp(fd.get("phone"));
+  if (!result.ok) return fail(result.code, result.fields);
+  await setVerifyTicket(result.ticket);
   redirect({ href: "/verify-whatsapp", locale: await currentLocale() });
   return ok();
 }
@@ -112,45 +67,19 @@ export type VerificationPoll =
  */
 export async function pollWhatsappAction(): Promise<VerificationPoll> {
   const ticket = await getVerifyTicket();
-  const admin = createAdminClient();
-  if (!ticket || !admin) return { state: "missing" };
-  const hash = hashTicket(ticket);
-  const { data, error: lookupError } = await admin.rpc("phone_verify_lookup", { p_ticket_hash: hash });
-  if (lookupError) {
-    // A passing database hiccup shouldn't end the wait: the page asks again in a moment.
-    logger.warn("phone_verify_poll_failed", { code: lookupError.code });
-    return { state: "pending" };
-  }
-  const row = data?.[0];
-  if (!row) return { state: "missing" };
-  if (row.status === "pending") return new Date(row.expires_at) <= new Date() ? { state: "expired" } : { state: "pending" };
-  if (row.status === "phone_taken" || row.status === "no_account") return { state: row.status };
-  if (row.status !== "verified") return { state: "missing" };
-
-  const { data: consumed, error } = await admin.rpc("phone_verify_consume", { p_ticket_hash: hash });
-  const account = consumed?.[0];
-  if (error || !account?.email) return { state: "missing" };
+  if (!ticket) return { state: "missing" };
+  const result = await verificationState(ticket);
+  if (result.state !== "verified") return result;
   // A new number for the signed-in member (migration 0047): it is already theirs; no new session.
-  if (account.purpose === "phone_change") {
+  if (result.purpose === "phone_change") {
     await clearVerifyTicket();
     revalidatePath("/[locale]", "layout");
     return { state: "done", href: `/${await currentLocale()}/settings?phone=changed#phone` };
   }
-  const link = await admin.auth.admin.generateLink({ type: "magiclink", email: account.email });
-  const tokenHash = link.data?.properties?.hashed_token;
-  if (link.error || !tokenHash) {
-    logger.error("phone_verify_session_failed", { status: link.error?.status });
-    return { state: "missing" };
-  }
-  const supabase = await createClient();
-  const { error: verifyError } = await supabase.auth.verifyOtp({ type: "email", token_hash: tokenHash });
-  if (verifyError) {
-    logger.error("phone_verify_session_failed", { status: verifyError.status });
-    return { state: "missing" };
-  }
+  if (!(await openSession(await createClient(), result.email))) return { state: "missing" };
   await clearVerifyTicket();
   const locale = await currentLocale();
-  return { state: "done", href: account.purpose === "signup" ? `/${locale}/onboarding` : `/${locale}/reset-password` };
+  return { state: "done", href: result.purpose === "signup" ? `/${locale}/onboarding` : `/${locale}/reset-password` };
 }
 
 /** Settings: booking messages and offers on WhatsApp, each on or off. */

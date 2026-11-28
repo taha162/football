@@ -56,14 +56,18 @@ export async function clientKey(): Promise<string> {
 }
 
 /**
- * Starts a verification and keeps its ticket in the browser, retrying on the
- * (unlikely) clash with another pending code. Returns an error code, or null.
+ * Starts a verification, retrying on the (unlikely) clash with another pending
+ * code, and hands back its ticket (the database keeps only its hash).
  * `phone` is the number the user typed: the code is then accepted only from
  * that number's WhatsApp.
  */
-export async function createVerification(purpose: "signup" | "reset" | "phone_change", userId: string | null, phone: string | null = null): Promise<string | null> {
+export async function startVerification(
+  purpose: "signup" | "reset" | "phone_change",
+  userId: string | null,
+  phone: string | null = null,
+): Promise<{ error: string } | { ticket: string }> {
   const admin = createAdminClient();
-  if (!admin) return "generic";
+  if (!admin) return { error: "generic" };
   const key = await clientKey();
   for (let attempt = 0; attempt < 4; attempt++) {
     const { ticket, hash } = newTicket();
@@ -71,25 +75,26 @@ export async function createVerification(purpose: "signup" | "reset" | "phone_ch
       p_purpose: purpose,
       p_code: newVerificationCode(),
       p_ticket_hash: hash,
-      // Null for a reset (the generated types don't model nullable arguments).
       p_user_id: userId as string,
       p_client_key: key,
       ...(phone ? { p_phone: phone } : {}),
     });
-    if (!error) {
-      await setVerifyTicket(ticket);
-      return null;
-    }
+    if (!error) return { ticket };
     if (phone && error.code === "PGRST202") {
-      // A database without migration 0029 has no typed number: start as before (the sender's
-      // number, when WhatsApp shows it, is the verified one). Admin → Settings says to apply 0029.
       logger.warn("phone_verify_start_without_typed_number");
       phone = null;
       continue;
     }
-    // A kind of verification the database doesn't know yet (a new number: migrations 0046–0047).
-    if (error.code === "22P02" && purpose === "phone_change") return "feature_not_ready";
-    if (error.code !== "23505") return dbErrorCode(error, "phone_verify_start");
+    if (error.code === "22P02" && purpose === "phone_change") return { error: "feature_not_ready" };
+    if (error.code !== "23505") return { error: dbErrorCode(error, "phone_verify_start") };
   }
-  return "generic";
+  return { error: "generic" };
+}
+
+/** The site's pages: a verification whose ticket the browser keeps (a cookie). Returns an error code, or null. */
+export async function createVerification(purpose: "signup" | "reset" | "phone_change", userId: string | null, phone: string | null = null): Promise<string | null> {
+  const started = await startVerification(purpose, userId, phone);
+  if ("error" in started) return started.error;
+  await setVerifyTicket(started.ticket);
+  return null;
 }

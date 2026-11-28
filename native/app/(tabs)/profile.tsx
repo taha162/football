@@ -26,11 +26,12 @@ export default function Profile() {
       </Card>
 
       <Card style={{ gap: 0, padding: 0 }}>
-        <Item icon="person-outline" label="ملفي الشخصي" onPress={() => open("/profile")} />
+        <Item icon="person-outline" label="تعديل ملفي" onPress={() => router.push("/onboarding")} />
         <Item icon="people-outline" label="الأصدقاء" onPress={() => open("/friends")} />
         <Item icon="calendar-outline" label="حجوزاتي" onPress={() => router.push("/bookings")} />
         <Item icon="settings-outline" label="الإعدادات" onPress={() => open("/settings")} />
-        <Item icon="shield-checkmark-outline" label="سياسة الخصوصية" onPress={() => open("/legal/privacy")} last />
+        <Item icon="shield-checkmark-outline" label="سياسة الخصوصية" onPress={() => router.push("/legal/privacy")} />
+        <Item icon="document-text-outline" label="الشروط" onPress={() => router.push("/legal/terms")} last />
       </Card>
 
       <T weight="bold" style={{ fontSize: 16 }}>المظهر</T>

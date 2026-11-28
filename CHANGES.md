@@ -2372,3 +2372,30 @@
 الملفات: `native/app/book/[venue].tsx` و`native/app/bookings.tsx` و`native/src/lib/texts.ts` (جديدة)، `native/app/venue/[id].tsx`، `native/app/(tabs)/profile.tsx`، `native/app/_layout.tsx`، `native/src/lib/format.ts`، `native/scripts/sync-texts.mjs`، `native/src/lib/site-texts.json`.
 
 التعديل: «Native app: booking and my bookings»
+
+### 129. التطبيق الأصلي: إنشاء الحساب واستعادة كلمة المرور والملف داخل التطبيق
+**ما تغيّر:**
+- **إنشاء حساب** داخل التطبيق:
+  - برقم واتساب: شاشة الرمز، وزر يفتح واتساب والرمز مكتوب، والتطبيق ينتظر ويكمل وحده.
+  - أو بالبريد الإلكتروني: الرمز المرسل إلى البريد، مع «أرسل رمزاً جديداً».
+  - الاسم، واسم المستخدم، وكلمة المرور، والموافقة على الشروط.
+- **إكمال الملف بعد التسجيل:** المدينة، والمراكز، والمستوى، وما تحب أن تلعبه، ونبذة. «تعديل ملفي» في «حسابي» يفتح الشاشة نفسها.
+- **نسيت كلمة المرور:** برقم واتساب (رمز يُرسل من الرقم) أو بالبريد (رمز في الرسالة)، ثم كلمة مرور جديدة، وتُسجَّل في سجل الإدارة كما في الموقع.
+- **الشروط وسياسة الخصوصية وغيرها** تُعرض داخل التطبيق بنصوص الموقع نفسها.
+- **في الموقع:**
+  - صار منطق التسجيل والتحقق والاستعادة مشتركاً بين صفحات الموقع والتطبيق (`src/server/signup-core.ts`): الحدود والتسجيل نفسها، ودون تغيير في سلوك الموقع.
+  - نقاط جديدة للتطبيق: `/api/app/sign-up` و`/api/app/email-code` و`/api/app/forgot` و`/api/app/whatsapp` و`/api/app/password`.
+  - التحقق بواتساب يعطي التطبيق «تذكرته» مباشرة بدل ملف تعريف الارتباط.
+- **قالب رسالة استعادة كلمة المرور** صار فيه رمز أيضاً، لمن يستعيد من التطبيق.
+
+**يحتاج منك:** رفع القالب `supabase/templates/recovery.html` من جديد إلى Supabase (Authentication ← Emails ← Templates ← Reset Password). دونه تصل رسالة بالرابط فقط، فيُكمل العضو الاستعادة من الموقع.
+
+**جُرّب:**
+- التسجيل بالبريد من التطبيق حتى إكمال الملف.
+- التسجيل بواتساب.
+- الاستعادة بالبريد وتغيير كلمة المرور.
+- اختبارات التسجيل والدخول في الموقع للتأكد أن شيئاً لم يتغيّر.
+
+الملفات: `src/server/signup-core.ts`، `src/lib/app-api.ts`، `src/lib/app-whatsapp.ts`، `src/app/api/app/{sign-up,email-code,forgot,whatsapp,password}/route.ts` (جديدة)، `src/server/auth.ts`، `src/server/whatsapp.ts`، `src/lib/phone-verification.ts`، `supabase/templates/recovery.html`، وفي التطبيق: `app/{sign-up,verify-whatsapp,verify-email,forgot,new-password,onboarding}.tsx` و`app/legal/[page].tsx` و`src/ui/choice.tsx` (جديدة). الاختبارات: `e2e/app-api.spec.ts`.
+
+التعديل: «Native app: sign-up, password reset and profile»

@@ -709,6 +709,11 @@ select vault.create_secret('<قيمة CRON_SECRET>', 'push_secret');
 - **نسخة التجربة:** GitHub ← Actions ← Native app ← Artifacts ← `al-malab-native-apk`.
 - **آيفون:** حساب Apple Developer، ثم `npx eas-cli build -p ios` (حساب Expo مجاني، لا يلزم Mac).
 
+## 24) تحديث 28 نوفمبر: التسجيل والاستعادة في التطبيق الأصلي
+
+- **قالب «Reset Password»:** في Authentication ← Emails ← Templates ← Reset Password، الصق محتوى `supabase/templates/recovery.html` الجديد. صار يحمل رمزاً، إلى جانب الرابط، لمن يستعيد كلمة المرور من التطبيق.
+- **لا ملفات قاعدة بيانات جديدة.**
+
 ## قائمة التحقق قبل الإطلاق
 
 - [ ] الـ migrations مطبّقة، و `/api/health` يُرجع `ok`

@@ -102,6 +102,13 @@ function Routes() {
       <Stack.Screen name="chat/[id]" options={{ title: "" }} />
       <Stack.Screen name="delete-account" options={{ title: "حذف الحساب" }} />
       <Stack.Screen name="book/[venue]" options={{ title: "الحجز" }} />
+      <Stack.Screen name="sign-up" options={{ title: "حساب جديد" }} />
+      <Stack.Screen name="verify-whatsapp" options={{ title: "التحقق بواتساب" }} />
+      <Stack.Screen name="verify-email" options={{ title: "الرمز" }} />
+      <Stack.Screen name="forgot" options={{ title: "نسيت كلمة المرور" }} />
+      <Stack.Screen name="new-password" options={{ title: "كلمة مرور جديدة", headerBackVisible: false }} />
+      <Stack.Screen name="onboarding" options={{ title: "ملفك" }} />
+      <Stack.Screen name="legal/[page]" options={{ title: "" }} />
       <Stack.Screen name="bookings" options={{ title: "حجوزاتي" }} />
     </Stack>
   );
