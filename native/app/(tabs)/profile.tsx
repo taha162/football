@@ -28,7 +28,7 @@ export default function Profile() {
       <Card style={{ gap: 0, padding: 0 }}>
         <Item icon="person-outline" label="ملفي الشخصي" onPress={() => open("/profile")} />
         <Item icon="people-outline" label="الأصدقاء" onPress={() => open("/friends")} />
-        <Item icon="calendar-outline" label="حجوزاتي" onPress={() => open("/my/bookings")} />
+        <Item icon="calendar-outline" label="حجوزاتي" onPress={() => router.push("/bookings")} />
         <Item icon="settings-outline" label="الإعدادات" onPress={() => open("/settings")} />
         <Item icon="shield-checkmark-outline" label="سياسة الخصوصية" onPress={() => open("/legal/privacy")} last />
       </Card>

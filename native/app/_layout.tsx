@@ -101,6 +101,8 @@ function Routes() {
       <Stack.Screen name="venue/[id]" options={{ title: "الملعب" }} />
       <Stack.Screen name="chat/[id]" options={{ title: "" }} />
       <Stack.Screen name="delete-account" options={{ title: "حذف الحساب" }} />
+      <Stack.Screen name="book/[venue]" options={{ title: "الحجز" }} />
+      <Stack.Screen name="bookings" options={{ title: "حجوزاتي" }} />
     </Stack>
   );
 }
