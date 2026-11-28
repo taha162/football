@@ -18,6 +18,8 @@ import { Checkbox } from "@/components/ui/field";
 import { buttonClass } from "@/components/ui/button";
 import { Alert, Card, CardBody, Container, DefinitionList, PageHeader, Section } from "@/components/ui/primitives";
 import { LinkButton } from "@/components/ui/link-button";
+import { DeleteAccountForm } from "@/components/forms/delete-account-form";
+import { DELETE_WORD } from "@/lib/member-deletion";
 
 export default async function SettingsPage({ params, searchParams }: PageProps<"/[locale]/settings">) {
   const { locale } = await params;
@@ -27,7 +29,7 @@ export default async function SettingsPage({ params, searchParams }: PageProps<"
   const t = await getTranslations("settings");
   const nt = await getTranslations("notificationTypes");
   const supabase = await createClient();
-  const [{ data: prefs }, { data: blocks }, { data: phone }, consent, { data: authUser }, activityHidden] = await Promise.all([
+  const [{ data: prefs }, { data: blocks }, { data: phone }, consent, { data: authUser }, activityHidden, deletion] = await Promise.all([
     supabase.from("user_preferences").select("*").eq("user_id", user.id).maybeSingle(),
     supabase.from("user_blocks").select("blocked_id, profile:profiles!user_blocks_blocked_id_fkey(display_name)").eq("blocker_id", user.id),
     supabase.rpc("my_phone"),
@@ -36,7 +38,12 @@ export default async function SettingsPage({ params, searchParams }: PageProps<"
     supabase.auth.getUser(),
     // Whether they hide when they were active (migration 0049; the section waits for it).
     supabase.rpc("my_presence_hidden"),
+    // Deleting the account: what goes with it, and what stops it (migration 0050; the section waits for it).
+    supabase.rpc("my_account_deletion_preview"),
   ]);
+  const toDelete = deletion.error
+    ? null
+    : ((deletion.data ?? {}) as { admin?: boolean; owns_venues?: string[]; matches?: number; tournaments?: number; bookings?: number; upcoming_bookings?: number });
   const pendingEmail = authUser.user?.new_email ?? null;
   const waitingForCurrent = (await cookies()).get("malaab_email_change_left")?.value === "current";
   const query = await searchParams;
@@ -187,6 +194,27 @@ export default async function SettingsPage({ params, searchParams }: PageProps<"
           </ul>
         )}
       </Section>
+
+      {toDelete ? (
+        <Section title={t("deleteAccount")} id="delete-account">
+          <Card>
+            <CardBody className="flex flex-col gap-4">
+              <p className="font-semibold">{t("deleteAccountIntro")}</p>
+              <ul className="flex list-disc flex-col gap-1.5 ps-5 text-sm text-muted">
+                <li>{t("deleteGoes", { matches: toDelete.matches ?? 0, tournaments: toDelete.tournaments ?? 0 })}</li>
+                <li>{t("deleteStays", { bookings: toDelete.bookings ?? 0, upcoming: toDelete.upcoming_bookings ?? 0 })}</li>
+              </ul>
+              {toDelete.admin ? (
+                <Alert tone="warning">{t("deleteBlockedAdmin")}</Alert>
+              ) : toDelete.owns_venues?.length ? (
+                <Alert tone="warning">{t("deleteBlockedVenue", { venues: toDelete.owns_venues.join("، ") })}</Alert>
+              ) : (
+                <DeleteAccountForm word={DELETE_WORD} />
+              )}
+            </CardBody>
+          </Card>
+        </Section>
+      ) : null}
     </Container>
   );
 }

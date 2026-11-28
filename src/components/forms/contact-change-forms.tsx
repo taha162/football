@@ -10,7 +10,7 @@ import { Alert } from "@/components/ui/primitives";
 import { useActionMessage } from "@/components/ui/use-action-message";
 
 /** The account's password, asked before an address changes (server/account.ts). */
-function CurrentPassword({ id }: { id: string }) {
+export function CurrentPassword({ id }: { id: string }) {
   const t = useTranslations("settings");
   return (
     <FormField name="current_password" id={id} label={t("currentPassword")} hint={t("currentPasswordHint")} required>

@@ -1,21 +1,14 @@
-import { timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
+import { hasCronSecret } from "@/lib/cron-auth";
 import { logger } from "@/lib/log";
 import { API_LIMITS, hit, limitAddress, spent, tooManyRequests } from "@/lib/rate-limit";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { MESSAGE_VIDEOS } from "@/lib/message-video";
 import { deliverWhatsapp } from "@/lib/whatsapp-outbox";
+import { drainPush } from "@/server/push";
 
 export const dynamic = "force-dynamic";
 
-function authorized(request: NextRequest): boolean {
-  const secret = process.env.CRON_SECRET;
-  const header = request.headers.get("authorization") ?? "";
-  if (!secret || secret.length < 16) return false;
-  const expected = Buffer.from(`Bearer ${secret}`);
-  const given = Buffer.from(header);
-  return expected.length === given.length && timingSafeEqual(expected, given);
-}
 
 /**
  * Scheduled maintenance: expires stale booking requests, sends match
@@ -30,7 +23,7 @@ export async function GET(request: NextRequest) {
   const address = limitAddress(request.headers);
   const blocked = spent(API_LIMITS.badSecret, address);
   if (!blocked.ok) return tooManyRequests(blocked.retryAfter);
-  if (!authorized(request)) {
+  if (!hasCronSecret(request)) {
     hit(API_LIMITS.badSecret, address);
     // Someone other than the scheduler, or a scheduler with the wrong secret: worth noticing.
     logger.warn("cron_unauthorized", { withHeader: request.headers.has("authorization") });
@@ -72,6 +65,11 @@ export async function GET(request: NextRequest) {
     if (removeError) logger.error("cron_orphan_videos_remove_failed", { message: removeError.message.slice(0, 120) });
     else videosRemoved += chunk.length;
   }
+  // Phone notifications still waiting (the database's wake-up isn't set, or failed): migration 0051.
+  const push = await drainPush().catch((e: unknown) => {
+    logger.error("cron_push_failed", { message: e instanceof Error ? e.message : "unknown" });
+    return null;
+  });
   const result = {
     ...(data as Record<string, unknown>),
     ...((cleanup as Record<string, unknown>) ?? {}),
@@ -80,6 +78,7 @@ export async function GET(request: NextRequest) {
     ...(retention ? { retention } : {}),
     ...(videosRemoved ? { videos_removed: videosRemoved } : {}),
     ...(whatsapp ? { whatsapp } : {}),
+    ...(push && push.sent + push.gone + push.failed ? { push } : {}),
   };
   logger.info("cron_completed", { ms: Date.now() - started, ...result });
   return NextResponse.json({ ok: true, result });

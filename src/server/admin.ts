@@ -9,9 +9,9 @@ import { logger } from "@/lib/log";
 import { DELETE_WORD } from "@/lib/member-deletion";
 import { getCurrentUser } from "@/lib/auth";
 import { removeMessageFiles } from "@/lib/message-files";
-import { MESSAGE_VIDEOS, posterPathOf } from "@/lib/message-video";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { memberVideoFiles, removeMemberFiles, type MemberFiles } from "@/server/member-files";
 
 type Rpc = Parameters<Awaited<ReturnType<typeof createClient>>["rpc"]>[0];
 
@@ -81,27 +81,6 @@ export async function resetSecondFactorAction(_: ActionState, fd: FormData): Pro
   return res;
 }
 
-const MEMBER_FILE_BUCKETS = ["avatars", "message-images", "message-voice"] as const;
-
-/**
- * The videos a member sent, with their stills (none before migration 0045).
- * Nothing is returned to the caller: the paths only serve to remove the files
- * once the database has accepted the deletion. Anything missed is removed by
- * the scheduled clean-up of videos no message points at.
- */
-async function memberVideoFiles(userId: string): Promise<string[]> {
-  const service = createAdminClient();
-  if (!service) return [];
-  const paths: string[] = [];
-  for (let from = 0; from < 20_000; from += 1000) {
-    const { data, error } = await service.from("messages").select("video_path").eq("sender_id", userId).not("video_path", "is", null).range(from, from + 999);
-    if (error || !data?.length) break;
-    for (const row of data) if (row.video_path) paths.push(row.video_path, posterPathOf(row.video_path));
-    if (data.length < 1000) break;
-  }
-  return paths;
-}
-
 /**
  * Deletes a member completely (Admin → Users → «حذف نهائي»). The database
  * decides who may (admins only, after the second step; never oneself, an
@@ -127,23 +106,8 @@ export async function deleteMemberAction(_: ActionState, fd: FormData): Promise<
     }
     return fail(code);
   }
-  // The member's own files: their picture, and the pictures and voice notes of their messages.
-  const files = ((data ?? {}) as { files?: Partial<Record<(typeof MEMBER_FILE_BUCKETS)[number], string[]>> }).files ?? {};
-  const storage = createAdminClient()?.storage;
-  let left = 0;
-  for (const bucket of MEMBER_FILE_BUCKETS) {
-    const paths = (files[bucket] ?? []).filter((p) => typeof p === "string" && p.length > 0);
-    for (let i = 0; i < paths.length; i += 100) {
-      const chunk = paths.slice(i, i + 100);
-      const { error: removeError } = storage ? await storage.from(bucket).remove(chunk) : { error: { message: "no_service_role" } };
-      if (removeError) left += chunk.length;
-    }
-  }
-  for (let i = 0; i < videos.length; i += 100) {
-    const chunk = videos.slice(i, i + 100);
-    const { error: removeError } = storage ? await storage.from(MESSAGE_VIDEOS).remove(chunk) : { error: { message: "no_service_role" } };
-    if (removeError) left += chunk.length;
-  }
+  // The member's own files: their picture, and the pictures, voice notes and videos of their messages.
+  const left = await removeMemberFiles(((data ?? {}) as { files?: MemberFiles }).files ?? {}, videos);
   const { data: me } = await supabase.auth.getUser();
   logger.info("admin_user_deleted", { user: user.data, by: me.user?.id ?? null, files_left: left });
   if (left > 0) logger.error("admin_user_files_left", { user: user.data, count: left });

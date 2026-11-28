@@ -869,6 +869,26 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"push_devices": {
+                  Row: {
+                    "created_at": string,"last_seen_at": string,"platform": string,"token": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"last_seen_at"?: string,"platform": string,"token": string,"user_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"last_seen_at"?: string,"platform"?: string,"token"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "push_devices_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"reports": {
                   Row: {
                     "category": Database["public"]['Enums']["report_category"],"created_at": string,"details": string | null,"handled_at": string | null,"handled_by": string | null,"id": string,"reporter_id": string | null,"resolution_note": string | null,"snapshot": NonNullable<Json>,"status": Database["public"]['Enums']["report_status"],"target_id": string,"target_type": Database["public"]['Enums']["report_target"]
@@ -1621,6 +1641,9 @@ isOneToOne: true
 "admin_whatsapp_summary":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
+"allow_account_deletion":
+{ Args: { "p_user_id": string }; Returns: undefined
+                           },
 "answer_call":
 { Args: { "p_call_id": string }; Returns: string
                            },
@@ -1653,6 +1676,11 @@ isOneToOne: true
                            },
 "cancel_match":
 { Args: { "p_match_id": string,"p_reason"?: string }; Returns: undefined
+                           },
+"claim_push_batch":
+{ Args: { "p_limit"?: number }; Returns: {
+              "devices": Json,"kind": string,"ref": string,"user_id": string
+            }[]
                            },
 "clear_conversation":
 { Args: { "p_conversation_id": string }; Returns: undefined
@@ -1711,6 +1739,9 @@ isOneToOne: true
 "delete_message":
 { Args: { "p_message_id": number }; Returns: undefined
                            },
+"delete_my_account":
+{ Args: { "p_reason"?: string }; Returns: Json
+                           },
 "dispute_tournament_result":
 { Args: { "p_match_id": string,"p_reason": string }; Returns: undefined
                            },
@@ -1735,6 +1766,9 @@ isOneToOne: true
 { Args: { "p_username": string }; Returns: {
               "avatar_path": string,"display_name": string,"id": string,"relation": string,"username": string
             }[]
+                           },
+"forget_push_tokens":
+{ Args: { "p_tokens": (string)[] }; Returns: undefined
                            },
 "free_start_times":
 { Args: { "p_duration_minutes": number,"p_field_id": string,"p_local_date": string }; Returns: {
@@ -1793,6 +1827,9 @@ isOneToOne: true
 "mute_conversation":
 { Args: { "p_conversation_id": string,"p_hours": number }; Returns: undefined
                            },
+"my_account_deletion_preview":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
 "my_conversations":
 { Args: { "p_limit"?: number }; Returns: {
               "conversation_id": string,"favorite": boolean,"is_locked": boolean,"kind": Database["public"]['Enums']["conversation_kind"],"last_kind": string,"last_message": string,"last_message_at": string,"muted": boolean,"nickname": string,"pinned": boolean,"ref_id": string,"title": string,"unread_count": number
@@ -1848,6 +1885,9 @@ isOneToOne: true
                            },
 "record_tournament_result":
 { Args: { "p_away_penalties"?: number,"p_away_score": number,"p_home_penalties"?: number,"p_home_score": number,"p_match_id": string }; Returns: Database["public"]['Enums']["result_status"]
+                           },
+"register_push_device":
+{ Args: { "p_platform": string,"p_token": string }; Returns: undefined
                            },
 "register_tournament_team":
 { Args: { "p_team_id": string,"p_tournament_id": string }; Returns: string
@@ -2074,6 +2114,9 @@ isOneToOne: true
                            },
 "unread_counts":
 { Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"unregister_push_device":
+{ Args: { "p_token": string }; Returns: undefined
                            },
 "update_match":
 { Args: { "p_area_id"?: string,"p_cost_is_estimate"?: boolean,"p_description"?: string,"p_duration_minutes": number,"p_external_booking"?: boolean,"p_field_id"?: string,"p_join_policy"?: Database["public"]['Enums']["match_join_policy"],"p_leave_deadline_hours"?: number,"p_location_note"?: string,"p_match_id": string,"p_paying_players"?: number,"p_payment_collector"?: Database["public"]['Enums']["payment_collector"],"p_payment_notes"?: string,"p_positions_needed"?: Json,"p_price_per_player"?: number,"p_reserved_spots"?: number,"p_rules"?: string,"p_skill_level"?: Database["public"]['Enums']["skill_level"],"p_start_local": string,"p_title": string,"p_total_cost"?: number,"p_total_players": number,"p_venue_id"?: string,"p_visibility"?: Database["public"]['Enums']["visibility_level"] }; Returns: undefined

@@ -11,11 +11,13 @@ import { SiteFooter } from "@/components/layout/site-footer";
 import { LandingOnly } from "@/components/layout/landing-only";
 import { CallProvider } from "@/components/calls/call-provider";
 import { LiveRefresh } from "@/components/layout/live-refresh";
+import { NativePush } from "@/components/layout/native-push";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { IntlProvider } from "@/components/layout/intl-provider";
 import { getCurrentUser } from "@/lib/auth";
 import { getLiveCheckSeconds, getUnreadCounts } from "@/server/reference";
 import { publicEnv } from "@/lib/env";
+import { appCanPush, isAppUserAgent } from "@/lib/app-shell";
 import { INTRO_SCRIPT } from "@/components/stage/intro-script";
 import { ENTER_SCRIPT } from "@/components/motion/enter-script";
 import { MotionRoot } from "@/components/motion/motion-root";
@@ -38,11 +40,16 @@ const barlowCondensed = Barlow_Condensed({
   preload: false,
 });
 
-export const viewport: Viewport = {
+const VIEWPORT: Viewport = {
   themeColor: "#0a0e0b",
   width: "device-width",
   initialScale: 1,
 };
+
+/** In the phone app the page runs edge to edge and keeps clear of the bars itself (globals.css, [data-app]). */
+export async function generateViewport(): Promise<Viewport> {
+  return isAppUserAgent((await headers()).get("user-agent")) ? { ...VIEWPORT, viewportFit: "cover" } : VIEWPORT;
+}
 
 export async function generateMetadata({ params }: LayoutProps<"/[locale]">): Promise<Metadata> {
   const { locale } = await params;
@@ -68,7 +75,11 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
   const user = await getCurrentUser();
   const t = await getTranslations({ locale, namespace: "common" });
   // The page's script nonce (src/proxy.ts): only scripts carrying it may run.
-  const nonce = (await headers()).get("x-nonce") ?? undefined;
+  const requestHeaders = await headers();
+  const nonce = requestHeaders.get("x-nonce") ?? undefined;
+  // Inside the phone app (mobile/): the layout keeps clear of the status bar and the notch.
+  const app = isAppUserAgent(requestHeaders.get("user-agent"));
+  const appPush = appCanPush(requestHeaders.get("user-agent"));
   const fontVars =
     locale === "ar"
       ? { "--font-body": "var(--font-cairo)", "--font-heading": "var(--font-cairo)" }
@@ -80,6 +91,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
       dir={directionOf(locale)}
       className={`${cairo.variable} ${barlow.variable} ${barlowCondensed.variable} antialiased`}
       style={fontVars as React.CSSProperties}
+      data-app={app ? "" : undefined}
       // The pre-paint script below sets data-intro on <html> before hydration (landing page).
       suppressHydrationWarning
     >
@@ -123,6 +135,8 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
           </CallProvider>
           {/* Pages stay up to date without reloading: news arrives live, and open pages check every so often (live.check_seconds). */}
           {user ? <LiveRefresh userId={user.id} checkSeconds={await getLiveCheckSeconds()} /> : null}
+          {/* The phone app: notifications on the phone (mobile/, migration 0051). */}
+          {appPush && user ? <NativePush /> : null}
           {/* After the page content, so its effects run once the router has placed the new page. */}
           <MotionRoot />
         </IntlProvider>

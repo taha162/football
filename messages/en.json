@@ -71,7 +71,8 @@
     "terms": "Terms of use",
     "privacy": "Privacy",
     "safety": "Trust & safety",
-    "copyright": "© {year} Al-Malab"
+    "copyright": "© {year} Al-Malab",
+    "accountDeletion": "Delete your account"
   },
   "auth": {
     "email": "Email",
@@ -161,7 +162,8 @@
     "usernameInvalid": "3 to 20: lower-case English letters, digits, _ and ., starting with a letter.",
     "usernameChecking": "Checking…",
     "waSubtitleChange": "Send the code from your new number's WhatsApp to link it to your account.",
-    "backToSettings": "Back to settings"
+    "backToSettings": "Back to settings",
+    "accountDeleted": "Your account has been deleted. Thanks for playing with us."
   },
   "onboarding": {
     "title": "Set up your player profile",
@@ -508,7 +510,10 @@
     "same_email": "That's your current address.",
     "same_phone": "That's your current number.",
     "phone_taken": "That number belongs to another Al-Malab account.",
-    "no_email_change": "There's no e-mail change waiting for a code."
+    "no_email_change": "There's no e-mail change waiting for a code.",
+    "password_check_required": "Enter your password again, then try again.",
+    "admin_account": "You are an admin of the site: ask for the admin role to be removed first.",
+    "owns_venue": "You own a venue: hand its ownership over first."
   },
   "validation": {
     "invalid": "Invalid value.",
@@ -849,6 +854,28 @@
         {
           "heading": "Payments",
           "body": "There are no in-app payments yet. Pay organizers or venues in person and be wary of anyone asking for money in advance outside the agreed arrangement."
+        }
+      ]
+    },
+    "accountDeletion": {
+      "title": "Deleting your Al-Malab account",
+      "intro": "You can delete your account and your data yourself at any time, on the website or in the app.",
+      "sections": [
+        {
+          "heading": "How to delete your account",
+          "body": "1. Sign in on the website or in the Al-Malab app.\n2. Open Settings → «Delete account» at the end of the page.\n3. Type your password and the word «حذف» to confirm, then press «Delete my account for good».\nThe account is deleted at once."
+        },
+        {
+          "heading": "What is deleted",
+          "body": "Your profile, picture, phone number and e-mail; your messages with their pictures, voice notes and videos; your friends and your place in groups and teams; the matches and tournaments you organised; reviews you wrote or received; your settings and notifications."
+        },
+        {
+          "heading": "What stays without your name",
+          "body": "Your bookings stay in the venues' records, since they are theirs, without your name or note (shown as «عضو محذوف»). Upcoming bookings are cancelled and the venue is told. Reports and the admin activity log stay, without your personal data."
+        },
+        {
+          "heading": "If you can't sign in",
+          "body": "If you forgot your password, reset it from the sign-in page, then delete your account. If you are the site's admin or own a venue, hand the role or the ownership over first."
         }
       ]
     }
@@ -1993,7 +2020,16 @@
     "privacy": "Privacy",
     "showActivity": "Show when I was active",
     "showActivityHint": "Only your friends and the people you message see it: “Active now” or “Active 5 minutes ago”. Hidden, nobody does.",
-    "savePrivacy": "Save privacy"
+    "savePrivacy": "Save privacy",
+    "deleteAccount": "Delete account",
+    "deleteAccountIntro": "Your account is deleted for good. It can't be restored.",
+    "deleteGoes": "Gone with it: your profile, picture, number and e-mail; your messages with their pictures, voice notes and videos; your friends and your place in groups and teams; the matches ({matches}) and tournaments ({tournaments}) you organised; reviews.",
+    "deleteStays": "Kept without your name: your bookings in the venues' records ({bookings}). Upcoming ones ({upcoming}) are cancelled and the venue is told; a paid deposit is marked to refund.",
+    "deleteBlockedAdmin": "You are an admin of the site. Ask another admin to remove your admin role first, then delete your account.",
+    "deleteBlockedVenue": "You own a venue: {venues}. Hand its ownership to someone else or contact the admins first, then delete your account.",
+    "deleteReason": "Why are you leaving? (optional)",
+    "deleteConfirm": "Type «{word}» to confirm",
+    "deleteSubmit": "Delete my account for good"
   },
   "messages": {
     "title": "Messages",

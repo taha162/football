@@ -1,5 +1,6 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { getLocale } from "next-intl/server";
 import { z } from "zod";
 import { redirect } from "@/i18n/navigation";
@@ -13,6 +14,7 @@ import { clearPendingEmail, getPendingEmail, setPendingEmail } from "@/lib/pendi
 import { looksLikePhone, normalizePhone } from "@/lib/phone";
 import { hasSecondFactor } from "@/lib/second-factor";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { PUSH_TOKEN_COOKIE } from "@/lib/push/device-cookie";
 import { createClient } from "@/lib/supabase/server";
 import { accountTag, allowed, buckets, count, countFailure } from "@/lib/throttle";
 import { usernameField, usernameFree } from "@/lib/username-server";
@@ -223,6 +225,13 @@ export async function resetPasswordAction(_: ActionState, fd: FormData): Promise
 
 export async function signOutAction(): Promise<void> {
   const supabase = await createClient();
+  // In the phone app: this phone stops receiving the member's notifications (migration 0051).
+  const jar = await cookies();
+  const pushToken = jar.get(PUSH_TOKEN_COOKIE)?.value;
+  if (pushToken) {
+    await supabase.rpc("unregister_push_device", { p_token: pushToken });
+    jar.delete(PUSH_TOKEN_COOKIE);
+  }
   await supabase.auth.signOut();
   redirect({ href: "/", locale: await currentLocale() });
 }

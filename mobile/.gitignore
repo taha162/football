@@ -1,0 +1,3 @@
+node_modules/
+# Written by scripts/prepare-www.mjs before each sync.
+www/

@@ -662,6 +662,46 @@ select grantee, table_name, privilege_type from information_schema.role_table_gr
 - وقت النشاط يُجلب في الوقت نفسه مع باقي بيانات صفحة المحادثة وقائمة الرسائل، فلا يؤخر فتحهما.
 - **«نشط الآن»** يعني نشاطاً في آخر دقيقتين ونصف، فقد يبقى ظاهراً حتى دقيقتين ونصف بعد أن يغادر العضو. التحديث ليس لحظياً بالثانية، فهو لا يستعمل اتصالات Realtime إضافية.
 
+## 21) تحديث 28 نوفمبر: تطبيق أندرويد وآيفون
+
+التطبيق في `mobile/`، ودليله الكامل في `mobile/README.md`. ملخص:
+- **لا يحتاج الموقع إعداداً جديداً.** التطبيق يفتح الموقع المنشور نفسه (`https://al-malab.vercel.app`). إن غيّرت النطاق، ابنِ التطبيق من جديد بالعنوان الجديد (`APP_SITE_URL`).
+- **نسخة تجربة أندرويد:** GitHub ← Actions ← Mobile app ← Artifacts ← `al-malab-debug-apk`.
+- **Google Play:** حساب مطوّر (25 دولاراً مرة واحدة)، ومفتاح توقيع في أسرار المستودع، ثم Run workflow مع «release».
+- **App Store:** حساب Apple Developer (99 دولاراً سنوياً)، وجهاز Mac عليه Xcode.
+- **قبل الرفع:** قرّر معرّف التطبيق (`com.almalab.app`)، فلا يتغيّر بعد النشر.
+- **ملف قاعدة البيانات `…0050_account_deletion.sql`:** شغّله في SQL Editor قبل رفع التطبيق. يضيف «حذف الحساب» في الإعدادات، وهو شرط في المتجرين. يحتاج `SUPABASE_SERVICE_ROLE_KEY` في Vercel (موجود من قبل).
+- **روابط للمتجرين:** سياسة الخصوصية `/ar/legal/privacy`، وحذف الحساب `/ar/legal/account-deletion`.
+
+## 22) تحديث 28 نوفمبر: الإشعارات على هاتف التطبيق
+
+**ما يصل:** الرسائل الجديدة لأعضاء المحادثة الآخرين (إلا من كتمها أو حظر المرسل)، وكل إشعار يظهر في الجرس. الأنواع التي أطفأها العضو في الإعدادات لا تُنشأ أصلاً. إشعارات المكالمات الواردة والتطبيق مغلق غير مدعومة بعد: تصل المكالمة الفائتة كإشعار.
+
+### 1) ملف قاعدة البيانات `…0051_push_notifications.sql`
+شغّله بعد …0050. يضيف جدول الهواتف، وقائمة انتظار الإرسال، ويفعّل إضافة `pg_net`. قبل تشغيله لا يُطلب إذن الإشعارات ولا يُرسل شيء.
+
+### 2) المفاتيح في Vercel (Settings ← Environment Variables ← Production)
+| المتغير | من أين |
+| --- | --- |
+| `FIREBASE_SERVICE_ACCOUNT` | Firebase ← Project settings ← Service accounts ← Generate new private key (الملف كاملاً). **سرّي.** |
+| `APNS_KEY` | Apple Developer ← Keys ← مفتاح مع APNs، محتوى ملف `.p8`. **سرّي.** |
+| `APNS_KEY_ID` و`APNS_TEAM_ID` | صفحة المفتاح، ومعرّف الفريق في Membership |
+
+يكفي أحدهما لنظامه: Firebase لأندرويد، وApple لآيفون. وفي GitHub (Settings ← Secrets ← Actions): `GOOGLE_SERVICES_JSON` (ملف Firebase للتطبيق، `mobile/README.md`).
+
+### 3) الإيقاظ الفوري (اختياري، موصى به)
+دون هذه الخطوة تُرسل إشعارات الرسائل فوراً، وباقي الإشعارات مع المهمة الدورية (كل 15 دقيقة). معها يصل كل شيء خلال ثوانٍ. في SQL Editor، **مرة واحدة**، بعنوان موقعك وقيمة `CRON_SECRET` نفسها الموجودة في Vercel:
+```sql
+select vault.create_secret('https://al-malab.vercel.app/api/push', 'push_endpoint');
+select vault.create_secret('<قيمة CRON_SECRET>', 'push_secret');
+```
+تُحفظ القيمتان مشفّرتين في Supabase Vault ولا تظهران لأي عضو. لتغيير إحداهما: `select vault.update_secret((select id from vault.secrets where name = 'push_secret'), '<القيمة الجديدة>');`
+
+### 4) التطبيق
+- أندرويد: أعد البناء بعد حفظ `GOOGLE_SERVICES_JSON`.
+- آيفون: أضف قدرة Push Notifications في Xcode (`mobile/README.md`).
+- النسخ المبنية قبل ذلك تعمل دون إشعارات، ولا تطلب الإذن.
+
 ## قائمة التحقق قبل الإطلاق
 
 - [ ] الـ migrations مطبّقة، و `/api/health` يُرجع `ok`

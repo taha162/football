@@ -1,0 +1,25 @@
+{
+  "name": "al-malab-app",
+  "private": true,
+  "description": "«الملعب» for Google Play and the App Store: a Capacitor shell around the website (see README.md).",
+  "scripts": {
+    "assets:source": "node scripts/make-assets.mjs",
+    "assets": "capacitor-assets generate --android --ios --iconBackgroundColor '#baff1b' --iconBackgroundColorDark '#baff1b' --splashBackgroundColor '#0a0e0b' --splashBackgroundColorDark '#0a0e0b'",
+    "sync": "node scripts/prepare-www.mjs && cap sync",
+    "android": "cap open android",
+    "ios": "cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.6.2",
+    "@capacitor/app": "8.1.2",
+    "@capacitor/core": "8.6.2",
+    "@capacitor/ios": "8.6.2",
+    "@capacitor/push-notifications": "8.1.3",
+    "@capacitor/splash-screen": "8.0.2"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "4.0.0",
+    "@capacitor/cli": "8.6.2",
+    "typescript": "5.9.3"
+  }
+}

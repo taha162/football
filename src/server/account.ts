@@ -6,10 +6,11 @@ import { getLocale } from "next-intl/server";
 import { z } from "zod";
 import { redirect } from "@/i18n/navigation";
 import { isLocale } from "@/i18n/routing";
-import { fail, ok, type ActionState } from "@/lib/actions";
+import { dbErrorCode, fail, ok, type ActionState } from "@/lib/actions";
 import { getCurrentUser } from "@/lib/auth";
 import { authErrorCode, emailDeliveryError } from "@/lib/auth-errors";
 import { logger } from "@/lib/log";
+import { DELETE_WORD } from "@/lib/member-deletion";
 import { passwordMatches } from "@/lib/password-check";
 import { isPhoneAccountEmail, normalizePhone } from "@/lib/phone";
 import { createVerification } from "@/lib/phone-verification";
@@ -17,6 +18,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { accountTag, allowed, buckets, count, countFailure } from "@/lib/throttle";
 import { whatsappConfig } from "@/lib/whatsapp";
+import { memberVideoFiles, removeMemberFiles, type MemberFiles } from "@/server/member-files";
 
 /**
  * Adding or changing the account's e-mail or phone number (settings). Both ask
@@ -168,4 +170,46 @@ export async function confirmEmailChangeAction(_: ActionState, fd: FormData): Pr
   // The form that asked for the code is gone once the address changed: the page says it instead.
   await goTo("/settings?email=changed#email");
   return ok("email_changed");
+}
+
+/**
+ * Deleting one's own account (Settings → «حذف الحساب»; migration 0050). Asked
+ * for: the word «حذف» and the password. The password is checked here (with the
+ * sign-in limits); the server key then allows one deletion for 5 minutes, and
+ * the deletion itself runs as the member, so the database also asks for the
+ * second step when they have one, and refuses an admin of the site or a
+ * venue's owner. Their files are then removed, and they are signed out.
+ */
+export async function deleteMyAccountAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  const user = await getCurrentUser();
+  if (!user?.email) return fail("not_authenticated");
+  if (String(fd.get("confirm") ?? "").trim() !== DELETE_WORD) return fail("validation", { confirm: "delete_word" });
+  const supabase = await createClient();
+  // What stops it is said before the password is even checked (the database checks again).
+  const { data: preview, error: previewError } = await supabase.rpc("my_account_deletion_preview");
+  if (previewError) return fail(dbErrorCode(previewError, "my_account_deletion_preview"));
+  const blockers = (preview ?? {}) as { admin?: boolean; owns_venues?: string[] };
+  if (blockers.admin) return fail("admin_account");
+  if (blockers.owns_venues?.length) return fail("owns_venue");
+  const wrong = await checkPassword(user.email, fd);
+  if (wrong) return wrong;
+  const service = createAdminClient();
+  if (!service) {
+    logger.error("account_delete_failed", { hint: "SUPABASE_SERVICE_ROLE_KEY is not set" });
+    return fail("generic");
+  }
+  const { error: allowError } = await service.rpc("allow_account_deletion", { p_user_id: user.id });
+  if (allowError) return fail(dbErrorCode(allowError, "allow_account_deletion"));
+  // Their videos (and stills): read first, as the deletion takes their messages with it.
+  const videos = await memberVideoFiles(user.id);
+  const reason = String(fd.get("reason") ?? "").trim().slice(0, 500);
+  const { data, error } = await supabase.rpc("delete_my_account", { p_reason: reason || undefined });
+  if (error) return fail(dbErrorCode(error, "delete_my_account"));
+  const left = await removeMemberFiles(((data ?? {}) as { files?: MemberFiles }).files ?? {}, videos);
+  logger.info("account_self_deleted", { user: user.id, files_left: left });
+  if (left > 0) logger.error("account_files_left", { user: user.id, count: left });
+  // The account is gone: this clears the session cookies whatever the server answers.
+  await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
+  await goTo("/sign-in?account=deleted");
+  return ok("account_deleted");
 }
