@@ -3,7 +3,7 @@ import { Redirect, Tabs } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../src/lib/auth";
-import { colors, fonts } from "../../src/ui/theme";
+import { fonts, useColors } from "../../src/ui/theme";
 
 type Icon = keyof typeof Ionicons.glyphMap;
 const tab = (title: string, icon: Icon) => ({
@@ -13,6 +13,7 @@ const tab = (title: string, icon: Icon) => ({
 
 /** The bottom bar, as on the site's phone layout. Signed-in members only. */
 export default function TabsLayout() {
+  const colors = useColors();
   const { session, needsSecondStep } = useAuth();
   const insets = useSafeAreaInsets();
   if (!session) return <Redirect href="/sign-in" />;
@@ -25,7 +26,7 @@ export default function TabsLayout() {
         headerTitleStyle: { fontFamily: fonts.bold },
         // Cairo's letters are tall: the bar leaves them room (and keeps clear of the home bar).
         tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.line, height: 68 + insets.bottom, paddingTop: 6, paddingBottom: insets.bottom + 6 },
-        tabBarActiveTintColor: colors.accent,
+        tabBarActiveTintColor: colors.accentText,
         tabBarInactiveTintColor: colors.muted,
         tabBarLabelStyle: { fontFamily: fonts.semibold, fontSize: 11, lineHeight: 21 },
         sceneStyle: { backgroundColor: colors.bg },

@@ -2327,3 +2327,24 @@
 الملفات: `native/` و`.github/workflows/native-app.yml` و`src/app/api/app/` و`src/lib/supabase/app-token.ts` و`src/server/sign-in-core.ts` و`src/server/account-deletion.ts` (جديدة)، `src/server/auth.ts`، `src/server/account.ts`، `mobile/README.md`، `tsconfig.json`، `eslint.config.mjs`، `.vercelignore`، `DEPLOYMENT.md` (القسم 23). الاختبارات: `e2e/app-api.spec.ts`.
 
 التعديل: «Native app, phase one»
+
+### 127. التطبيق الأصلي: مظهر فاتح وداكن، وبطاقات جديدة للمباريات والملاعب
+**ما تغيّر:**
+- **مظهر فاتح جديد** بألوان «الملعب» (أبيض مخضرّ، والليموني، وأخضر الملعب)، و**داكن** كما كان.
+- **حسابي ← المظهر:** «تلقائي» (حسب إعداد الهاتف، وهو الافتراضي)، «فاتح»، «داكن». الاختيار يُحفظ على الهاتف، ويتغيّر التطبيق فوراً، وشريط الحالة يتبعه.
+- **بطاقة المباراة على شكل تذكرة:**
+  - قسيمة التاريخ على جانبها: اليوم أو «اليوم/غداً»، والرقم كبيراً، والشهر، والوقت.
+  - خط تمزيق منقّط.
+  - مقعد صغير لكل لاعب يُظهر امتلاءها بنظرة.
+  - «آخر مكانين!» بلون التنبيه حين تقترب من الاكتمال.
+- **بطاقة الملعب طولية بالصورة:**
+  - تظليل، والاسم والمنطقة عليها.
+  - أقل سعر في وسم ليموني.
+  - علامة الحجز.
+  - ملعب مرسوم (خطوط وعشب مخطط) حين لا توجد صورة.
+- **الرئيسية:** ترحيب على ملعب مرسوم، مع عدد مبارياتك القادمة.
+- **صفحة الملعب بلا صورة** تعرض الملعب المرسوم.
+
+الملفات: `native/src/ui/theme.tsx`، `native/src/ui/kit.tsx`، `native/src/ui/match-card.tsx`، `native/src/ui/venue-card.tsx` و`native/src/ui/pitch-art.tsx` (جديدان)، `native/src/lib/format.ts`، وكل الشاشات في `native/app/`، و`native/app.config.ts`.
+
+التعديل: «Native app: light and dark, new match and venue cards»

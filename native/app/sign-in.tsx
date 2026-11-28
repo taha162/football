@@ -8,7 +8,7 @@ import { useAuth } from "../src/lib/auth";
 import { SITE_URL } from "../src/lib/config";
 import { errorText, fieldText } from "../src/lib/errors";
 import { Button, Field, Notice, Screen, T } from "../src/ui/kit";
-import { colors } from "../src/ui/theme";
+import { useColors } from "../src/ui/theme";
 
 /**
  * Signing in: the WhatsApp number first, the e-mail the other way, as on the
@@ -16,6 +16,7 @@ import { colors } from "../src/ui/theme";
  * (WhatsApp verification lives there); the app opens it.
  */
 export default function SignIn() {
+  const colors = useColors();
   const { signIn } = useAuth();
   const router = useRouter();
   const [method, setMethod] = useState<"phone" | "email">("phone");
@@ -84,7 +85,7 @@ export default function SignIn() {
             />
             <Button label="تسجيل الدخول" onPress={submit} busy={busy} disabled={!login || !password} />
             <Pressable onPress={() => setMethod(method === "phone" ? "email" : "phone")} accessibilityRole="button" style={{ alignSelf: "center", padding: 8 }}>
-              <T weight="semibold" style={{ color: colors.accent }}>{method === "phone" ? "الدخول بالبريد الإلكتروني بدلاً من ذلك" : "الدخول برقم واتساب بدلاً من ذلك"}</T>
+              <T weight="semibold" style={{ color: colors.accentText }}>{method === "phone" ? "الدخول بالبريد الإلكتروني بدلاً من ذلك" : "الدخول برقم واتساب بدلاً من ذلك"}</T>
             </Pressable>
             <View style={{ flexDirection: "row", justifyContent: "center", gap: 18, flexWrap: "wrap" }}>
               <Pressable onPress={() => WebBrowser.openBrowserAsync(`${SITE_URL}/ar/sign-up`)} accessibilityRole="link" style={{ padding: 6 }}>

@@ -19,8 +19,9 @@ const config: ExpoConfig = {
   version: process.env.APP_VERSION_NAME || "1.0.0",
   orientation: "portrait",
   icon: "./assets/icon.png",
-  userInterfaceStyle: "dark",
-  backgroundColor: "#0a0e0b",
+  // Light, dark, or as the phone is (the member chooses in «حسابي»).
+  userInterfaceStyle: "automatic",
+  backgroundColor: "#f4f7f1",
   ios: {
     bundleIdentifier: process.env.APP_ID || "com.almalab.app",
     // Each upload to the stores needs a higher number (the build's run number on GitHub).
@@ -54,7 +55,7 @@ const config: ExpoConfig = {
     "expo-router",
     "expo-secure-store",
     "expo-font",
-    ["expo-splash-screen", { image: "./assets/splash-icon.png", imageWidth: 160, backgroundColor: "#0a0e0b" }],
+    ["expo-splash-screen", { image: "./assets/splash-icon.png", imageWidth: 160, backgroundColor: "#f4f7f1", dark: { image: "./assets/splash-icon.png", backgroundColor: "#0a0e0b" } }],
     "expo-image",
     "expo-web-browser",
     "expo-localization",

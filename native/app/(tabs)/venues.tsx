@@ -1,29 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { FlatList, RefreshControl, TextInput, View } from "react-native";
-import { useRouter } from "expo-router";
-import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
-import { formatPrice } from "../../src/lib/format";
-import { publicUrl, supabase } from "../../src/lib/supabase";
-import { Badge, Card, Empty, Loading, T } from "../../src/ui/kit";
-import { colors, fonts } from "../../src/ui/theme";
+import { supabase } from "../../src/lib/supabase";
+import { Empty, Loading } from "../../src/ui/kit";
+import { VenueCard, type VenueCardData as Venue } from "../../src/ui/venue-card";
+import { fonts, useColors } from "../../src/ui/theme";
 
-interface Venue {
-  id: string;
-  name: string;
-  cover_image_path: string | null;
-  booking_mode: string;
-  verification_status: string;
-  city: { name_ar: string } | null;
-  area: { name_ar: string } | null;
-  fields: { price_per_hour: number; is_active: boolean }[];
-}
 
 const PAGE = 20;
 
 /** The venues, searched by name (as the site's «الملاعب»). */
 export default function Venues() {
-  const router = useRouter();
+  const colors = useColors();
   const [items, setItems] = useState<Venue[] | null>(null);
   const [page, setPage] = useState(0);
   const [more, setMore] = useState(false);
@@ -84,25 +72,9 @@ export default function Venues() {
           onEndReached={() => {
             if (more) void load(page + 1, query);
           }}
-          refreshControl={<RefreshControl refreshing={refreshing} tintColor={colors.accent} onRefresh={async () => { setRefreshing(true); await load(0, query); setRefreshing(false); }} />}
+          refreshControl={<RefreshControl refreshing={refreshing} tintColor={colors.accentText} onRefresh={async () => { setRefreshing(true); await load(0, query); setRefreshing(false); }} />}
           ListEmptyComponent={<Empty title={query ? "لا ملاعب بهذا الاسم" : "لا ملاعب بعد"} />}
-          renderItem={({ item }) => {
-            const prices = item.fields.filter((f) => f.is_active).map((f) => f.price_per_hour);
-            const cover = publicUrl("venue-images", item.cover_image_path);
-            return (
-              <Card onPress={() => router.push(`/venue/${item.id}`)} style={{ flex: 1, padding: 0, overflow: "hidden", gap: 0 }}>
-                <View style={{ aspectRatio: 4 / 3, backgroundColor: "#1f6b3a" }}>
-                  {cover ? <Image source={cover} style={{ flex: 1 }} contentFit="cover" transition={150} accessibilityLabel={item.name} /> : null}
-                </View>
-                <View style={{ padding: 10, gap: 4 }}>
-                  <T weight="bold" numberOfLines={1}>{item.name}</T>
-                  <T muted numberOfLines={1} style={{ fontSize: 13 }}>{item.area?.name_ar ?? item.city?.name_ar ?? ""}</T>
-                  {prices.length ? <T style={{ fontSize: 13 }}>من {formatPrice(Math.min(...prices))} / ساعة</T> : null}
-                  {item.booking_mode === "platform" && item.verification_status === "verified" ? <Badge label="حجز من الموقع" tone="accent" /> : null}
-                </View>
-              </Card>
-            );
-          }}
+          renderItem={({ item }) => <VenueCard venue={item} />}
         />
       )}
     </View>

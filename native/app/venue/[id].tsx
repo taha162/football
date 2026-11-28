@@ -9,8 +9,9 @@ import { formatPrice } from "../../src/lib/format";
 import { publicUrl, supabase } from "../../src/lib/supabase";
 import { Button, Card, Empty, Loading, T } from "../../src/ui/kit";
 import { MatchCard } from "../../src/ui/match-card";
+import { PitchArt } from "../../src/ui/pitch-art";
 import { MATCH_CARD, type MatchCard as Match } from "../../src/lib/matches";
-import { colors } from "../../src/ui/theme";
+import { useColors } from "../../src/ui/theme";
 
 interface Venue {
   id: string;
@@ -38,6 +39,7 @@ const hhmm = (t: string) => {
 
 /** A venue: its courts and prices, opening hours, coming matches, and how to reach or book it. */
 export default function VenueScreen() {
+  const colors = useColors();
   const { id } = useLocalSearchParams<{ id: string }>();
   const navigation = useNavigation();
   const [venue, setVenue] = useState<Venue | null | undefined>(undefined);
@@ -71,8 +73,8 @@ export default function VenueScreen() {
 
   return (
     <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
-      <View style={{ aspectRatio: 16 / 9, backgroundColor: "#1f6b3a" }}>
-        {cover ? <Image source={cover} style={{ flex: 1 }} contentFit="cover" accessibilityLabel={venue.name} /> : null}
+      <View style={{ aspectRatio: 16 / 9, overflow: "hidden" }}>
+        {cover ? <Image source={cover} style={{ flex: 1 }} contentFit="cover" accessibilityLabel={venue.name} /> : <PitchArt />}
       </View>
       <View style={{ padding: 16, gap: 14 }}>
         <View style={{ gap: 4 }}>

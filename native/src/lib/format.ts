@@ -35,3 +35,17 @@ export function formatPrice(amount: number, currency = "IQD"): string {
   const n = Math.round(amount).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   return currency === "IQD" ? `${n} د.ع` : `${n} ${currency}`;
 }
+
+const SHORT_DAYS = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+
+/** A match ticket's date stub: the weekday (or اليوم/غداً), the day, the month, the time. */
+export function dateParts(iso: string): { weekday: string; day: string; month: string; time: string } {
+  const d = baghdad(iso);
+  const label = formatDay(iso);
+  return {
+    weekday: label === "اليوم" || label === "غداً" ? label : SHORT_DAYS[d.getUTCDay()],
+    day: String(d.getUTCDate()),
+    month: MONTHS[d.getUTCMonth()],
+    time: formatTime(iso),
+  };
+}

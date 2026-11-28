@@ -9,7 +9,7 @@ import { dbCode, errorText } from "../../src/lib/errors";
 import { formatDay, formatTime } from "../../src/lib/format";
 import { supabase } from "../../src/lib/supabase";
 import { Loading, Notice, T } from "../../src/ui/kit";
-import { colors, fonts } from "../../src/ui/theme";
+import { fonts, useColors } from "../../src/ui/theme";
 
 interface Message {
   id: number;
@@ -45,6 +45,7 @@ async function signPictures(list: Message[]): Promise<Message[]> {
  * notes, videos and calls are named, and play on the site for now.
  */
 export default function Chat() {
+  const colors = useColors();
   const { id, title } = useLocalSearchParams<{ id: string; title?: string }>();
   const { session } = useAuth();
   const navigation = useNavigation();
@@ -195,6 +196,7 @@ export default function Chat() {
 }
 
 function Bubble({ message: m, mine, name }: { message: Message; mine: boolean; name?: string }) {
+  const colors = useColors();
   const content = m.deleted_at ? (
     <T muted style={{ fontStyle: "italic" }}>حُذفت هذه الرسالة</T>
   ) : m.call_outcome ? (
@@ -214,7 +216,7 @@ function Bubble({ message: m, mine, name }: { message: Message; mine: boolean; n
   return (
     <View style={{ alignSelf: mine ? "flex-start" : "flex-end", maxWidth: "82%" }}>
       <View style={{ backgroundColor: mine ? "#1f4d2b" : colors.surface2, borderRadius: 18, paddingHorizontal: 12, paddingVertical: 8, gap: 4 }}>
-        {name ? <T weight="semibold" style={{ color: colors.accent, fontSize: 13 }}>{name}</T> : null}
+        {name ? <T weight="semibold" style={{ color: colors.accentText, fontSize: 13 }}>{name}</T> : null}
         {content}
         <T style={{ fontSize: 11, color: colors.faint, alignSelf: "flex-end" }}>{formatTime(m.created_at)}</T>
       </View>

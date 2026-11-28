@@ -6,7 +6,7 @@ import { useAuth } from "../../src/lib/auth";
 import { formatListTime } from "../../src/lib/format";
 import { publicUrl, supabase } from "../../src/lib/supabase";
 import { Avatar, Empty, Loading, T } from "../../src/ui/kit";
-import { colors } from "../../src/ui/theme";
+import { useColors } from "../../src/ui/theme";
 
 interface Row {
   conversation_id: string;
@@ -36,6 +36,7 @@ function preview(r: Row): string {
 
 /** The member's conversations, newest first; live: a new message moves its conversation up. */
 export default function Messages() {
+  const colors = useColors();
   const { session } = useAuth();
   const router = useRouter();
   const [rows, setRows] = useState<Row[] | null>(null);
@@ -81,7 +82,7 @@ export default function Messages() {
       keyExtractor={(r) => r.conversation_id}
       contentContainerStyle={{ flexGrow: 1 }}
       ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: colors.line, marginStart: 76 }} />}
-      refreshControl={<RefreshControl refreshing={refreshing} tintColor={colors.accent} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />}
+      refreshControl={<RefreshControl refreshing={refreshing} tintColor={colors.accentText} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />}
       ListEmptyComponent={<Empty title="لا محادثات بعد"><T muted style={{ textAlign: "center" }}>راسل لاعباً من صفحة مباراة أو من صفحته.</T></Empty>}
       renderItem={({ item }) => {
         const face = faces.get(item.conversation_id);
@@ -104,7 +105,7 @@ export default function Messages() {
             <View style={{ flex: 1, gap: 2 }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
                 <T weight={unread ? "bold" : "semibold"} numberOfLines={1} style={{ flex: 1 }}>{title}</T>
-                {item.last_message_at ? <T style={{ fontSize: 12, color: unread ? colors.accent : colors.faint }}>{formatListTime(item.last_message_at)}</T> : null}
+                {item.last_message_at ? <T style={{ fontSize: 12, color: unread ? colors.accentText : colors.faint }}>{formatListTime(item.last_message_at)}</T> : null}
               </View>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
                 <T muted numberOfLines={1} style={{ flex: 1, fontSize: 14 }}>{preview(item)}</T>

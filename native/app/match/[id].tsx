@@ -8,7 +8,7 @@ import { formatDateTime, formatPrice, formatTime } from "../../src/lib/format";
 import { formatLabel, openSpots, STATUS } from "../../src/lib/matches";
 import { publicUrl, supabase } from "../../src/lib/supabase";
 import { Avatar, Badge, Button, Card, Empty, Loading, Notice, T } from "../../src/ui/kit";
-import { colors } from "../../src/ui/theme";
+import { useColors } from "../../src/ui/theme";
 
 interface Match {
   id: string;
@@ -163,6 +163,7 @@ export default function MatchScreen() {
 }
 
 function Row({ icon, text }: { icon: keyof typeof Ionicons.glyphMap; text: string }) {
+  const colors = useColors();
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
       <Ionicons name={icon} size={18} color={colors.muted} />
