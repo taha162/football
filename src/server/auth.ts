@@ -11,11 +11,11 @@ import { authErrorCode, emailDeliveryError } from "@/lib/auth-errors";
 import { publicEnv } from "@/lib/env";
 import { logger } from "@/lib/log";
 import { clearPendingEmail, getPendingEmail, setPendingEmail } from "@/lib/pending-email";
-import { looksLikePhone, normalizePhone } from "@/lib/phone";
 import { hasSecondFactor } from "@/lib/second-factor";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { PUSH_TOKEN_COOKIE } from "@/lib/push/device-cookie";
 import { createClient } from "@/lib/supabase/server";
+import { passwordSignIn } from "@/server/sign-in-core";
 import { accountTag, allowed, buckets, count, countFailure } from "@/lib/throttle";
 import { usernameField, usernameFree } from "@/lib/username-server";
 
@@ -42,59 +42,21 @@ function reportDelivery(code: string, status?: number): string {
 export async function signInAction(_: ActionState, fd: FormData): Promise<ActionState> {
   // The WhatsApp number (the main way, field "phone") or the e-mail; a number typed as the e-mail still works.
   const field = fd.has("phone") ? "phone" : "email";
-  const login = String(fd.get(field) ?? "").trim();
-  const pass = z.string().min(1, "required").safeParse(fd.get("password"));
-  if (!pass.success) return fail("validation", { password: "required" });
-
-  let address: string | null = null;
-  let account: string;
-  if (field === "phone" || looksLikePhone(login)) {
-    const phone = normalizePhone(login);
-    if (!phone) return fail("validation", { [field]: "invalid_phone" });
-    account = phone;
-  } else {
-    const parsed = email.safeParse(login);
-    if (!parsed.success) return fail("validation", { email: "invalid_email" });
-    account = address = parsed.data;
-  }
-  // Too many wrong passwords from this device or on this account: stop guessing for a while.
-  const limits = await buckets(["signinDevice"], [["signinAccount", account]]);
-  if (!(await allowed(limits, account))) return fail("too_many_attempts");
-  const via = address ? "email" : "phone";
-  if (!address) {
-    // Phone sign-in (accounts verified with WhatsApp, or with Telegram before it was removed): map the number to its auth address.
-    const admin = createAdminClient();
-    const { data } = admin ? await admin.rpc("auth_email_for_phone", { p_phone: account }) : { data: null };
-    if (!data) {
-      // Logged with a tag that can't be read back to the number; the password is never logged.
-      logger.warn("sign_in_failed", { via, account: accountTag(account) });
-      await countFailure(limits, account);
-      return fail("invalid_phone_credentials");
-    }
-    address = data as string;
-  }
-
   const supabase = await createClient();
-  const { data, error } = await supabase.auth.signInWithPassword({ email: address, password: pass.data });
-  if (error) {
-    const code = authErrorCode(error);
-    if (code === "invalid_credentials") {
-      logger.warn("sign_in_failed", { via, account: accountTag(account) });
-      await countFailure(limits, account);
-      // Said about the number when the number was typed.
-      if (via === "phone") return fail("invalid_phone_credentials");
-    }
-    if (code === "email_not_confirmed") {
-      await setPendingEmail(address);
+  const result = await passwordSignIn(supabase, field, String(fd.get(field) ?? "").trim(), String(fd.get("password") ?? ""));
+  if (!result.ok) {
+    if (result.field) return fail("validation", { [result.field.name]: result.field.error });
+    if (result.code === "email_not_confirmed" && result.address) {
+      await setPendingEmail(result.address);
       redirect({ href: "/verify-email", locale: await currentLocale() });
     }
-    return fail(code);
+    return fail(result.code);
   }
   // With an authenticator app, the password is only the first step: the code comes next.
-  if (hasSecondFactor(data.user)) {
+  if (hasSecondFactor(result.user)) {
     redirect({ href: { pathname: "/mfa", query: { next: safeNext(fd.get("next")) } }, locale: await currentLocale() });
   }
-  const { data: prefs } = await supabase.from("user_preferences").select("locale").eq("user_id", data.user.id).maybeSingle();
+  const { data: prefs } = await supabase.from("user_preferences").select("locale").eq("user_id", result.user.id).maybeSingle();
   const locale = isLocale(prefs?.locale) ? prefs.locale : await currentLocale();
   redirect({ href: safeNext(fd.get("next")), locale });
   return ok();

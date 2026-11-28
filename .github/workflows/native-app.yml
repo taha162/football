@@ -1,0 +1,112 @@
+# Builds the native Android app (native/, Expo) on GitHub's Linux runners:
+# - Every pull request touching native/ (and on demand): an APK to install on
+#   a phone for testing, attached to the run as «al-malab-native-apk».
+# - On demand with «release» ticked: the signed bundle (.aab) for Google Play,
+#   with the upload key saved as repository secrets (native/README.md):
+#   ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS,
+#   ANDROID_KEY_PASSWORD.
+# - GOOGLE_SERVICES_JSON (optional): the Firebase file for Android
+#   notifications. Without it the app builds and works without them.
+#
+# The native project is generated here from app.config.ts (expo prebuild), so
+# it is never stored in the repository. The iPhone app is built with Expo's
+# cloud (EAS) or Xcode on a Mac (native/README.md).
+name: Native app
+
+on:
+  pull_request:
+    paths: ["native/**", ".github/workflows/native-app.yml"]
+  workflow_dispatch:
+    inputs:
+      release:
+        description: "Also build the signed bundle (.aab) for Google Play"
+        type: boolean
+        default: false
+      site_url:
+        description: "The site the app belongs to (empty: production)"
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-app-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android:
+    name: Native Android
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: native
+    env:
+      APP_VERSION_CODE: ${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: native/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+      - run: npm ci
+      - name: Types
+        run: npx tsc --noEmit
+      - name: Firebase file for notifications (when saved)
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES_JSON" ]; then
+            printf '%s' "$GOOGLE_SERVICES_JSON" > google-services.json
+            echo "google-services.json: added"
+          else
+            echo "google-services.json: not saved; the app builds without Android notifications"
+          fi
+      - name: Generate the Android project
+        env:
+          SITE_URL_INPUT: ${{ inputs.site_url }}
+        run: |
+          if [ -n "$SITE_URL_INPUT" ]; then export APP_SITE_URL="$SITE_URL_INPUT"; fi
+          npx expo prebuild --platform android --no-install
+      - name: APK for testing
+        working-directory: native/android
+        run: ./gradlew --no-daemon assembleRelease
+      - uses: actions/upload-artifact@v4
+        with:
+          name: al-malab-native-apk
+          path: native/android/app/build/outputs/apk/release/app-release.apk
+          retention-days: 14
+      - name: Signed bundle for Google Play
+        if: ${{ inputs.release }}
+        working-directory: native/android
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "::error::Save the upload key as repository secrets first (native/README.md)."
+            exit 1
+          fi
+          KEYSTORE="$RUNNER_TEMP/upload.jks"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$KEYSTORE"
+          ./gradlew --no-daemon bundleRelease \
+            -Pandroid.injected.signing.store.file="$KEYSTORE" \
+            -Pandroid.injected.signing.store.password="$ANDROID_KEYSTORE_PASSWORD" \
+            -Pandroid.injected.signing.key.alias="$ANDROID_KEY_ALIAS" \
+            -Pandroid.injected.signing.key.password="$ANDROID_KEY_PASSWORD"
+          rm -f "$KEYSTORE"
+      - uses: actions/upload-artifact@v4
+        if: ${{ inputs.release }}
+        with:
+          name: al-malab-native-aab
+          path: native/android/app/build/outputs/bundle/release/app-release.aab
+          retention-days: 30
