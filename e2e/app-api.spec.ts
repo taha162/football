@@ -1,4 +1,4 @@
-import { admin, createAuthUser, emailedCode, expect, PASSWORD, test, whatsappMessage } from "./fixtures";
+import { admin, createAuthUser, emailedCode, expect, PASSWORD, rpc, test, whatsappMessage } from "./fixtures";
 
 /** The native app's endpoints (native/): where the database is, signing in, and deleting the account. */
 test.describe("Native app endpoints", () => {
@@ -102,5 +102,54 @@ test.describe("Native app sign-up and reset", () => {
     expect(await (await request.post("/api/app/password", { data: { ...session, password: "New-pass-456", confirm: "New-pass-456" } })).json()).toEqual({ ok: true });
     expect((await request.post("/api/app/sign-in", { data: { email: me.email, password: "New-pass-456" } })).status()).toBe(200);
     expect((await request.post("/api/app/sign-in", { data: { email: me.email, password: PASSWORD } })).status()).toBe(400);
+  });
+});
+
+/** An 8×8 lime PNG. */
+const PHOTO = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAIAAABLbSncAAAAFUlEQVR42mPc8cmeARtgYsABBqcEAIHGAfltyicCAAAAAElFTkSuQmCC", "base64");
+
+/** The app's pictures and attachments (server/avatar.ts and server/message-send.ts, shared with the site). */
+test.describe("Native app files", () => {
+  const signedIn = async (request: import("@playwright/test").APIRequestContext, email: string) => {
+    const { accessToken } = await (await request.post("/api/app/sign-in", { data: { email, password: PASSWORD } })).json();
+    return { Authorization: `Bearer ${accessToken}` };
+  };
+
+  test("the member's picture: checked by its bytes, stored in their folder, and the old one removed", async ({ request }) => {
+    const me = await createAuthUser("App picture");
+    expect((await request.post("/api/app/avatar", { multipart: { avatar: { name: "me.png", mimeType: "image/png", buffer: PHOTO } } })).status()).toBe(401);
+    const headers = await signedIn(request, me.email);
+    const fake = await request.post("/api/app/avatar", { headers, multipart: { avatar: { name: "me.png", mimeType: "image/png", buffer: Buffer.from("not a picture at all") } } });
+    expect(fake.status()).toBe(400);
+    expect(await admin("select avatar_path from public.profiles where id = $1", [me.id])).toEqual([{ avatar_path: null }]);
+
+    const first = await (await request.post("/api/app/avatar", { headers, multipart: { avatar: { name: "me.png", mimeType: "image/png", buffer: PHOTO } } })).json();
+    expect(first.path).toMatch(new RegExp(`^${me.id}/`));
+    const second = await (await request.post("/api/app/avatar", { headers, multipart: { avatar: { name: "me.png", mimeType: "image/png", buffer: PHOTO } } })).json();
+    expect(await admin("select avatar_path from public.profiles where id = $1", [me.id])).toEqual([{ avatar_path: second.path }]);
+    const stored = await admin<{ name: string }>("select name from storage.objects where bucket_id = 'avatars' and name like $1", [`${me.id}/%`]);
+    expect(stored.map((o) => o.name)).toEqual([second.path]);
+  });
+
+  test("a picture or a location in a conversation: only its members, and the file is checked", async ({ request }) => {
+    const [me, friend, stranger] = [await createAuthUser("App sender"), await createAuthUser("App friend"), await createAuthUser("App stranger")];
+    const conv = await rpc<string>(me.id, "start_direct_conversation", { p_user_id: friend.id });
+    const headers = await signedIn(request, me.email);
+
+    const picture = await request.post("/api/app/message", { headers, multipart: { conversation_id: conv, image: { name: "pitch.jpg", mimeType: "image/png", buffer: PHOTO } } });
+    expect(picture.status()).toBe(200);
+    const { id } = await picture.json();
+    const [row] = await admin<{ image_path: string; sender_id: string }>("select image_path, sender_id from public.messages where id = $1", [id]);
+    expect(row.sender_id).toBe(me.id);
+    expect(row.image_path).toMatch(new RegExp(`^${conv}/`));
+
+    const place = await request.post("/api/app/message", { headers, multipart: { conversation_id: conv, location_lat: "36.34", location_lng: "43.13", location_accuracy: "12" } });
+    const [spot] = await admin<{ location_lat: number }>("select location_lat from public.messages where id = $1", [(await place.json()).id]);
+    expect(Number(spot.location_lat)).toBeCloseTo(36.34, 2);
+
+    expect((await request.post("/api/app/message", { headers, multipart: { conversation_id: conv, image: { name: "x.jpg", mimeType: "image/jpeg", buffer: Buffer.from("nope") } } })).status()).toBe(400);
+    const outsider = await request.post("/api/app/message", { headers: await signedIn(request, stranger.email), multipart: { conversation_id: conv, image: { name: "pitch.png", mimeType: "image/png", buffer: PHOTO } } });
+    expect((await outsider.json()).error).toBe("conversation_not_found");
+    expect((await request.post("/api/app/message", { multipart: { conversation_id: conv, body: "hi" } })).status()).toBe(401);
   });
 });

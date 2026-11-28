@@ -1,26 +1,55 @@
-import { Alert, Pressable, ScrollView, View } from "react-native";
+import { useState } from "react";
+import { ActivityIndicator, Alert, Pressable, ScrollView, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import Constants from "expo-constants";
 import { useAuth } from "../../src/lib/auth";
+import { errorText } from "../../src/lib/errors";
+import { pickPicture, siteUpload } from "../../src/lib/media";
 import { publicUrl } from "../../src/lib/supabase";
-import { Avatar, Button, Card, T } from "../../src/ui/kit";
+import { Avatar, Button, Card, Notice, T } from "../../src/ui/kit";
 import { useColors, useTheme, type ThemeMode } from "../../src/ui/theme";
 
-/** The member: who they are, and the account's pages, all in the app. */
+/** The member: who they are (their picture changes here), and the account's pages, all in the app. */
 export default function Profile() {
   const colors = useColors();
-  const { profile, signOut } = useAuth();
+  const { profile, signOut, refreshProfile } = useAuth();
   const router = useRouter();
   const name = profile?.display_name ?? "";
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // The same checks as the site's (/api/app/avatar): a square picture, made small on the phone first.
+  const changePicture = async (source: "library" | "camera") => {
+    setError(null);
+    const picked = await pickPicture(source, { max: 800, square: true });
+    if (!picked) return;
+    setUploading(true);
+    const res = await siteUpload("/api/app/avatar", {}, { avatar: picked.uri });
+    setUploading(false);
+    if (res.error) return setError(errorText(res.error));
+    await refreshProfile();
+  };
+  const askPicture = () =>
+    Alert.alert("صورتك الشخصية", undefined, [
+      { text: "من المعرض", onPress: () => void changePicture("library") },
+      { text: "التقاط صورة", onPress: () => void changePicture("camera") },
+      { text: "إلغاء", style: "cancel" },
+    ]);
 
   return (
     <ScrollView contentContainerStyle={{ padding: 16, gap: 14 }}>
       <Card style={{ alignItems: "center", gap: 10, paddingVertical: 24 }}>
-        <Avatar uri={publicUrl("avatars", profile?.avatar_path)} name={name || "?"} size={88} />
+        <Pressable onPress={askPicture} disabled={uploading} accessibilityRole="button" accessibilityLabel="تغيير صورتك الشخصية">
+          <Avatar uri={publicUrl("avatars", profile?.avatar_path)} name={name || "?"} size={88} />
+          <View style={{ position: "absolute", bottom: 0, left: 0, width: 30, height: 30, borderRadius: 15, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: colors.surface }}>
+            {uploading ? <ActivityIndicator size="small" color={colors.accentInk} /> : <Ionicons name="camera" size={15} color={colors.accentInk} />}
+          </View>
+        </Pressable>
         <T weight="bold" style={{ fontSize: 22 }}>{name}</T>
         {profile?.username ? <T style={{ color: colors.accentText }}>@{profile.username}</T> : null}
       </Card>
+      {error ? <Notice tone="danger">{error}</Notice> : null}
 
       <Card style={{ gap: 0, padding: 0 }}>
         <Item icon="person-outline" label="تعديل ملفي" onPress={() => router.push("/onboarding")} />

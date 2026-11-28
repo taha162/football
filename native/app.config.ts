@@ -60,6 +60,12 @@ const config: ExpoConfig = {
     "expo-web-browser",
     "expo-localization",
     ["expo-notifications", { color: "#baff1b" }],
+    // Asked for at the moment of use only (a picture to send, or the member's own).
+    ["expo-image-picker", { photosPermission: "لاختيار صورة من هاتفك لإرسالها أو لصورتك الشخصية.", cameraPermission: "لالتقاط صورة ترسلها في المحادثة، أو لصورتك الشخصية.", microphonePermission: false }],
+    ["expo-location", { locationWhenInUsePermission: "لإرسال موقعك في المحادثة حين تختار ذلك." }],
+    // Playing voice notes only, for now: no recording, so no microphone.
+    ["expo-audio", { microphonePermission: false, recordAudioAndroid: false }],
+    "expo-video",
   ],
   experiments: { typedRoutes: false },
   extra: {
