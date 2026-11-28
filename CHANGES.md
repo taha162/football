@@ -2399,3 +2399,29 @@
 الملفات: `src/server/signup-core.ts`، `src/lib/app-api.ts`، `src/lib/app-whatsapp.ts`، `src/app/api/app/{sign-up,email-code,forgot,whatsapp,password}/route.ts` (جديدة)، `src/server/auth.ts`، `src/server/whatsapp.ts`، `src/lib/phone-verification.ts`، `supabase/templates/recovery.html`، وفي التطبيق: `app/{sign-up,verify-whatsapp,verify-email,forgot,new-password,onboarding}.tsx` و`app/legal/[page].tsx` و`src/ui/choice.tsx` (جديدة). الاختبارات: `e2e/app-api.spec.ts`.
 
 التعديل: «Native app: sign-up, password reset and profile»
+
+### 130. التطبيق الأصلي: الأصدقاء وصفحة اللاعب والإعدادات داخل التطبيق
+**ما تغيّر:**
+- **الأصدقاء:** البحث عن لاعب، والطلبات الواردة (قبول أو رفض)، والأصدقاء، والطلبات المرسلة (إلغاء).
+- **صفحة اللاعب:** تفتح بالضغط على أي لاعب في المباراة. فيها:
+  - ملفه.
+  - آخر ظهور (إلا إن أخفاه).
+  - إضافة صديق أو قبول طلبه أو إزالته.
+  - مراسلته.
+  - الحظر وإلغاؤه.
+- **الإعدادات:**
+  - اسم المستخدم.
+  - إخفاء «متصل الآن».
+  - تشغيل وإيقاف كل نوع من الإشعارات الاختيارية.
+  - قائمة من حظرتهم.
+- **«حسابي»:** كل بنوده تُفتح داخل التطبيق، ولم يبقَ ما يفتح الموقع في المتصفح.
+- **صفحة المباراة:** المنظّم الذي يلعب يظهر مرة واحدة في قائمة اللاعبين.
+
+كله بدوال قاعدة البيانات نفسها التي يستعملها الموقع، فالحدود والصلاحيات نفسها.
+
+**جُرّب:** في معاينة التطبيق على المتصفح، مع قاعدة بيانات محلية.
+
+الملفات: `native/app/friends.tsx` و`native/app/player/[id].tsx` و`native/app/settings.tsx` و`native/src/lib/people.ts` (جديدة)، `native/app/match/[id].tsx`، `native/app/(tabs)/profile.tsx`، `native/app/_layout.tsx`، `native/scripts/sync-texts.mjs`، `native/src/lib/site-texts.json`.
+
+التعديل: «Native app: friends, player page and settings»
+

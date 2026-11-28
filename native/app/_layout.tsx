@@ -109,6 +109,9 @@ function Routes() {
       <Stack.Screen name="new-password" options={{ title: "كلمة مرور جديدة", headerBackVisible: false }} />
       <Stack.Screen name="onboarding" options={{ title: "ملفك" }} />
       <Stack.Screen name="legal/[page]" options={{ title: "" }} />
+      <Stack.Screen name="friends" options={{ title: "الأصدقاء" }} />
+      <Stack.Screen name="settings" options={{ title: "الإعدادات" }} />
+      <Stack.Screen name="player/[id]" options={{ title: "" }} />
       <Stack.Screen name="bookings" options={{ title: "حجوزاتي" }} />
     </Stack>
   );

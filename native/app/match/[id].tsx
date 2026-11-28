@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { Alert, Linking, ScrollView, View } from "react-native";
+import { Alert, Linking, Pressable, ScrollView, View } from "react-native";
 import { useFocusEffect, useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../src/lib/auth";
@@ -150,13 +150,14 @@ export default function MatchScreen() {
 
       <T weight="bold" style={{ fontSize: 18 }}>اللاعبون ({players.filter((p) => p.status === "confirmed").length})</T>
       <Card>
-        {match.organizer ? <Person name={match.organizer.display_name} avatar={match.organizer.avatar_path} note="المنظّم" /> : null}
+        {match.organizer ? <Person id={match.organizer.id} name={match.organizer.display_name} avatar={match.organizer.avatar_path} note="المنظّم" /> : null}
+        {/* An organizer who plays is also a player: listed once, as the organizer. */}
         {players.map((p) =>
-          p.profile ? (
-            <Person key={p.user_id} name={p.profile.display_name} avatar={p.profile.avatar_path} note={[p.position ? POSITION[p.position] : null, p.status === "pending" ? "ينتظر الموافقة" : null].filter(Boolean).join(" · ")} />
+          p.profile && p.user_id !== match.organizer_id ? (
+            <Person key={p.user_id} id={p.user_id} name={p.profile.display_name} avatar={p.profile.avatar_path} note={[p.position ? POSITION[p.position] : null, p.status === "pending" ? "ينتظر الموافقة" : null].filter(Boolean).join(" · ")} />
           ) : null,
         )}
-        {players.length === 0 ? <T muted>لم ينضم أحد بعد.</T> : null}
+        {players.every((p) => p.user_id === match.organizer_id) ? <T muted>لم ينضم أحد بعد.</T> : null}
       </Card>
     </ScrollView>
   );
@@ -172,14 +173,15 @@ function Row({ icon, text }: { icon: keyof typeof Ionicons.glyphMap; text: strin
   );
 }
 
-function Person({ name, avatar, note }: { name: string; avatar: string | null; note?: string }) {
+function Person({ id, name, avatar, note }: { id: string; name: string; avatar: string | null; note?: string }) {
+  const router = useRouter();
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 6 }}>
+    <Pressable onPress={() => router.push(`/player/${id}`)} accessibilityRole="button" style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 6 }}>
       <Avatar uri={publicUrl("avatars", avatar)} name={name} size={40} />
       <View style={{ flex: 1 }}>
         <T weight="semibold">{name}</T>
         {note ? <T muted style={{ fontSize: 13 }}>{note}</T> : null}
       </View>
-    </View>
+    </Pressable>
   );
 }

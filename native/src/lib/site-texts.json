@@ -540,5 +540,24 @@
         }
       ]
     }
+  },
+  "notificationTypes": {
+    "match_participant_joined": "انضمام لاعب لمباراتي",
+    "match_participant_left": "مغادرة لاعب لمباراتي",
+    "match_reminder": "تذكيرات المباريات",
+    "match_invitation": "دعوات المباريات",
+    "match_confirmed": "تأكيد المباريات",
+    "match_result_reported": "نتائج المباريات",
+    "team_invitation": "دعوات الفرق",
+    "team_join_request": "طلبات الانضمام للفريق",
+    "recruitment_response": "طلبات الاستقطاب",
+    "challenge_received": "التحديات الواردة",
+    "team_match_scheduled": "مباريات الفريق الجديدة",
+    "new_message": "الرسائل المباشرة ورسائل الحجوزات",
+    "tournament_update": "تحديثات البطولات",
+    "review_received": "التقييمات الواردة",
+    "friend_request": "طلبات الصداقة",
+    "friend_accepted": "قبول طلبات صداقتك",
+    "group_added": "إضافتي إلى مجموعة"
   }
 }

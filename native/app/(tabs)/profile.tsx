@@ -1,20 +1,17 @@
 import { Alert, Pressable, ScrollView, View } from "react-native";
 import { useRouter } from "expo-router";
-import * as WebBrowser from "expo-web-browser";
 import { Ionicons } from "@expo/vector-icons";
 import Constants from "expo-constants";
 import { useAuth } from "../../src/lib/auth";
-import { SITE_URL } from "../../src/lib/config";
 import { publicUrl } from "../../src/lib/supabase";
 import { Avatar, Button, Card, T } from "../../src/ui/kit";
 import { useColors, useTheme, type ThemeMode } from "../../src/ui/theme";
 
-/** The member: who they are, and the account's pages (settings that live on the site open in it for now). */
+/** The member: who they are, and the account's pages, all in the app. */
 export default function Profile() {
   const colors = useColors();
   const { profile, signOut } = useAuth();
   const router = useRouter();
-  const open = (path: string) => void WebBrowser.openBrowserAsync(`${SITE_URL}/ar${path}`);
   const name = profile?.display_name ?? "";
 
   return (
@@ -27,9 +24,9 @@ export default function Profile() {
 
       <Card style={{ gap: 0, padding: 0 }}>
         <Item icon="person-outline" label="تعديل ملفي" onPress={() => router.push("/onboarding")} />
-        <Item icon="people-outline" label="الأصدقاء" onPress={() => open("/friends")} />
+        <Item icon="people-outline" label="الأصدقاء" onPress={() => router.push("/friends")} />
         <Item icon="calendar-outline" label="حجوزاتي" onPress={() => router.push("/bookings")} />
-        <Item icon="settings-outline" label="الإعدادات" onPress={() => open("/settings")} />
+        <Item icon="settings-outline" label="الإعدادات" onPress={() => router.push("/settings")} />
         <Item icon="shield-checkmark-outline" label="سياسة الخصوصية" onPress={() => router.push("/legal/privacy")} />
         <Item icon="document-text-outline" label="الشروط" onPress={() => router.push("/legal/terms")} last />
       </Card>
