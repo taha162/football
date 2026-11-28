@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import type { CapacitorConfig } from "@capacitor/cli";
 
 /**
@@ -11,9 +12,13 @@ import type { CapacitorConfig } from "@capacitor/cli";
  * - The user agent says "AlMalabApp": the site then lays itself out for the
  *   app (edge to edge, room for the status bar and the notch). It only changes
  *   the layout; nothing about who may do what depends on it.
+ * - "Push" is added when the app can receive notifications: always on iPhone;
+ *   on Android only when built with Firebase's google-services.json, without
+ *   which registering would crash the app. The site asks only then.
  * - No connection: www/offline.html, with a button that tries again.
  * - Other sites (WhatsApp, maps, Supabase e-mail links…) open outside the app.
  */
+// Capacitor reads this file from mobile/ (npm run sync), so paths are relative to it.
 const site = (process.env.APP_SITE_URL || "https://al-malab.vercel.app").replace(/\/+$/, "");
 
 const config: CapacitorConfig = {
@@ -28,12 +33,14 @@ const config: CapacitorConfig = {
     errorPath: "offline.html",
   },
   ios: {
+    appendUserAgent: "AlMalabApp/1 Push",
     // The site keeps clear of the notch and the home bar itself (viewport-fit=cover in app mode).
     contentInset: "never",
     scrollEnabled: true,
   },
   android: {
     allowMixedContent: false,
+    appendUserAgent: existsSync("android/app/google-services.json") ? "AlMalabApp/1 Push" : "AlMalabApp/1",
   },
   plugins: {
     SplashScreen: {

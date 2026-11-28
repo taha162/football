@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { getLocale } from "next-intl/server";
 import { z } from "zod";
 import { redirect } from "@/i18n/navigation";
@@ -14,6 +15,7 @@ import { isVideoSignature, isVideoType, MAX_POSTER_BYTES, MAX_VIDEO_BYTES, MESSA
 import { inspectAudio, inspectImage, randomFileName, UPLOAD_CACHE_SECONDS } from "@/lib/storage";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { drainPush, pushEnabled } from "@/server/push";
 
 const MAX_VOICE_SECONDS = 300;
 /** A picture's small copy is a few dozen kilobytes; anything much bigger isn't one. */
@@ -90,6 +92,8 @@ export async function sendMessageAction(_: ActionState, fd: FormData): Promise<A
     return fail(dbErrorCode(error, "send_message"));
   }
   revalidatePath("/[locale]/messages", "layout");
+  // The others' phones hear of it now, once the answer is on its way (migration 0051).
+  if (pushEnabled()) after(() => drainPush().then(() => undefined));
   return ok(undefined, data);
 }
 
@@ -189,6 +193,8 @@ export async function sendVideoMessageAction(_: ActionState, fd: FormData): Prom
     return fail(dbErrorCode(error, "send_message"));
   }
   revalidatePath("/[locale]/messages", "layout");
+  // The others' phones hear of it now, once the answer is on its way (migration 0051).
+  if (pushEnabled()) after(() => drainPush().then(() => undefined));
   return ok(undefined, data);
 }
 

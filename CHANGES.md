@@ -2269,3 +2269,31 @@
 الملفات: `src/server/member-files.ts` و`src/components/forms/delete-account-form.tsx` (جديدان)، `src/server/account.ts`، `src/server/admin.ts`، `src/components/forms/contact-change-forms.tsx`، `src/app/[locale]/settings/page.tsx`، `src/app/[locale]/legal/[page]/page.tsx`، `src/app/[locale]/sign-in/page.tsx`، `src/components/layout/site-footer.tsx`، `src/app/sitemap.ts`، `src/lib/supabase/types.ts`، `DEPLOYMENT.md`، والنصوص في `messages/`. الاختبارات: `tests/db/account-deletion.test.ts` و`e2e/account-deletion.spec.ts` (جديدان).
 
 التعديل: «Members delete their own account»
+
+### 125. الإشعارات على هاتف التطبيق
+**ما تغيّر:**
+- **في التطبيق:** بعد الدخول يُطلب إذن الإشعارات مرة واحدة. تصل الإشعارات والتطبيق مغلق، والضغط على الإشعار يفتح صفحته (المحادثة، الأصدقاء، الحجز…).
+- **ما يصل:**
+  - الرسائل الجديدة باسم المرسل ونص الرسالة، أو «📷 صورة» و«🎤 رسالة صوتية» وغيرها. في المجموعة: «الاسم · اسم المجموعة».
+  - كل ما يظهر في الجرس، بنصه نفسه.
+  - رسائل المحادثة الواحدة تحلّ محل بعضها، فلا تتراكم.
+- **ما لا يصل:** المحادثات المكتومة، ورسائل من حظرته، والأنواع التي أطفأتها في الإعدادات، وسجلات المكالمات.
+- **تسجيل الخروج** يوقف إشعارات ذلك الهاتف. والهاتف الذي يدخل بحساب آخر ينتقل إليه. حذف الحساب يحذف هواتفه.
+- **الإرسال:**
+  - أندرويد عبر Firebase، وآيفون مباشرة عبر Apple، بلا مكتبات جديدة على الخادم.
+  - يُرسل فوراً بعد كل رسالة، ومع المهمة الدورية، وخلال ثوانٍ لكل شيء إن فُعّل «الإيقاظ الفوري» (`DEPLOYMENT.md` القسم 22).
+  - كل إشعار يُرسل مرة واحدة حتى لو تزامن طلبان. والهاتف الذي حُذف منه التطبيق يُنسى.
+- **أمان:** لا يقرأ أي عضو جدول الهواتف، ورابط الإيقاظ يحتاج سرّ المهمة الدورية.
+- **مكتبة Capacitor** تُحمَّل داخل التطبيق فقط (3 كيلوبايت)، فلا يحمّلها المتصفح.
+- **نسخة أندرويد بلا ملف Firebase** لا تطلب الإشعارات، لأن طلبها يُغلق التطبيق في هذه الحالة.
+
+**ملف قاعدة البيانات `…0051_push_notifications.sql`:** جدول الهواتف، وقائمة الانتظار ومشغّلاتها، والإيقاظ عبر `pg_net`. لا يغيّر بيانات موجودة، وتشغيله مرتين لا يضر.
+- قبل تشغيله: لا يُطلب الإذن ولا يُرسل شيء، وباقي الموقع يعمل كما هو.
+
+**يحتاج إعداداً منك:** مشروع Firebase (مجاني) ومفتاح Apple، ثم مفاتيحهما في Vercel وGitHub (`DEPLOYMENT.md` القسم 22).
+
+**ما لم يُجرَّب:** الإرسال الفعلي إلى هاتف حقيقي، لأنه يحتاج مفاتيح Firebase وApple الحقيقية. جُرّب تنسيق الطلبين وتوقيعهما على خوادم بديلة محلية.
+
+الملفات: `src/lib/push/` و`src/server/push.ts` و`src/server/push-devices.ts` و`src/components/layout/native-push.tsx` و`src/app/api/push/route.ts` و`src/lib/cron-auth.ts` (جديدة)، `src/app/api/cron/route.ts`، `src/server/messages.ts`، `src/server/auth.ts`، `src/app/[locale]/layout.tsx`، `src/lib/app-shell.ts`، `mobile/capacitor.config.ts`، `mobile/README.md`، `package.json`، `.env.example`، `DEPLOYMENT.md` (القسم 22)، `src/lib/supabase/types.ts`. الاختبارات: `tests/db/push.test.ts` و`tests/unit/push-senders.test.ts` و`e2e/push.spec.ts` (جديدة).
+
+التعديل: «Notifications on the phone from the app»
