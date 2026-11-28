@@ -14,6 +14,7 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // The phone app (its own package, with generated Android and iOS projects).
     "mobile/**",
+    "native/**",
   ]),
 ]);
 

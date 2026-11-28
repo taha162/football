@@ -702,6 +702,13 @@ select vault.create_secret('<قيمة CRON_SECRET>', 'push_secret');
 - آيفون: أضف قدرة Push Notifications في Xcode (`mobile/README.md`).
 - النسخ المبنية قبل ذلك تعمل دون إشعارات، ولا تطلب الإذن.
 
+## 23) تحديث 28 نوفمبر: التطبيق الأصلي
+
+- **للنشر في المتاجر:** التطبيق الأصلي في `native/`، ودليله `native/README.md`. الغلاف القديم `mobile/` باقٍ احتياطاً بالمعرّف نفسه، فلا يُنشر إلا واحد.
+- **لا إعداد جديد في الموقع.** التطبيق يسأل `/api/app/config` عن عنوان قاعدة البيانات، ويحتاج ملفَّي …0050 و…0051 (القسمان 21 و22).
+- **نسخة التجربة:** GitHub ← Actions ← Native app ← Artifacts ← `al-malab-native-apk`.
+- **آيفون:** حساب Apple Developer، ثم `npx eas-cli build -p ios` (حساب Expo مجاني، لا يلزم Mac).
+
 ## قائمة التحقق قبل الإطلاق
 
 - [ ] الـ migrations مطبّقة، و `/api/health` يُرجع `ok`

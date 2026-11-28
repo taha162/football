@@ -87,8 +87,11 @@ describe("phone notifications", () => {
     await rpc(me, "register_push_device", { p_token: token(), p_platform: "android" });
     const [{ before }] = await admin<{ before: string }>("select coalesce(max(id), 0)::text as before from net.http_request_queue");
     await admin("insert into public.notifications (user_id, type, payload) values ($1, 'friend_accepted', '{}')", [me]);
-    const calls = await admin<{ url: string; headers: Record<string, string> }>("select url, headers from net.http_request_queue where id > $1", [before]);
-    expect(calls.some((c) => c.url === "http://127.0.0.1:9/api/push" && c.headers.Authorization === "Bearer test-secret")).toBe(true);
+    // pg_net may answer it at once: a request still queued (its address and secret are checked) or already answered.
+    const queued = await admin<{ url: string; headers: Record<string, string> }>("select url, headers from net.http_request_queue where id > $1", [before]);
+    const answered = await admin("select id from net._http_response where id > $1", [before]);
+    expect(queued.length + answered.length).toBeGreaterThan(0);
+    for (const c of queued) expect(c).toMatchObject({ url: "http://127.0.0.1:9/api/push", headers: { Authorization: "Bearer test-secret" } });
 
     await admin("delete from auth.users where id = $1", [me]);
     expect(await admin("select 1 from public.push_devices where user_id = $1", [me])).toHaveLength(0);

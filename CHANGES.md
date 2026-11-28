@@ -2297,3 +2297,33 @@
 الملفات: `src/lib/push/` و`src/server/push.ts` و`src/server/push-devices.ts` و`src/components/layout/native-push.tsx` و`src/app/api/push/route.ts` و`src/lib/cron-auth.ts` (جديدة)، `src/app/api/cron/route.ts`، `src/server/messages.ts`، `src/server/auth.ts`، `src/app/[locale]/layout.tsx`، `src/lib/app-shell.ts`، `mobile/capacitor.config.ts`، `mobile/README.md`، `package.json`، `.env.example`، `DEPLOYMENT.md` (القسم 22)، `src/lib/supabase/types.ts`. الاختبارات: `tests/db/push.test.ts` و`tests/unit/push-senders.test.ts` و`e2e/push.spec.ts` (جديدة).
 
 التعديل: «Notifications on the phone from the app»
+
+### 126. التطبيق الأصلي (المرحلة الأولى): شاشات مرسومة للهاتف لا موقع داخل غلاف
+**ما تغيّر:**
+- **مجلد جديد `native/`:** تطبيق أصلي لأندرويد وآيفون (React Native مع Expo)، يتصل بقاعدة البيانات نفسها، فالحسابات والبيانات مشتركة مع الموقع.
+- **الشاشات الأصلية:**
+  - تسجيل الدخول (رقم واتساب أو البريد، ورمز تطبيق المصادقة).
+  - الرئيسية (مبارياتك القادمة ودعواتك).
+  - المباريات: القائمة والبحث، وصفحة المباراة مع الانضمام والمغادرة وقائمة الانتظار.
+  - الملاعب: القائمة والبحث، وصفحة الملعب.
+  - الرسائل: قائمة حيّة، ومحادثة حيّة بالنص والصور مع علامة القراءة.
+  - حسابي: الخروج وحذف الحساب.
+  - الإشعارات على الهاتف.
+- **ما يُفتح من الموقع داخل التطبيق إلى المرحلة التالية:** إنشاء الحساب، ونسيت كلمة المرور، والحجز، والإعدادات، والأصدقاء، وتشغيل الصوت والفيديو.
+- **الأمان:**
+  - الدخول من التطبيق يمر بحدود المحاولات الخاطئة نفسها في الموقع.
+  - الجلسة في خزنة الهاتف الآمنة.
+  - كل صلاحية تقررها قاعدة البيانات كما في الموقع.
+- **في الموقع:**
+  - ثلاث نقاط للتطبيق: `/api/app/config` (عنوان قاعدة البيانات، قيم عامة فقط)، و`/api/app/sign-in`، و`/api/app/delete-account`.
+  - منطق الدخول وحذف الحساب صار مشتركاً بين صفحات الموقع والتطبيق، دون تغيير في سلوك الموقع.
+- **البناء:** GitHub ← Actions ← Native app يبني APK للتجربة مع كل تعديل، ونسخة موقّعة لـGoogle Play عند الطلب. آيفون عبر خدمة Expo السحابية دون Mac.
+- **الدليل** `native/README.md`.
+
+**لا ملفات قاعدة بيانات** (يستعمل ما أضافته 0050 و0051).
+
+**ما لم يُجرَّب:** التطبيق لم يُشغَّل على هاتف حقيقي. جُرّبت شاشاته في المتصفح على قاعدة بيانات محلية: الدخول، والقوائم، وفتح مباراة، وإرسال رسالة وصولها.
+
+الملفات: `native/` و`.github/workflows/native-app.yml` و`src/app/api/app/` و`src/lib/supabase/app-token.ts` و`src/server/sign-in-core.ts` و`src/server/account-deletion.ts` (جديدة)، `src/server/auth.ts`، `src/server/account.ts`، `mobile/README.md`، `tsconfig.json`، `eslint.config.mjs`، `.vercelignore`، `DEPLOYMENT.md` (القسم 23). الاختبارات: `e2e/app-api.spec.ts`.
+
+التعديل: «Native app, phase one»
