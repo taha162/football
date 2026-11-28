@@ -35,3 +35,33 @@ export function formatPrice(amount: number, currency = "IQD"): string {
   const n = Math.round(amount).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   return currency === "IQD" ? `${n} د.ع` : `${n} ${currency}`;
 }
+
+const SHORT_DAYS = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+
+/** A match ticket's date stub: the weekday (or اليوم/غداً), the day, the month, the time. */
+export function dateParts(iso: string): { weekday: string; day: string; month: string; time: string } {
+  const d = baghdad(iso);
+  const label = formatDay(iso);
+  return {
+    weekday: label === "اليوم" || label === "غداً" ? label : SHORT_DAYS[d.getUTCDay()],
+    day: String(d.getUTCDate()),
+    month: MONTHS[d.getUTCMonth()],
+    time: formatTime(iso),
+  };
+}
+
+/** The coming days in Baghdad, for choosing a booking's day: "YYYY-MM-DD" with a short label. */
+export function comingDays(count: number, now = Date.now()): { date: string; weekday: string; day: string; month: string }[] {
+  return Array.from({ length: count }, (_, i) => {
+    const d = new Date(now + OFFSET_MS + i * 86_400_000);
+    const date = d.toISOString().slice(0, 10);
+    const label = i === 0 ? "اليوم" : i === 1 ? "غداً" : SHORT_DAYS[d.getUTCDay()];
+    return { date, weekday: label, day: String(d.getUTCDate()), month: MONTHS[d.getUTCMonth()] };
+  });
+}
+
+/** "20:30" → "8:30 م". */
+export function clock(hhmm: string): string {
+  const [h, m] = hhmm.split(":").map(Number);
+  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h < 12 ? "ص" : "م"}`;
+}

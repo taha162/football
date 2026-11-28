@@ -8,9 +8,8 @@ import { isLocale } from "@/i18n/routing";
 import { bool, dbErrorCode, fail, ok, str, strs, uuid, zodFieldErrors, type ActionState } from "@/lib/actions";
 import { getCurrentUser, safeNext } from "@/lib/auth";
 import { MATCH_FORMATS, POSITIONS, SKILL_LEVELS } from "@/lib/domain/match";
-import { logger } from "@/lib/log";
-import { inspectImage, isPubliclyServed, randomFileName, UPLOAD_CACHE_SECONDS } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
+import { removeOldAvatar, uploadAvatar } from "@/server/avatar";
 
 const TIMES = [
   "weekday_morning", "weekday_afternoon", "weekday_evening", "weekday_night",
@@ -72,24 +71,8 @@ export async function uploadAvatarAction(_: ActionState, fd: FormData): Promise<
   if (!user) return fail("not_authenticated");
   const file = fd.get("avatar");
   if (!(file instanceof File)) return fail("file_missing");
-  const img = await inspectImage(file);
-  if (!img.ok) return fail(img.error);
-  const supabase = await createClient();
-  const path = `${user.id}/${randomFileName(img.ext)}`;
-  // Storage policies only allow writing into the caller's own folder.
-  const { error: upErr } = await supabase.storage.from("avatars").upload(path, img.bytes, { cacheControl: UPLOAD_CACHE_SECONDS, contentType: img.mime, upsert: false });
-  if (upErr) return fail("upload_failed");
-  if (!(await isPubliclyServed("avatars", path))) {
-    await supabase.storage.from("avatars").remove([path]);
-    logger.error("storage_not_public", { bucket: "avatars" });
-    return fail("storage_not_public");
-  }
-  const { error } = await supabase.rpc("set_my_avatar", { p_path: path });
-  if (error) {
-    await supabase.storage.from("avatars").remove([path]);
-    return fail(dbErrorCode(error, "set_my_avatar"));
-  }
-  if (user.profile.avatar_path) await supabase.storage.from("avatars").remove([user.profile.avatar_path]);
+  const result = await uploadAvatar(await createClient(), { id: user.id, avatarPath: user.profile.avatar_path }, file);
+  if (!result.ok) return fail(result.code);
   revalidatePath("/", "layout");
   return ok("avatar_updated");
 }
@@ -101,7 +84,7 @@ export async function removeAvatarAction(): Promise<ActionState> {
   // The generated types do not model nullable SQL arguments; null clears the avatar.
   const { error } = await supabase.rpc("set_my_avatar", { p_path: null as unknown as string });
   if (error) return fail(dbErrorCode(error, "set_my_avatar"));
-  if (user.profile.avatar_path) await supabase.storage.from("avatars").remove([user.profile.avatar_path]);
+  await removeOldAvatar(user.id, user.profile.avatar_path);
   revalidatePath("/", "layout");
   return ok("avatar_removed");
 }

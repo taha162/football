@@ -1,14 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { FlatList, RefreshControl, TextInput, View } from "react-native";
+import { FlatList, Pressable, RefreshControl, TextInput, View } from "react-native";
+import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { errorText, dbCode } from "../../src/lib/errors";
 import { searchMatches, type MatchCard as Match } from "../../src/lib/matches";
 import { Empty, Loading, Notice, T } from "../../src/ui/kit";
 import { MatchCard } from "../../src/ui/match-card";
-import { colors, fonts } from "../../src/ui/theme";
+import { fonts, useColors } from "../../src/ui/theme";
 
-/** Upcoming matches the member may join, soonest first, with a search by name. */
+/** Upcoming matches the member may join, soonest first, with a search by name; and organising a new one. */
 export default function Matches() {
+  const colors = useColors();
+  const router = useRouter();
   const [items, setItems] = useState<Match[] | null>(null);
   const [more, setMore] = useState(false);
   const [page, setPage] = useState(0);
@@ -54,6 +57,16 @@ export default function Matches() {
             returnKeyType="search"
             style={{ flex: 1, minHeight: 46, color: colors.ink, fontFamily: fonts.regular, fontSize: 16, textAlign: "left" }}
           />
+          <Pressable
+            onPress={() => router.push("/new-match")}
+            accessibilityRole="button"
+            accessibilityLabel="مباراة جديدة"
+            hitSlop={6}
+            style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: colors.accent, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 7, opacity: pressed ? 0.8 : 1 })}
+          >
+            <Ionicons name="add" size={18} color={colors.accentInk} />
+            <T weight="bold" style={{ color: colors.accentInk, fontSize: 13 }}>جديدة</T>
+          </Pressable>
         </View>
       </View>
       {error ? (
@@ -73,7 +86,7 @@ export default function Matches() {
           onEndReached={() => {
             if (more) void load(page + 1, query);
           }}
-          refreshControl={<RefreshControl refreshing={refreshing} tintColor={colors.accent} onRefresh={async () => { setRefreshing(true); await load(0, query); setRefreshing(false); }} />}
+          refreshControl={<RefreshControl refreshing={refreshing} tintColor={colors.accentText} onRefresh={async () => { setRefreshing(true); await load(0, query); setRefreshing(false); }} />}
           ListEmptyComponent={<Empty title={query ? "لا مباريات بهذا الاسم" : "لا مباريات قادمة الآن"}><T muted style={{ textAlign: "center" }}>اسحب للأسفل للتحديث.</T></Empty>}
         />
       )}

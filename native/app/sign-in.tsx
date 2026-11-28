@@ -1,21 +1,19 @@
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from "react-native";
 import { useRouter } from "expo-router";
-import * as WebBrowser from "expo-web-browser";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import { useAuth } from "../src/lib/auth";
-import { SITE_URL } from "../src/lib/config";
 import { errorText, fieldText } from "../src/lib/errors";
 import { Button, Field, Notice, Screen, T } from "../src/ui/kit";
-import { colors } from "../src/ui/theme";
+import { useColors } from "../src/ui/theme";
 
 /**
  * Signing in: the WhatsApp number first, the e-mail the other way, as on the
- * site. New accounts and forgotten passwords are made on the site for now
- * (WhatsApp verification lives there); the app opens it.
+ * site; a new account and a forgotten password are one tap away.
  */
 export default function SignIn() {
+  const colors = useColors();
   const { signIn } = useAuth();
   const router = useRouter();
   const [method, setMethod] = useState<"phone" | "email">("phone");
@@ -33,7 +31,7 @@ export default function SignIn() {
     setBusy(false);
     if (result.field) return setFieldError(result.field);
     if (result.error) return setError(result.error === "email_not_confirmed" ? "email_not_confirmed" : result.error);
-    router.replace(result.secondStep ? "/second-step" : "/(tabs)");
+    router.replace(result.secondStep ? "/second-step" : "/");
   };
   const fieldErr = (name: string) => (fieldError?.name === name ? fieldText(fieldError.error) : null);
 
@@ -84,13 +82,13 @@ export default function SignIn() {
             />
             <Button label="تسجيل الدخول" onPress={submit} busy={busy} disabled={!login || !password} />
             <Pressable onPress={() => setMethod(method === "phone" ? "email" : "phone")} accessibilityRole="button" style={{ alignSelf: "center", padding: 8 }}>
-              <T weight="semibold" style={{ color: colors.accent }}>{method === "phone" ? "الدخول بالبريد الإلكتروني بدلاً من ذلك" : "الدخول برقم واتساب بدلاً من ذلك"}</T>
+              <T weight="semibold" style={{ color: colors.accentText }}>{method === "phone" ? "الدخول بالبريد الإلكتروني بدلاً من ذلك" : "الدخول برقم واتساب بدلاً من ذلك"}</T>
             </Pressable>
             <View style={{ flexDirection: "row", justifyContent: "center", gap: 18, flexWrap: "wrap" }}>
-              <Pressable onPress={() => WebBrowser.openBrowserAsync(`${SITE_URL}/ar/sign-up`)} accessibilityRole="link" style={{ padding: 6 }}>
+              <Pressable onPress={() => router.push("/sign-up")} accessibilityRole="link" style={{ padding: 6 }}>
                 <T muted>إنشاء حساب جديد</T>
               </Pressable>
-              <Pressable onPress={() => WebBrowser.openBrowserAsync(`${SITE_URL}/ar/forgot-password`)} accessibilityRole="link" style={{ padding: 6 }}>
+              <Pressable onPress={() => router.push("/forgot")} accessibilityRole="link" style={{ padding: 6 }}>
                 <T muted>نسيت كلمة المرور</T>
               </Pressable>
             </View>

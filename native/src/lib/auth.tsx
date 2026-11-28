@@ -28,6 +28,8 @@ interface Auth {
   signIn: (field: "phone" | "email", login: string, password: string) => Promise<SignInResult>;
   verifySecondStep: (code: string) => Promise<string | null>;
   signOut: () => Promise<void>;
+  /** A session the site handed over (after a sign-up or a reset): kept, then the profile loaded. */
+  adoptSession: (tokens: { accessToken: string; refreshToken: string }) => Promise<boolean>;
   refreshProfile: () => Promise<void>;
 }
 
@@ -126,13 +128,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setNeedsSecondStep(false);
   }, []);
 
+  const adoptSession = useCallback<Auth["adoptSession"]>(
+    async ({ accessToken, refreshToken }) => {
+      const { data, error } = await supabase().auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+      if (error || !data.session) return false;
+      setNeedsSecondStep(false);
+      await loadProfile(data.session.user.id);
+      void registerForPush();
+      return true;
+    },
+    [loadProfile],
+  );
+
   const refreshProfile = useCallback(async () => {
     if (session) await loadProfile(session.user.id);
   }, [session, loadProfile]);
 
   const value = useMemo<Auth>(
-    () => ({ ready, session, profile, needsSecondStep, signIn, verifySecondStep, signOut, refreshProfile }),
-    [ready, session, profile, needsSecondStep, signIn, verifySecondStep, signOut, refreshProfile],
+    () => ({ ready, session, profile, needsSecondStep, signIn, verifySecondStep, signOut, refreshProfile, adoptSession }),
+    [ready, session, profile, needsSecondStep, signIn, verifySecondStep, signOut, refreshProfile, adoptSession],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

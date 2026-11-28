@@ -1,16 +1,15 @@
 import { useCallback, useState } from "react";
 import { Linking, ScrollView, View } from "react-native";
-import { useFocusEffect, useLocalSearchParams, useNavigation } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import { Image } from "expo-image";
-import * as WebBrowser from "expo-web-browser";
 import { Ionicons } from "@expo/vector-icons";
-import { SITE_URL } from "../../src/lib/config";
 import { formatPrice } from "../../src/lib/format";
 import { publicUrl, supabase } from "../../src/lib/supabase";
 import { Button, Card, Empty, Loading, T } from "../../src/ui/kit";
 import { MatchCard } from "../../src/ui/match-card";
+import { PitchArt } from "../../src/ui/pitch-art";
 import { MATCH_CARD, type MatchCard as Match } from "../../src/lib/matches";
-import { colors } from "../../src/ui/theme";
+import { useColors } from "../../src/ui/theme";
 
 interface Venue {
   id: string;
@@ -38,8 +37,10 @@ const hhmm = (t: string) => {
 
 /** A venue: its courts and prices, opening hours, coming matches, and how to reach or book it. */
 export default function VenueScreen() {
+  const colors = useColors();
   const { id } = useLocalSearchParams<{ id: string }>();
   const navigation = useNavigation();
+  const router = useRouter();
   const [venue, setVenue] = useState<Venue | null | undefined>(undefined);
   const [matches, setMatches] = useState<Match[]>([]);
 
@@ -71,8 +72,8 @@ export default function VenueScreen() {
 
   return (
     <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
-      <View style={{ aspectRatio: 16 / 9, backgroundColor: "#1f6b3a" }}>
-        {cover ? <Image source={cover} style={{ flex: 1 }} contentFit="cover" accessibilityLabel={venue.name} /> : null}
+      <View style={{ aspectRatio: 16 / 9, overflow: "hidden" }}>
+        {cover ? <Image source={cover} style={{ flex: 1 }} contentFit="cover" accessibilityLabel={venue.name} /> : <PitchArt />}
       </View>
       <View style={{ padding: 16, gap: 14 }}>
         <View style={{ gap: 4 }}>
@@ -80,8 +81,7 @@ export default function VenueScreen() {
           <T muted>{[venue.address, venue.area?.name_ar ?? venue.city?.name_ar].filter(Boolean).join("، ")}</T>
         </View>
         {bookable ? (
-          // Booking (times, courts, the deposit) is on the site for now; it opens here.
-          <Button label="احجز موعداً" onPress={() => void WebBrowser.openBrowserAsync(`${SITE_URL}/ar/venues/${venue.id}/book`)} />
+          <Button label="احجز موعداً" onPress={() => router.push(`/book/${venue.id}`)} />
         ) : null}
         <View style={{ flexDirection: "row", gap: 10 }}>
           {venue.phone ? <Button label="اتصال" variant="secondary" style={{ flex: 1 }} onPress={() => void Linking.openURL(`tel:${venue.phone}`)} /> : null}
@@ -127,10 +127,6 @@ export default function VenueScreen() {
             ))}
           </>
         ) : null}
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, opacity: 0.8 }}>
-          <Ionicons name="information-circle-outline" size={16} color={colors.muted} />
-          <T muted style={{ fontSize: 13, flex: 1 }}>الحجز يُفتح في صفحة الموقع داخل التطبيق.</T>
-        </View>
       </View>
     </ScrollView>
   );

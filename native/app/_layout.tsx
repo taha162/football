@@ -11,7 +11,7 @@ import { initSupabase } from "../src/lib/supabase";
 import { AuthProvider } from "../src/lib/auth";
 import { screenFor } from "../src/lib/push";
 import { Button, Empty, T } from "../src/ui/kit";
-import { colors, fonts } from "../src/ui/theme";
+import { fonts, ThemeProvider, useColors } from "../src/ui/theme";
 
 void SplashScreen.preventAutoHideAsync();
 // The phones run right to left (app.config.ts: forcesRTL); a browser preview of the screens does too.
@@ -34,6 +34,15 @@ function useNotificationTaps() {
 }
 
 export default function RootLayout() {
+  return (
+    <ThemeProvider>
+      <Root />
+    </ThemeProvider>
+  );
+}
+
+function Root() {
+  const colors = useColors();
   const [fontsLoaded] = useFonts({ Cairo_400Regular, Cairo_600SemiBold, Cairo_700Bold });
   const [state, setState] = useState<"loading" | "ready" | "offline">("loading");
 
@@ -64,7 +73,7 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
-        <StatusBar style="light" />
+        <StatusBar style={colors.scheme === "dark" ? "light" : "dark"} />
         <Routes />
       </AuthProvider>
     </SafeAreaProvider>
@@ -72,6 +81,7 @@ export default function RootLayout() {
 }
 
 function Routes() {
+  const colors = useColors();
   useNotificationTaps();
   return (
     <Stack
@@ -91,6 +101,19 @@ function Routes() {
       <Stack.Screen name="venue/[id]" options={{ title: "الملعب" }} />
       <Stack.Screen name="chat/[id]" options={{ title: "" }} />
       <Stack.Screen name="delete-account" options={{ title: "حذف الحساب" }} />
+      <Stack.Screen name="book/[venue]" options={{ title: "الحجز" }} />
+      <Stack.Screen name="sign-up" options={{ title: "حساب جديد" }} />
+      <Stack.Screen name="verify-whatsapp" options={{ title: "التحقق بواتساب" }} />
+      <Stack.Screen name="verify-email" options={{ title: "الرمز" }} />
+      <Stack.Screen name="forgot" options={{ title: "نسيت كلمة المرور" }} />
+      <Stack.Screen name="new-password" options={{ title: "كلمة مرور جديدة", headerBackVisible: false }} />
+      <Stack.Screen name="onboarding" options={{ title: "ملفك" }} />
+      <Stack.Screen name="legal/[page]" options={{ title: "" }} />
+      <Stack.Screen name="friends" options={{ title: "الأصدقاء" }} />
+      <Stack.Screen name="new-match" options={{ title: "مباراة جديدة" }} />
+      <Stack.Screen name="settings" options={{ title: "الإعدادات" }} />
+      <Stack.Screen name="player/[id]" options={{ title: "" }} />
+      <Stack.Screen name="bookings" options={{ title: "حجوزاتي" }} />
     </Stack>
   );
 }
