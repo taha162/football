@@ -2225,3 +2225,26 @@
 الملفات: `src/lib/presence.ts` و`src/components/messages/active-status.tsx` (جديدان)، `src/components/layout/live-refresh.tsx`، `src/app/[locale]/messages/[id]/page.tsx`، `src/app/[locale]/messages/page.tsx`، `src/app/[locale]/players/[id]/page.tsx`، `src/components/player/player-summary.tsx`، `src/app/[locale]/settings/page.tsx`، `src/server/profile.ts`، `src/lib/supabase/types.ts`، `DEPLOYMENT.md` (القسم 20: ملفات …0046 إلى …0049 وإعدادات البريد في Supabase)، والنصوص في `messages/`. الاختبارات: `tests/db/presence.test.ts`، `e2e/presence.spec.ts`.
 
 التعديل: «Active now, or how long ago»
+
+### 123. تطبيق «الملعب» لأندرويد وآيفون (Google Play وApp Store)
+**ما تغيّر:**
+- **مجلد جديد `mobile/`:** تطبيق أصلي (Capacitor 8) لأندرويد وآيفون، يفتح الموقع الحي داخل التطبيق. كل تحديث للموقع يصل إلى التطبيق فوراً دون نسخة جديدة في المتجر.
+- **الأيقونة وشاشة البداية** مرسومتان من شعار الموقع. الاسم «الملعب». المعرّف `com.almalab.app` (يُقرَّر قبل أول رفع، ولا يتغيّر بعده).
+- **صفحة «لا يوجد اتصال بالإنترنت»** مع «إعادة المحاولة»، ويرجع التطبيق وحده حين يعود الاتصال.
+- **الصلاحيات** (الكاميرا، الميكروفون، الموقع، الإشعارات) تُطلب عند أول حاجة فقط، مع نص عربي يشرح السبب في آيفون.
+- **عمودي فقط.** آيفون: للآيفون فقط. أندرويد: النسخ الاحتياطي موقوف، حتى لا تنتقل جلسة الدخول إلى هاتف آخر.
+- **روابط المواقع الأخرى** (واتساب، الخرائط) تُفتح في تطبيقاتها خارج التطبيق.
+- **في الموقع:** حين يُفتح داخل التطبيق يمتد إلى حواف الشاشة، ويترك مكان شريط الحالة والنتوء في الشريط العلوي وشاشة المحادثة. في المتصفح لا يتغيّر شيء.
+- **«حفظ» الصورة داخل التطبيق** يفتحها في متصفح الهاتف لتحفظها منه، لأن متصفح التطبيق لا ينزّل الملفات.
+- **بناء أندرويد تلقائي على GitHub** (Actions ← Mobile app): نسخة تجربة APK مع كل تعديل على التطبيق، ونسخة موقّعة لـGoogle Play عند الطلب بعد حفظ مفتاح التوقيع.
+- **الدليل** `mobile/README.md`: التجربة على الهاتف، والنشر في المتجرين خطوة بخطوة، وما يجب تجربته.
+
+**التكلفة (عند النشر، لا قبله):** حساب Google Play ‏25 دولاراً مرة واحدة. حساب Apple Developer ‏99 دولاراً سنوياً، ويلزم جهاز Mac لبناء نسخة آيفون.
+
+**لا ملفات قاعدة بيانات.**
+
+**ما لم يُجرَّب بعد:** التطبيق لم يُشغَّل على هاتف حقيقي، فبيئة العمل بلا هاتف ولا Mac. القائمة في `mobile/README.md`.
+
+الملفات: `mobile/` (جديد)، `.github/workflows/mobile-app.yml` (جديد)، `src/lib/app-shell.ts` (جديد)، `src/app/[locale]/layout.tsx`، `src/app/globals.css`، `src/components/ui/media-viewer.tsx`، `tsconfig.json`، `eslint.config.mjs`، `.vercelignore`، `DEPLOYMENT.md` (القسم 21). الاختبارات: `e2e/app-shell.spec.ts`.
+
+التعديل: «Android and iPhone app»

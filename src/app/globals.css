@@ -1724,3 +1724,14 @@ html[data-intro="headline"] .reveal-line > span {
     radial-gradient(120% 60% at 50% 0%, rgb(31 107 58 / 0.55), transparent 70%),
     var(--color-bg);
 }
+
+/*
+ * The phone app (mobile/, src/lib/app-shell.ts): the page runs edge to edge
+ * under the status bar and the notch (viewport-fit=cover), so the bars at the
+ * top keep clear of them. The bottom bar, the box to write in, the picture
+ * viewer and the call screen already keep clear of the home bar and the notch.
+ */
+html[data-app] .site-header,
+html[data-app] .chat-screen {
+  padding-top: env(safe-area-inset-top);
+}

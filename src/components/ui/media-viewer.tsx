@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Download, LoaderCircle, X, ZoomIn, ZoomOut } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { inApp } from "@/lib/app-shell";
 import { cn } from "@/lib/cn";
 
 export type ViewedMedia = {
@@ -84,6 +85,12 @@ export function MediaViewer({ media, onClose }: { media: ViewedMedia | null; onC
           // Closing the share sheet isn't a failure; anything else falls back to a download.
           if (e instanceof DOMException && e.name === "AbortError") return;
         }
+      }
+      // The phone app's WebView can't download a file: the picture opens in the phone's browser
+      // instead (another site always opens outside the app), where pressing it saves it.
+      if (inApp()) {
+        window.location.href = media.src;
+        return;
       }
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
