@@ -6,7 +6,7 @@ import type { Database } from "@/lib/supabase/types";
 /** Rebuilt at most once an hour. */
 export const revalidate = 3600;
 
-const SECTIONS = ["", "/matches", "/venues", "/teams", "/tournaments", "/recruitment", "/legal/terms", "/legal/privacy", "/legal/safety"];
+const SECTIONS = ["", "/matches", "/venues", "/teams", "/tournaments", "/recruitment", "/legal/terms", "/legal/privacy", "/legal/safety", "/legal/account-deletion"];
 
 /** The database returns at most this many rows per request. */
 const PAGE = 1000;

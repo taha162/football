@@ -1621,6 +1621,9 @@ isOneToOne: true
 "admin_whatsapp_summary":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
+"allow_account_deletion":
+{ Args: { "p_user_id": string }; Returns: undefined
+                           },
 "answer_call":
 { Args: { "p_call_id": string }; Returns: string
                            },
@@ -1711,6 +1714,9 @@ isOneToOne: true
 "delete_message":
 { Args: { "p_message_id": number }; Returns: undefined
                            },
+"delete_my_account":
+{ Args: { "p_reason"?: string }; Returns: Json
+                           },
 "dispute_tournament_result":
 { Args: { "p_match_id": string,"p_reason": string }; Returns: undefined
                            },
@@ -1792,6 +1798,9 @@ isOneToOne: true
                            },
 "mute_conversation":
 { Args: { "p_conversation_id": string,"p_hours": number }; Returns: undefined
+                           },
+"my_account_deletion_preview":
+{ Args: Record<PropertyKey, never>; Returns: Json
                            },
 "my_conversations":
 { Args: { "p_limit"?: number }; Returns: {

@@ -28,6 +28,7 @@ export async function SiteFooter() {
           <Link prefetch={false} className="link-quiet w-fit text-muted hover:text-ink" href="/legal/terms">{t("terms")}</Link>
           <Link prefetch={false} className="link-quiet w-fit text-muted hover:text-ink" href="/legal/privacy">{t("privacy")}</Link>
           <Link prefetch={false} className="link-quiet w-fit text-muted hover:text-ink" href="/legal/safety">{t("safety")}</Link>
+          <Link prefetch={false} className="link-quiet w-fit text-muted hover:text-ink" href="/legal/account-deletion">{t("accountDeletion")}</Link>
         </nav>
       </div>
       <p className="border-t border-line px-4 py-4 text-center text-xs text-faint">{t("copyright", { year })}</p>

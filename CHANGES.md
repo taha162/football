@@ -2248,3 +2248,24 @@
 الملفات: `mobile/` (جديد)، `.github/workflows/mobile-app.yml` (جديد)، `src/lib/app-shell.ts` (جديد)، `src/app/[locale]/layout.tsx`، `src/app/globals.css`، `src/components/ui/media-viewer.tsx`، `tsconfig.json`، `eslint.config.mjs`، `.vercelignore`، `DEPLOYMENT.md` (القسم 21). الاختبارات: `e2e/app-shell.spec.ts`.
 
 التعديل: «Android and iPhone app»
+
+### 124. حذف الحساب بنفسك (شرط في Google Play وApp Store)
+**ما تغيّر:**
+- **الإعدادات ← «حذف الحساب»** في آخر الصفحة:
+  - تشرح ما يُحذف، وما يبقى دون اسم العضو (حجوزاته في سجل الملاعب)، مع أعدادها.
+  - يُطلب سبب اختياري، وكلمة المرور، وكتابة «حذف» للتأكيد.
+  - بعد الحذف يخرج العضو، وتقول صفحة الدخول «تم حذف حسابك».
+- **ما يُحذف هو نفسه ما يحذفه المدير** (التعديل 81): الحساب، والرسائل بملفاتها، والأصدقاء والمجموعات، والمباريات والبطولات التي نظّمها. الحجوزات تبقى للملعب باسم «عضو محذوف»، والقادمة تُلغى ويُبلَّغ الملعب.
+- **الأمان:**
+  - الجلسة المفتوحة وحدها لا تكفي: الموقع يتحقق من كلمة المرور أولاً (5 محاولات كل 15 دقيقة كتسجيل الدخول)، ثم يسمح بحذف واحد خلال 5 دقائق.
+  - الحذف يجري باسم العضو، فتطلب قاعدة البيانات خطوة التحقق الثانية لمن فعّلها.
+  - كل حذف يُسجَّل في سجل الإدارة.
+- **لا يحذف حسابه:** مدير الموقع (حتى يُزال دوره)، ومالك الملعب (حتى تُنقل ملكيته). الصفحة تقول له ذلك بدل النموذج.
+- **صفحة عامة** `/legal/account-deletion` تشرح الطريقة لمن لا يملك التطبيق، كما تطلب Google Play. رابطها في أسفل الصفحة الرئيسية.
+
+**ملف قاعدة البيانات `…0050_account_deletion.sql`:** دالة الحذف المشتركة بين المدير والعضو، ودوال المعاينة والحذف الذاتي. حذف المدير يبقى كما هو. لا يغيّر بيانات موجودة، وتشغيله مرتين لا يضر.
+- قبل تشغيله: قسم «حذف الحساب» لا يظهر، والصفحة العامة تظهر.
+
+الملفات: `src/server/member-files.ts` و`src/components/forms/delete-account-form.tsx` (جديدان)، `src/server/account.ts`، `src/server/admin.ts`، `src/components/forms/contact-change-forms.tsx`، `src/app/[locale]/settings/page.tsx`، `src/app/[locale]/legal/[page]/page.tsx`، `src/app/[locale]/sign-in/page.tsx`، `src/components/layout/site-footer.tsx`، `src/app/sitemap.ts`، `src/lib/supabase/types.ts`، `DEPLOYMENT.md`، والنصوص في `messages/`. الاختبارات: `tests/db/account-deletion.test.ts` و`e2e/account-deletion.spec.ts` (جديدان).
+
+التعديل: «Members delete their own account»

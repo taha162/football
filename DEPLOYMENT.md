@@ -670,6 +670,8 @@ select grantee, table_name, privilege_type from information_schema.role_table_gr
 - **Google Play:** حساب مطوّر (25 دولاراً مرة واحدة)، ومفتاح توقيع في أسرار المستودع، ثم Run workflow مع «release».
 - **App Store:** حساب Apple Developer (99 دولاراً سنوياً)، وجهاز Mac عليه Xcode.
 - **قبل الرفع:** قرّر معرّف التطبيق (`com.almalab.app`)، فلا يتغيّر بعد النشر.
+- **ملف قاعدة البيانات `…0050_account_deletion.sql`:** شغّله في SQL Editor قبل رفع التطبيق. يضيف «حذف الحساب» في الإعدادات، وهو شرط في المتجرين. يحتاج `SUPABASE_SERVICE_ROLE_KEY` في Vercel (موجود من قبل).
+- **روابط للمتجرين:** سياسة الخصوصية `/ar/legal/privacy`، وحذف الحساب `/ar/legal/account-deletion`.
 
 ## قائمة التحقق قبل الإطلاق
 

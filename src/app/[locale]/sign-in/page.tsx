@@ -37,6 +37,8 @@ export default async function SignInPage({ params, searchParams }: PageProps<"/[
       {sp.error === "link_invalid" ? <Alert tone="warning">{t("linkInvalid")}</Alert> : null}
       {/* Sent here by the proxy when the session passed its lifetime (src/lib/session-policy.ts). */}
       {sp.reason === "expired" ? <Alert tone="info">{t("sessionExpired")}</Alert> : null}
+      {/* After deleting their own account (Settings → «حذف الحساب»). */}
+      {sp.account === "deleted" ? <Alert tone="success">{t("accountDeleted")}</Alert> : null}
       <SignInForm next={next} method={method} />
       {method === "whatsapp" ? (
         <OtherWay via="email" or={t("or")} href={{ pathname: "/sign-in", query: { ...keep, method: "email" } }}>

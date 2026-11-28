@@ -3,7 +3,10 @@ import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Container, PageHeader } from "@/components/ui/primitives";
 
-const PAGES = ["terms", "privacy", "safety"] as const;
+// The address of each page and its texts (messages: legal.<key>). account-deletion: required by Google Play.
+const KEYS = { terms: "terms", privacy: "privacy", safety: "safety", "account-deletion": "accountDeletion" } as const;
+type Page = keyof typeof KEYS;
+const PAGES = Object.keys(KEYS) as Page[];
 
 export function generateStaticParams() {
   return PAGES.map((page) => ({ page }));
@@ -11,8 +14,8 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/legal/[page]">): Promise<Metadata> {
   const { locale, page } = await params;
-  if (!PAGES.includes(page as (typeof PAGES)[number])) return {};
-  const t = await getTranslations({ locale, namespace: `legal.${page}` });
+  if (!PAGES.includes(page as Page)) return {};
+  const t = await getTranslations({ locale, namespace: `legal.${KEYS[page as Page]}` });
   return { title: t("title") };
 }
 
@@ -24,8 +27,8 @@ export async function generateMetadata({ params }: PageProps<"/[locale]/legal/[p
 export default async function LegalPage({ params }: PageProps<"/[locale]/legal/[page]">) {
   const { locale, page } = await params;
   setRequestLocale(locale);
-  if (!PAGES.includes(page as (typeof PAGES)[number])) notFound();
-  const t = await getTranslations(`legal.${page as (typeof PAGES)[number]}`);
+  if (!PAGES.includes(page as Page)) notFound();
+  const t = await getTranslations(`legal.${KEYS[page as Page]}`);
   const sections = t.raw("sections") as { heading: string; body: string }[];
   return (
     <Container className="max-w-3xl py-10">
